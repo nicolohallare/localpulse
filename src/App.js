@@ -862,7 +862,10 @@ const ExploreScreen = ({ places, visited, onSelect }) => (
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const [places,     setPlaces]     = useState(PLACES);
+  const [places,     setPlaces]     = useState(PLACES); // starts with demo data, replaced by real data
+  const [loading,    setLoading]    = useState(false);
+  const [locErr,     setLocErr]     = useState(null);
+  const [userLoc,    setUserLoc]    = useState(null);
   const [mainTab,    setMainTab]    = useState("map");
   const [detail,     setDetail]     = useState(null);
   const [checkInFor, setCheckInFor] = useState(null);
@@ -871,11 +874,153 @@ export default function App() {
   const [activePin,  setActivePin]  = useState(null);
   const [search,     setSearch]     = useState("");
 
+  // ── Fetch real nearby places on mount ──────────────────────────────────────
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setLocErr("Location not supported by this browser. Showing demo data.");
+      return;
+    }
+    setLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        setUserLoc({ lat, lng });
+        try {
+          const res = await fetch(`/api/nearby-places?lat=${lat}&lng=${lng}&type=restaurant&radius=1500`);
+          const data = await res.json();
+          if (data.places && data.places.length > 0) {
+            // Merge real data with structure expected by UI
+            const enriched = data.places.map((p, i) => ({
+              ...p,
+              // Keep emoji/color from demo set if we can match by index, else defaults
+              emoji: ["🍽","☕","🍜","🍣","🍸","🥩","🍕","🍔","🌮","🍱"][i % 10],
+              hue: ["#E8400C","#7C3AED","#065F46","#C13584","#92400E","#1877F2","#D97706","#059669","#DC2626","#7C3AED"][i % 10],
+              hueBg: ["#FEF0EB","#F5F0FE","#ECFDF5","#FEF0F6","#FEF3E2","#EFF6FF","#FFFBEB","#E8F7F0","#FEF2F2","#F5F0FE"][i % 10],
+              coords: { // Approximate pin position on our fake map — replaced by real map later
+                x: `${20 + (i * 15) % 60}%`,
+                y: `${20 + (i * 20) % 55}%`,
+              },
+              tags: p.tags || [],
+              checkins: 0,
+            }));
+            setPlaces(enriched);
+          }
+        } catch (err) {
+          console.error("Failed to load nearby places:", err);
+          setLocErr("Could not load nearby places. Showing demo data.");
+        }
+        setLoading(false);
+      },
+      (err) => {
+        console.warn("Geolocation denied:", err.message);
+        setLocErr("Location access denied. Showing demo data for Metro Manila.");
+        // Fall back to Metro Manila BGC coordinates
+        const lat = 14.5535, lng = 121.0477;
+        setUserLoc({ lat, lng });
+        fetch(`/api/nearby-places?lat=${lat}&lng=${lng}&type=restaurant&radius=1500`)
+          .then(r => r.json())
+          .then(data => {
+            if (data.places?.length > 0) {
+              const enriched = data.places.map((p, i) => ({
+                ...p,
+                emoji: ["🍽","☕","🍜","🍣","🍸","🥩","🍕","🍔","🌮","🍱"][i % 10],
+                hue: ["#E8400C","#7C3AED","#065F46","#C13584","#92400E"][i % 5],
+                hueBg: ["#FEF0EB","#F5F0FE","#ECFDF5","#FEF0F6","#FEF3E2"][i % 5],
+                coords: { x: `${20 + (i * 15) % 60}%`, y: `${20 + (i * 20) % 55}%` },
+                tags: p.tags || [],
+                checkins: 0,
+              }));
+              setPlaces(enriched);
+            }
+          })
+          .catch(() => {}) // silently keep demo data
+          .finally(() => setLoading(false));
+      },
+      { timeout: 8000, enableHighAccuracy: false }
+    );
+  }, []);
+
+  // ── When a place is opened, fetch real details + YouTube videos ────────────
+  const openPlace = async (place) => {
+    setDetail(place);
+    setActivePin(place.id);
+
+    // Only fetch if we have a real Google place_id (not demo data)
+    if (!place.google_place_id) return;
+
+    try {
+      // Fetch Google reviews and photos in parallel with YouTube search
+      const [detailsRes, youtubeRes] = await Promise.allSettled([
+        fetch(`/api/place-details?place_id=${place.google_place_id}`).then(r => r.json()),
+        fetch(`/api/youtube-reviews?name=${encodeURIComponent(place.name)}&location=Philippines`).then(r => r.json()),
+      ]);
+
+      const details = detailsRes.status === 'fulfilled' ? detailsRes.value.details : null;
+      const youtubeVideos = youtubeRes.status === 'fulfilled' ? (youtubeRes.value.videos || []) : [];
+
+      // Build updated place with real data
+      const googleReviews = details?.googleReviews || [];
+      const allReviews = [...googleReviews, ...(place.feed || [])];
+
+      // Get AI aggregate score if we have any reviews or videos
+      let aiScore = null;
+      if (googleReviews.length > 0 || youtubeVideos.length > 0) {
+        try {
+          const scoreRes = await fetch('/api/aggregate-score', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              placeName: place.name,
+              googleReviews,
+              youtubeVideos,
+              checkinReviews: place.feed?.filter(r => r.pl === 'lp') || [],
+            }),
+          });
+          aiScore = await scoreRes.json();
+        } catch (e) {
+          console.warn('AI score failed, using Google rating:', e);
+        }
+      }
+
+      // Update this place in state with all real data
+      setPlaces(prev => prev.map(p => {
+        if (p.id !== place.id) return p;
+        return {
+          ...p,
+          feed: allReviews,
+          videos: youtubeVideos,
+          hero: details?.hero || p.hero,
+          rating: aiScore?.aggregate_score || details?.rating || p.rating,
+          reviews: details?.reviews || p.reviews,
+          price: details?.price || p.price,
+          tags: aiScore?.tags || p.tags,
+          scores: {
+            ...p.scores,
+            google: aiScore?.per_platform?.google || details?.rating || 0,
+            youtube: aiScore?.per_platform?.youtube || 0,
+            lp: aiScore?.per_platform?.localpulse || 0,
+          },
+          aiSummary: aiScore?.summary || null,
+          sentiment: aiScore?.sentiment || null,
+          open: details?.open ?? p.open,
+          hours: details?.hours || [],
+          phone: details?.phone || null,
+          website: details?.website || null,
+        };
+      }));
+
+    } catch (err) {
+      console.error("Failed to enrich place:", err);
+      // Keep whatever data we already have — app still works
+    }
+  };
+
+  // ── Keep detail in sync after state updates ────────────────────────────────
   useEffect(()=>{
     if(detail){ const f=places.find(p=>p.id===detail.id); if(f) setDetail(f); }
   },[places]);
 
-  const pick = p => { setDetail(p); setActivePin(p.id); };
+  const pick = p => openPlace(p);
 
   const submitReview = (id, {stars,txt}) => {
     setPlaces(prev=>prev.map(p=>{
@@ -977,6 +1122,24 @@ export default function App() {
                 {search&&<button onClick={()=>setSearch("")} style={{background:"none",border:"none",color:C.soft,fontSize:16,cursor:"pointer",padding:0}}>✕</button>}
               </div>
 
+              {/* Loading overlay */}
+              {loading && (
+                <div style={{position:"absolute",inset:0,background:"rgba(250,250,248,.82)",backdropFilter:"blur(3px)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:50}}>
+                  <div style={{fontSize:36,marginBottom:12,animation:"spin 1s linear infinite"}}>📍</div>
+                  <div style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:4}}>Finding places near you…</div>
+                  <div style={{fontSize:12,color:C.soft}}>Searching Google Places</div>
+                  <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+                </div>
+              )}
+
+              {/* Location error banner */}
+              {locErr && !loading && (
+                <div style={{position:"absolute",top:72,left:14,right:14,zIndex:40,background:"#FFFBEB",border:"1px solid #FDE68A",borderRadius:10,padding:"8px 14px",fontSize:12,color:C.mid,display:"flex",alignItems:"center",gap:8}}>
+                  <span>⚠️</span><span>{locErr}</span>
+                  <button onClick={()=>setLocErr(null)} style={{marginLeft:"auto",background:"none",border:"none",color:C.soft,cursor:"pointer",fontSize:14}}>✕</button>
+                </div>
+              )}
+
               {/* AI badge */}
               <div style={{
                 position:"absolute",bottom:14,right:14,
@@ -985,8 +1148,8 @@ export default function App() {
                 boxShadow:C.s1,border:`1px solid ${C.hairline}`,
                 display:"flex",alignItems:"center",gap:6,fontSize:11,
               }}>
-                <div style={{width:7,height:7,borderRadius:"50%",background:C.accent,animation:"pulse 2s infinite"}}/>
-                <span style={{fontWeight:600,color:C.mid}}>AI · 6 sources</span>
+                <div style={{width:7,height:7,borderRadius:"50%",background:loading?C.soft:C.accent,transition:"background .3s"}}/>
+                <span style={{fontWeight:600,color:C.mid}}>{loading?"Loading…":"AI · 6 sources"}</span>
               </div>
             </div>
 
