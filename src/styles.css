@@ -319,3 +319,16 @@ h1, h2, h3 { margin: 0; }
 .trend-body { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px 6px; border: 0; background: none; text-align: left; min-width: 0; }
 .trend-dir { margin: 4px 12px 12px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; border-radius: 10px; background: var(--ube); color: #fff; font-weight: 700; font-size: 13px; text-decoration: none; }
 .trend .row-between { margin-bottom: 12px; }
+
+/* ── Add a video ───────────────────────────────────── */
+.clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.share-video { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border: 1px solid var(--line); border-radius: 16px; }
+.share-video .vtile { width: 84px; flex-shrink: 0; aspect-ratio: 9 / 16; }
+.pick-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px; border: 1.5px solid var(--line); border-radius: 14px; background: #fff; text-align: left; }
+.pick-on { border-color: var(--ube); background: var(--ube-wash); }
+.pick-thumb { width: 52px; height: 52px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
+.pick-dot { width: 26px; height: 26px; flex-shrink: 0; border-radius: 999px; border: 2px solid var(--line); display: flex; align-items: center; justify-content: center; color: #fff; }
+.pick-on .pick-dot { background: var(--ube); border-color: var(--ube); }
+.player-tall { aspect-ratio: 9 / 16; max-height: 68vh; width: auto; margin: 0 auto; }
+.share-video .vtile { height: auto; }
+.player-tall { width: min(100%, calc(68vh * 9 / 16)); max-height: none; }

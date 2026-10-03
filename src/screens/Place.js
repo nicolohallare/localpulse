@@ -41,7 +41,8 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators }) {
 
   const play = useCallback((p) => {
     setPlayer(p);
-    logPlay({ placeId: id, ref: p.id, platform: 'youtube', creator: p.channel });
+    if (p.kind === 'tiktok') logPlay({ placeId: id, ref: p.url, platform: 'tiktok', creator: p.channel });
+    else logPlay({ placeId: id, ref: p.id, platform: 'youtube', creator: p.channel });
   }, [id]);
 
   useEffect(() => {
@@ -346,12 +347,21 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators }) {
       {addingVideo && <AddVideo place={place} onClose={() => setAddingVideo(false)} />}
       {player && (
         <Sheet title={player.channel || 'YouTube'} onClose={() => setPlayer(null)}>
-          <div className="player">
-            <iframe title={player.title || 'YouTube video'} src={`https://www.youtube-nocookie.com/embed/${player.id}?autoplay=1&playsinline=1&rel=0`}
-              allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />
-          </div>
-          {player.title && <p className="strong">{player.title}</p>}
-          <a className="link-out" href={`https://www.youtube.com/watch?v=${player.id}`} target="_blank" rel="noreferrer">Open on YouTube <Icon name="external" size={14} /></a>
+          {player.kind === 'tiktok' ? (
+            <div className="player player-tall">
+              <iframe title={player.title || 'TikTok video'} src={`https://www.tiktok.com/embed/v2/${player.id}`}
+                allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />
+            </div>
+          ) : (
+            <div className="player">
+              <iframe title={player.title || 'YouTube video'} src={`https://www.youtube-nocookie.com/embed/${player.id}?autoplay=1&playsinline=1&rel=0`}
+                allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />
+            </div>
+          )}
+          {player.title && <p className="strong clamp-3">{player.title}</p>}
+          <a className="link-out" href={player.kind === 'tiktok' ? player.url : `https://www.youtube.com/watch?v=${player.id}`} target="_blank" rel="noreferrer">
+            Open on {player.kind === 'tiktok' ? 'TikTok' : 'YouTube'} <Icon name="external" size={14} />
+          </a>
         </Sheet>
       )}
     </div>
@@ -365,7 +375,7 @@ function SubmittedVideo({ v, placeId, onPlayYouTube, first }) {
   }, [v.url, v.platform]);
   const ytId = v.platform === 'youtube' ? youtubeId(v.url) : null;
   const title = v.title || (meta && meta.title) || `${PLATFORM_LABEL[v.platform]} video`;
-  const handle = v.creator_handle || (meta && meta.author && `@${meta.author}`) || '';
+  const handle = v.creator_handle || (meta && (meta.handle ? `@${meta.handle}` : meta.author)) || '';
   const inner = (
     <>
       <span className={`vtile vtile-${v.platform}`}>
@@ -379,6 +389,9 @@ function SubmittedVideo({ v, placeId, onPlayYouTube, first }) {
     </>
   );
   if (ytId) return <button className="vcard" onClick={() => onPlayYouTube({ id: ytId, title, channel: handle })}>{inner}</button>;
+  if (v.platform === 'tiktok' && meta && meta.videoId) {
+    return <button className="vcard" onClick={() => onPlayYouTube({ kind: 'tiktok', id: meta.videoId, url: v.url, title, channel: handle })}>{inner}</button>;
+  }
   return (
     <a className="vcard" href={v.url} target="_blank" rel="noreferrer"
       onClick={() => logPlay({ placeId, ref: v.url, platform: v.platform, creator: handle })}>{inner}</a>
