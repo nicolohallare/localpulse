@@ -21,7 +21,7 @@ export default async function handler(req, res) {
         regionCode: 'PH',
       },
     });
-    send(res, 200, { places: (data.places || []).map(shapePlace) }, 'public, s-maxage=300');
+    send(res, 200, { places: (data.places || []).map((p) => shapePlace(p, 1)) }, 'public, s-maxage=300');
   } catch (e) {
     fail(res, e);
   }

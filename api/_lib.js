@@ -74,7 +74,7 @@ const PRICE = {
   PRICE_LEVEL_VERY_EXPENSIVE: '₱₱₱₱',
 };
 
-export function shapePlace(p) {
+export function shapePlace(p, maxPhotos = 8) {
   return {
     id: p.id,
     name: (p.displayName && p.displayName.text) || 'Unnamed place',
@@ -89,7 +89,7 @@ export function shapePlace(p) {
     openNow: p.currentOpeningHours && typeof p.currentOpeningHours.openNow === 'boolean'
       ? p.currentOpeningHours.openNow : null,
     hours: (p.regularOpeningHours && p.regularOpeningHours.weekdayDescriptions) || [],
-    photos: (p.photos || []).slice(0, 8).map((ph) => {
+    photos: (p.photos || []).slice(0, maxPhotos).map((ph) => {
       const a = (ph.authorAttributions && ph.authorAttributions[0]) || {};
       return { name: ph.name, author: a.displayName || null, authorUri: a.uri || null };
     }),
