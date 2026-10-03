@@ -33,7 +33,12 @@ export const api = {
   oembed: (url) => getJSON(`/api/oembed?${qs({ url })}`),
   summary: (id) => getJSON(`/api/summary?${qs({ id })}`),
   config: () => getJSON('/api/config'),
+  trending: (lat, lng, area) => getJSON(`/api/trending?${qs({ lat: lat.toFixed(2), lng: lng.toFixed(2), area })}`),
 };
+
+// Opens Google Maps (app on phones) with directions to the place.
+export const directionsUrl = (p) =>
+  `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(p.name || 'Destination')}&destination_place_id=${encodeURIComponent(p.id)}`;
 
 export const photoUrl = (name, w = 800) => `/api/places/photo?${qs({ name, w })}`;
 
