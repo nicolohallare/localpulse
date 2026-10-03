@@ -27,7 +27,9 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
     const ids = list.map((p) => p.id);
     if (!ids.length) return;
     const { data } = await supabase.from('place_stats').select('*').in('google_place_id', ids);
-    if (data) setStats((s) => ({ ...s, ...Object.fromEntries(data.map((r) => [r.google_place_id, r])) }));
+    if (!Array.isArray(data)) return;
+    const fresh = Object.fromEntries(data.map((r) => [r.google_place_id, r]));
+    setStats((s) => ({ ...s, ...fresh }));
   }, []);
 
   const loadNearby = useCallback(async () => {
