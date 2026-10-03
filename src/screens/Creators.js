@@ -3,7 +3,7 @@ import { supabase, initials } from '../lib';
 import { Icon, Notice } from '../ui';
 import { game, creatorTier } from '../game';
 
-export default function Creators({ onBack, onOpenRanks }) {
+export default function Creators({ onBack, onOpenRanks, onAddVideo }) {
   const [top, setTop] = useState(null);
   useEffect(() => { game.creators(30).then((d) => setTop((d || []).slice(0, 3))).catch(() => setTop([])); }, []);
   const [form, setForm] = useState({ name: '', email: '', handle: '', platforms: '', video_links: '', note: '' });
@@ -38,6 +38,13 @@ export default function Creators({ onBack, onOpenRanks }) {
           <li><Icon name="video" size={18} /> Plays on TikTok / YouTube — your views, your credit</li>
           <li><Icon name="tag" size={18} /> Share your promo codes with diners nearby</li>
         </ul>
+      </section>
+
+      <section className="section">
+        <button className="btn btn-primary" style={{ width: '100%' }} onClick={onAddVideo}>
+          <Icon name="plus" size={18} /> Add a TikTok or YouTube video
+        </button>
+        <p className="tiny muted" style={{ marginTop: 8 }}>On Android, install LocalPulse to your home screen and you can share straight from TikTok.</p>
       </section>
 
       <section className="section stack-12">

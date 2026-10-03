@@ -10,7 +10,7 @@ const MODES = [
   { k: 'top', label: 'Most checked-in' },
 ];
 
-export default function Discover({ loc, locNote, onRetryLocation, michelin, onOpen, onOpenProfile }) {
+export default function Discover({ loc, locNote, onRetryLocation, michelin, onOpen, onOpenProfile, onAddVideo }) {
   const [mode, setMode] = useState('near');
   const [places, setPlaces] = useState([]);
   const [stats, setStats] = useState({});
@@ -136,6 +136,18 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
             setPlayer(it);
             logPlay({ placeId: it.place.id, ref: it.video.id, platform: 'youtube', creator: it.video.channel });
           }} />}
+          {!query && (
+            <section className="section">
+              <button className="creator-cta" onClick={onAddVideo}>
+                <span className="cta-icon"><Icon name="video" size={22} /></span>
+                <span className="grow">
+                  <span className="strong block">Saw a food TikTok?</span>
+                  <span className="small muted">Pin it to the restaurant — we’ll find the place for you.</span>
+                </span>
+                <Icon name="plus" size={20} />
+              </button>
+            </section>
+          )}
           <section className="section">
             <h2 className="h2">{query && !searching ? `Results for “${query}”` : 'Popular near you'}</h2>
             {(loading || searching) && <Spinner label={searching ? 'Searching…' : 'Finding places near you…'} />}

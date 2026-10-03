@@ -33,6 +33,7 @@ export const api = {
   oembed: (url) => getJSON(`/api/oembed?${qs({ url })}`),
   summary: (id) => getJSON(`/api/summary?${qs({ id })}`),
   config: () => getJSON('/api/config'),
+  matchVideo: (url, lat, lng) => getJSON(`/api/match-video?${qs({ url, lat: lat.toFixed(2), lng: lng.toFixed(2) })}`),
   trending: (lat, lng, area) => getJSON(`/api/trending?${qs({ lat: lat.toFixed(2), lng: lng.toFixed(2), area })}`),
 };
 
@@ -118,11 +119,17 @@ export const DISTINCTION = {
 
 // ── Videos ──────────────────────────────────────────────────────────────────
 export function detectPlatform(url) {
-  if (/^https:\/\/(www\.|vm\.|vt\.)?tiktok\.com\//i.test(url)) return 'tiktok';
+  if (/^https:\/\/(www\.|vm\.|vt\.|m\.)?tiktok\.com\//i.test(url)) return 'tiktok';
   if (/^https:\/\/(www\.|m\.)?(youtube\.com|youtu\.be)\//i.test(url)) return 'youtube';
   if (/^https:\/\/(www\.)?instagram\.com\//i.test(url)) return 'instagram';
   if (/^https:\/\/(www\.|m\.)?(facebook\.com|fb\.watch)\//i.test(url)) return 'facebook';
   return null;
+}
+
+// First supported video link inside any shared text.
+export function findVideoUrl(text) {
+  const m = String(text || '').match(/https:\/\/[^\s]+/g) || [];
+  return m.find((u) => detectPlatform(u)) || null;
 }
 
 export function youtubeId(url) {

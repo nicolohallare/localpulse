@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './styles.css';
-import { supabase, getLocation, DEFAULT_LOCATION } from './lib';
+import { supabase, getLocation, DEFAULT_LOCATION, findVideoUrl } from './lib';
+
 import { Icon } from './ui';
 import Discover from './screens/Discover';
 import Place from './screens/Place';
@@ -9,10 +10,21 @@ import You from './screens/You';
 import Creators from './screens/Creators';
 import NearbyCheckIn from './screens/NearbyCheckIn';
 import Ranks from './screens/Ranks';
+import ShareVideo from './screens/ShareVideo';
+
+// Shared from another app (TikTok → Share → LocalPulse): /?url=…&text=…
+(function takeShare() {
+  const q = new URLSearchParams(window.location.search);
+  if (!q.has('url') && !q.has('text') && !q.has('title')) return;
+  const link = findVideoUrl([q.get('url'), q.get('text'), q.get('title')].filter(Boolean).join(' '));
+  window.history.replaceState(null, '', `/#/add${link ? `?u=${encodeURIComponent(link)}` : ''}`);
+}());
 
 function parseHash() {
-  const h = window.location.hash.replace(/^#\/?/, '');
+  const raw = window.location.hash.replace(/^#\/?/, '');
+  const [h, query] = raw.split('?');
   const [name, id] = h.split('/');
+  if (name === 'add') return { name: 'add', url: new URLSearchParams(query || '').get('u') || '' };
   if (name === 'place' && id) return { name: 'place', id: decodeURIComponent(id) };
   if (name === 'ranks') return { name, id: id === 'creators' ? 'creators' : 'diners' };
   if (['deals', 'creators', 'you', 'checkin'].includes(name)) return { name };
@@ -72,12 +84,13 @@ export default function App() {
       <main className="app-main">
         {(tab === 'discover') && route.name !== 'place' && (
           <Discover loc={loc} locNote={locNote} onRetryLocation={locate} michelin={michelin}
-            onOpen={openPlace} onOpenProfile={() => go('/you')} />
+            onOpen={openPlace} onOpenProfile={() => go('/you')} onAddVideo={() => go('/add')} />
         )}
         {tab === 'deals' && <Deals onOpen={openPlace} />}
         {tab === 'you' && <You onOpen={openPlace} onOpenCreators={() => go('/creators')} onOpenRanks={() => go('/ranks')} />}
-        {tab === 'creators' && <Creators onBack={back} onOpenRanks={() => go('/ranks/creators')} />}
+        {tab === 'creators' && <Creators onBack={back} onOpenRanks={() => go('/ranks/creators')} onAddVideo={() => go('/add')} />}
         {tab === 'ranks' && <Ranks key={route.id} initial={route.id} onBack={back} />}
+        {tab === 'add' && <ShareVideo key={route.url} initialUrl={route.url} loc={loc} onBack={back} onOpen={openPlace} />}
         {route.name === 'place' && (
           <Place key={route.id} id={route.id} loc={loc} michelin={michelin} onBack={back} onOpenCreators={() => go('/creators')} />
         )}
