@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { api, supabase, distanceM, fmtDistance, matchMichelin, DISTINCTION } from '../lib';
-import { Icon, PlacePhoto, Spinner, Notice, Empty, ScoreBadge } from '../ui';
+import { api, supabase, distanceM, fmtDistance, fmtCount, timeAgo, matchMichelin, DISTINCTION, directionsUrl } from '../lib';
+import { logPlay } from '../game';
+import { Icon, PlacePhoto, Spinner, Notice, Empty, ScoreBadge, Sheet } from '../ui';
 import MapView from '../MapView';
 
 const MODES = [
@@ -19,6 +20,8 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
   const [searching, setSearching] = useState(false);
   const [top, setTop] = useState(null);
   const [opening, setOpening] = useState(null);
+  const [trending, setTrending] = useState(null);
+  const [player, setPlayer] = useState(null);
 
   const loadStats = useCallback(async (list) => {
     const ids = list.map((p) => p.id);
@@ -34,6 +37,10 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
       const list = await api.nearby(loc.lat, loc.lng, 1500);
       setPlaces(list);
       loadStats(list);
+      setTrending(null);
+      api.trending(loc.lat, loc.lng, areaOf(list))
+        .then((d) => setTrending(d))
+        .catch(() => setTrending({ items: [] }));
     } catch (e) {
       setError(e);
     } finally {
@@ -123,6 +130,10 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
       {mode === 'near' && (
         <>
           <MapView center={loc} places={sorted} stats={stats} onPick={(p) => onOpen(p.id)} />
+          {!query && <TrendingRail data={trending} loc={loc} onOpen={onOpen} onPlay={(it) => {
+            setPlayer(it);
+            logPlay({ placeId: it.place.id, ref: it.video.id, platform: 'youtube', creator: it.video.channel });
+          }} />}
           <section className="section">
             <h2 className="h2">{query && !searching ? `Results for “${query}”` : 'Popular near you'}</h2>
             {(loading || searching) && <Spinner label={searching ? 'Searching…' : 'Finding places near you…'} />}
@@ -187,7 +198,76 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
           </div>
         </section>
       )}
+      {player && (
+        <Sheet title={player.video.channel} onClose={() => setPlayer(null)}>
+          <div className="player">
+            <iframe title={player.video.title} src={`https://www.youtube-nocookie.com/embed/${player.video.id}?autoplay=1&playsinline=1&rel=0`}
+              allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />
+          </div>
+          <p className="strong">{player.video.title}</p>
+          <div className="row-wrap">
+            <a className="btn btn-primary" href={directionsUrl(player.place)} target="_blank" rel="noreferrer">
+              <Icon name="nav" size={18} /> Directions to {player.place.name}
+            </a>
+            <button className="soft-btn" onClick={() => { const id = player.place.id; setPlayer(null); onOpen(id); }}>
+              See on LocalPulse
+            </button>
+          </div>
+          <a className="link-out" href={`https://www.youtube.com/watch?v=${player.video.id}`} target="_blank" rel="noreferrer">Open on YouTube <Icon name="external" size={14} /></a>
+        </Sheet>
+      )}
     </div>
+  );
+}
+
+// Most common city/area in the nearby results' addresses, e.g. "Taguig".
+function areaOf(list) {
+  const count = {};
+  list.forEach((p) => {
+    const parts = String(p.address || '').split(',').map((x) => x.trim()).filter(Boolean);
+    const a = parts[parts.length - 1];
+    if (a && a.length < 40) count[a] = (count[a] || 0) + 1;
+  });
+  const best = Object.entries(count).sort((a, b) => b[1] - a[1])[0];
+  return best ? best[0] : 'Metro Manila';
+}
+
+function TrendingRail({ data, loc, onOpen, onPlay }) {
+  if (data && (!data.items || data.items.length === 0)) return null;
+  return (
+    <section className="section trend">
+      <div className="row-between">
+        <h2 className="h2">Trending on YouTube</h2>
+        {data && data.area && <span className="tiny muted">{data.area} · last {data.days} days</span>}
+      </div>
+      {!data && <Spinner label="Finding what food creators are talking about…" />}
+      {data && (
+        <div className="trend-rail">
+          {data.items.map((it, i) => {
+            const d = distanceM(loc, it.place);
+            return (
+              <article key={it.place.id} className="trend-card">
+                <button className="trend-thumb" onClick={() => onPlay(it)} aria-label={`Play: ${it.video.title}`}>
+                  {it.video.thumb && <img src={it.video.thumb} alt="" loading="lazy" />}
+                  <span className="trend-rank">#{i + 1}</span>
+                  <span className="play"><Icon name="play" size={20} /></span>
+                  {it.video.views ? <span className="trend-views">{fmtCount(it.video.views)} views</span> : null}
+                </button>
+                <button className="trend-body" onClick={() => onOpen(it.place.id)}>
+                  <span className="row-title-sm clamp-1">{it.place.name}</span>
+                  <span className="tiny muted clamp-1">{[it.place.type, d != null ? fmtDistance(d) : null].filter(Boolean).join(' · ')}</span>
+                  <span className="tiny muted clamp-1">▶ {it.video.channel} · {timeAgo(it.video.published)}</span>
+                </button>
+                <a className="trend-dir" href={directionsUrl(it.place)} target="_blank" rel="noreferrer">
+                  <Icon name="nav" size={16} /> Directions
+                </a>
+              </article>
+            );
+          })}
+        </div>
+      )}
+      {data && <p className="tiny muted">Most-viewed food videos from YouTube, matched to places on Google Maps.</p>}
+    </section>
   );
 }
 
