@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase, ensureUser, getLocation, distanceM, fmtDistance, CHECKIN_RADIUS_M, isPreviewHost } from '../lib';
 import { Icon, Sheet, Spinner, Notice } from '../ui';
+import { game, levelFor, badgeState } from '../game';
 
 const TAGS = ['Must try', 'Worth the wait', 'Good value', 'Great for groups', 'Date night', 'Slow service'];
 const LABEL = ['', 'Skip it', 'Poor', 'Meh', 'Below average', 'Okay', 'Decent', 'Good', 'Great', 'Excellent', 'Unforgettable'];
@@ -15,6 +16,9 @@ export default function CheckIn({ place, onClose, onDone }) {
   const [score, setScore] = useState(0);
   const [tags, setTags] = useState([]);
   const [review, setReview] = useState('');
+  const [before, setBefore] = useState(null);
+  const [after, setAfter] = useState(null);
+  const [placeGame, setPlaceGame] = useState(null);
 
   async function start(skipDistance = false) {
     setProblem(null);
@@ -22,6 +26,7 @@ export default function CheckIn({ place, onClose, onDone }) {
     try {
       const u = await ensureUser();
       setUser(u);
+      game.me().then(setBefore).catch(() => {});
       let d = null;
       if (!skipDistance) {
         const here = await getLocation({ highAccuracy: true, timeout: 12000 });
@@ -65,6 +70,9 @@ export default function CheckIn({ place, onClose, onDone }) {
       setStep('rate');
       return;
     }
+    const [a, pgm] = await Promise.all([game.me().catch(() => null), game.place(place.id).catch(() => null)]);
+    setAfter(a);
+    setPlaceGame(pgm);
     setStep('done');
     onDone && onDone();
   }
@@ -137,9 +145,39 @@ export default function CheckIn({ place, onClose, onDone }) {
           <span className="done-icon"><Icon name="check" size={36} stroke={2.4} /></span>
           <h3 className="display-xs">You’re checked in</h3>
           <p className="muted">Your {score}/10 now counts toward {place.name}’s LocalPulse score.</p>
+          <Reward before={before} after={after} placeGame={placeGame} />
           <button className="btn btn-primary" onClick={onClose}>Done</button>
         </div>
       )}
     </Sheet>
+  );
+}
+
+function Reward({ before, after, placeGame }) {
+  if (!after) return null;
+  const b = before || { points: 0 };
+  const gained = Math.max(0, (after.points || 0) - (b.points || 0));
+  const lvlBefore = levelFor(b.points || 0);
+  const lvlAfter = levelFor(after.points || 0);
+  const had = new Set(badgeState(before).filter((x) => x.earned).map((x) => x.id));
+  const fresh = badgeState(after).filter((x) => x.earned && !had.has(x.id));
+  const suki = placeGame && placeGame.suki;
+  const trail = after.trailblazers > (b.trailblazers || 0);
+  return (
+    <div className="reward">
+      <div className="row-between">
+        <span className="reward-pts">+{gained} pts</span>
+        <span className="small muted">{after.points} total</span>
+      </div>
+      {trail && <div className="reward-row"><span className="badge-medal">🧭</span> First on LocalPulse here — Trailblazer bonus!</div>}
+      {lvlAfter.index > lvlBefore.index && (
+        <div className="reward-row"><span className="badge-medal">⭐</span> Level up: you’re now {lvlAfter.name}</div>
+      )}
+      {fresh.filter((x) => x.id !== 'trailblazer').map((x) => (
+        <div key={x.id} className="reward-row"><span className="badge-medal">{x.glyph}</span> New badge: {x.name}</div>
+      ))}
+      {suki && suki.is_me && <div className="reward-row"><span className="badge-medal">👑</span> You’re the Suki of this place</div>}
+      {lvlAfter.next && <span className="tiny muted">{lvlAfter.toNext} pts to {lvlAfter.next.name}</span>}
+    </div>
   );
 }

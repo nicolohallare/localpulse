@@ -254,3 +254,55 @@ h1, h2, h3 { margin: 0; }
   .sheet { animation: none; }
   .spinner { animation-duration: 2s; }
 }
+
+/* ── Gamification ──────────────────────────────────── */
+.rank-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.rank-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.rank-me { border-color: var(--ube); background: var(--ube-wash); }
+.rank-num { width: 28px; height: 28px; flex-shrink: 0; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; color: var(--mid); background: var(--tint); }
+.rank-gold { background: var(--mango); color: var(--ink); }
+.rank-silver { background: #dcd7e3; color: var(--ink); }
+.rank-bronze { background: #ecc29f; color: var(--ink); }
+.rank-pts { font-family: var(--display); font-weight: 800; font-size: 20px; color: var(--ube); display: flex; flex-direction: column; align-items: flex-end; line-height: 1; }
+.rank-pts small { font-family: var(--body); font-size: 11px; font-weight: 600; color: var(--soft); margin-top: 3px; }
+.avatar-creator { background: var(--mango-tint); color: var(--mango-ink); }
+.tier { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; margin-right: 4px; }
+.tier-rising { background: var(--tint); color: var(--mid); }
+.tier-trend { background: var(--ube-tint); color: var(--ube); }
+.tier-pick { background: var(--mango); color: var(--ink); }
+
+.level-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.level-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; background: var(--mango); color: var(--ink); font-weight: 800; font-size: 13px; }
+.level-pts { font-family: var(--display); font-weight: 800; font-size: 20px; }
+.level-bar { height: 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.22); overflow: hidden; }
+.level-bar span { display: block; height: 100%; border-radius: 999px; background: var(--mango); transition: width 0.6s ease; }
+.level-next { font-size: 12px; opacity: 0.9; }
+.rank-cta { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px; border-radius: 16px; border: 1px solid var(--line); background: #fff; text-align: left; }
+.rank-cta .cta-num { font-family: var(--display); font-weight: 800; font-size: 24px; color: var(--ube); min-width: 44px; }
+
+.badge-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.badge { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 6px; border-radius: 16px; border: 1px solid var(--line); background: #fff; text-align: center; }
+.badge-medal { width: 52px; height: 52px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 26px; background: var(--mango-tint); box-shadow: inset 0 0 0 3px var(--mango); }
+.badge-locked .badge-medal { background: var(--tint); box-shadow: inset 0 0 0 2px var(--line); filter: grayscale(1); opacity: 0.55; }
+.badge-name { font-weight: 700; font-size: 13px; line-height: 1.2; }
+.badge-prog { font-size: 11px; color: var(--soft); }
+.badge-earned { border-color: var(--mango); }
+
+.suki-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: var(--mango-tint); border: 1px solid #f5dfa5; }
+.suki-crown { font-size: 26px; line-height: 1; }
+.suki-card .grow { min-width: 0; }
+.trail-line { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--mid); }
+.first-feature { align-self: flex-start; padding: 2px 8px; border-radius: 999px; background: var(--mango); color: var(--ink); font-size: 11px; font-weight: 800; }
+.helpful-btn { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: #fff; font-size: 13px; font-weight: 600; color: var(--mid); }
+.helpful-btn[aria-pressed="true"] { background: var(--ube-wash); border-color: var(--ube); color: var(--ube); }
+.helpful-btn:disabled { opacity: 0.6; cursor: default; }
+
+.reward { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 16px; background: var(--ube-wash); border: 1px solid var(--ube-tint); text-align: left; }
+.reward-pts { font-family: var(--display); font-weight: 800; font-size: 30px; color: var(--ube); line-height: 1; }
+.reward-row { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; }
+.reward-row .badge-medal { width: 36px; height: 36px; font-size: 18px; }
+@media (prefers-reduced-motion: no-preference) {
+  .reward-pts { animation: pop 0.5s ease-out; }
+  @keyframes pop { 0% { transform: scale(0.6); opacity: 0; } 70% { transform: scale(1.08); } 100% { transform: scale(1); opacity: 1; } }
+}
+.row-between .h2 { margin-bottom: 0; }

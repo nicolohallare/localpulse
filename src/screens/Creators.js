@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
-import { supabase } from '../lib';
+import React, { useEffect, useState } from 'react';
+import { supabase, initials } from '../lib';
 import { Icon, Notice } from '../ui';
+import { game, creatorTier } from '../game';
 
-export default function Creators({ onBack }) {
+export default function Creators({ onBack, onOpenRanks }) {
+  const [top, setTop] = useState(null);
+  useEffect(() => { game.creators(30).then((d) => setTop((d || []).slice(0, 3))).catch(() => setTop([])); }, []);
   const [form, setForm] = useState({ name: '', email: '', handle: '', platforms: '', video_links: '', note: '' });
   const [state, setState] = useState('idle');
   const [err, setErr] = useState(null);
@@ -35,6 +38,41 @@ export default function Creators({ onBack }) {
           <li><Icon name="video" size={18} /> Plays on TikTok / YouTube — your views, your credit</li>
           <li><Icon name="tag" size={18} /> Share your promo codes with diners nearby</li>
         </ul>
+      </section>
+
+      <section className="section stack-12">
+        <div className="row-between">
+          <h2 className="h2">Creator leaderboard</h2>
+          <button className="link-btn" onClick={onOpenRanks}>See all</button>
+        </div>
+        <p className="small muted">Ranked by <strong className="ink">Pulse visits</strong>: people who watched your video on LocalPulse, then went and checked in. Proof you sent real customers.</p>
+        {top && top.length === 0 && (
+          <div className="card small muted">No Pulse visits yet this month — the first creator to send a diner takes #1.</div>
+        )}
+        {top && top.length > 0 && (
+          <ol className="rank-list">
+            {top.map((r) => {
+              const tier = creatorTier(r.pulse_visits);
+              return (
+                <li key={r.creator} className="rank-row">
+                  <span className={`rank-num ${['', 'rank-gold', 'rank-silver', 'rank-bronze'][r.rank] || ''}`}>{r.rank}</span>
+                  <span className="avatar avatar-creator">{initials(r.creator.replace(/^@/, ''))}</span>
+                  <span className="grow">
+                    <span className="strong small block">{r.creator}</span>
+                    <span className={`tier ${tier.cls}`}>{tier.name}</span>
+                  </span>
+                  <span className="rank-pts">{r.pulse_visits}<small>visits</small></span>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+        <div className="row-wrap">
+          <span className="tier tier-rising">Rising · 1+</span>
+          <span className="tier tier-trend">Trending · 10+</span>
+          <span className="tier tier-pick">Pulse Pick · 25+</span>
+          <span className="first-feature">First to feature</span>
+        </div>
       </section>
 
       <section className="section">

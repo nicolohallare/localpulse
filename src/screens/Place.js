@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   api, supabase, distanceM, fmtDistance, fmtCount, timeAgo, initials, matchMichelin, DISTINCTION,
-  PLATFORM_LABEL, detectPlatform, youtubeId,
+  PLATFORM_LABEL, detectPlatform, youtubeId, ensureUser,
 } from '../lib';
+import { game, logPlay } from '../game';
 import { Icon, PlacePhoto, Spinner, Notice, Empty, Sheet } from '../ui';
 import CheckIn from './CheckIn';
 
@@ -20,6 +21,8 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators }) {
   const [checkingIn, setCheckingIn] = useState(false);
   const [addingVideo, setAddingVideo] = useState(false);
   const [player, setPlayer] = useState(null);
+  const [pg, setPg] = useState(null);
+  const [voting, setVoting] = useState(null);
 
   const loadOwn = useCallback(async () => {
     const [s, f, v, d] = await Promise.all([
@@ -33,6 +36,12 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators }) {
     setVideos(v.data || []);
     setDeals(d.data || []);
     if (s.data && s.data.visit_count >= 3) api.summary(id).then(setSummary).catch(() => {});
+    game.place(id).then(setPg).catch(() => {});
+  }, [id]);
+
+  const play = useCallback((p) => {
+    setPlayer(p);
+    logPlay({ placeId: id, ref: p.id, platform: 'youtube', creator: p.channel });
   }, [id]);
 
   useEffect(() => {
@@ -66,6 +75,25 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators }) {
   const photo = place.photos[photoIdx] || place.photos[0];
   const ytVideos = (yt && yt.videos) || [];
   const videoCount = videos.length + ytVideos.length;
+  const helpful = (pg && pg.helpful) || {};
+  const myHelpful = new Set((pg && pg.my_helpful) || []);
+  const mine = new Set((pg && pg.my_visit_ids) || []);
+  const suki = pg && pg.suki;
+  const myRecent = (pg && pg.my_recent_visits) || 0;
+
+  async function toggleHelpful(visitId) {
+    setVoting(visitId);
+    try {
+      const u = await ensureUser();
+      if (myHelpful.has(visitId)) {
+        await supabase.from('visit_helpful').delete().eq('visit_id', visitId).eq('user_id', u.id);
+      } else {
+        await supabase.from('visit_helpful').insert({ visit_id: visitId, user_id: u.id });
+      }
+      setPg(await game.place(id));
+    } catch (e) { /* ignore */ }
+    setVoting(null);
+  }
 
   async function share() {
     const url = `${window.location.origin}/#/place/${id}`;
@@ -146,6 +174,35 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators }) {
         </div>
         <p className="tiny muted">The two scores are kept separate. LocalPulse counts verified visits only.</p>
 
+        {pg && (
+          <div className="stack-8">
+            <div className="suki-card">
+              <span className="suki-crown" aria-hidden="true">👑</span>
+              <span className="grow">
+                {suki ? (
+                  <>
+                    <span className="strong small block">{suki.is_me ? 'You’re the Suki here' : `${suki.name} is the Suki`}</span>
+                    <span className="tiny muted">
+                      {suki.visits} check-ins in 60 days
+                      {!suki.is_me && ` · ${Math.max(1, suki.visits + 1 - myRecent)} more visit${suki.visits + 1 - myRecent === 1 ? '' : 's'} to take the crown`}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="strong small block">No Suki yet</span>
+                    <span className="tiny muted">Check in twice within 60 days to claim the crown.</span>
+                  </>
+                )}
+              </span>
+            </div>
+            {pg.trailblazer ? (
+              <span className="trail-line">🧭 First checked in by <strong>{pg.trailblazer.name}</strong> · {timeAgo(pg.trailblazer.at)}</span>
+            ) : (
+              <span className="trail-line">🧭 Be the first to check in here: <strong className="ube">+25 bonus points</strong></span>
+            )}
+          </div>
+        )}
+
         {summary && summary.summary && (
           <section className="summary-card">
             <div className="row-between">
@@ -177,7 +234,10 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators }) {
               <div className="stack-10">
                 <h3 className="eyebrow">Added by creators &amp; visitors</h3>
                 <div className="video-grid">
-                  {videos.map((v) => <SubmittedVideo key={v.id} v={v} onPlayYouTube={setPlayer} />)}
+                  {videos.map((v) => (
+                    <SubmittedVideo key={v.id} v={v} placeId={id} onPlayYouTube={play}
+                      first={pg && pg.first_feature && pg.first_feature.id === v.id} />
+                  ))}
                 </div>
               </div>
             )}
@@ -188,7 +248,7 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators }) {
                 <p className="small muted">{yt.error ? `YouTube results unavailable${yt.hint ? ` — ${yt.hint}` : ''}` : 'No YouTube reviews found for this place yet.'}</p>
               )}
               {ytVideos.map((v) => (
-                <button key={v.id} className="yt-card" onClick={() => setPlayer({ id: v.id, title: v.title, channel: v.channel })}>
+                <button key={v.id} className="yt-card" onClick={() => play({ id: v.id, title: v.title, channel: v.channel })}>
                   <span className="yt-thumb">
                     {v.thumb && <img src={v.thumb} alt="" loading="lazy" />}
                     <span className="play"><Icon name="play" size={20} /></span>
@@ -226,7 +286,17 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators }) {
                 </div>
                 {r.review && <p>{r.review}</p>}
                 {r.tags && r.tags.length > 0 && <div className="row-wrap">{r.tags.map((t) => <span key={t} className="soft-chip">{t}</span>)}</div>}
-                <span className="tiny muted">{timeAgo(r.created_at)}</span>
+                <div className="row-between">
+                  <span className="tiny muted">{timeAgo(r.created_at)}</span>
+                  {mine.has(r.id) ? (
+                    <span className="tiny muted">🙌 {helpful[r.id] || 0} found this helpful</span>
+                  ) : (
+                    <button className="helpful-btn" aria-pressed={myHelpful.has(r.id)} disabled={voting === r.id}
+                      onClick={() => toggleHelpful(r.id)}>
+                      🙌 Helpful{helpful[r.id] ? ` · ${helpful[r.id]}` : ''}
+                    </button>
+                  )}
+                </div>
               </article>
             ))}
             {place.mapsUri && (
@@ -288,7 +358,7 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators }) {
   );
 }
 
-function SubmittedVideo({ v, onPlayYouTube }) {
+function SubmittedVideo({ v, placeId, onPlayYouTube, first }) {
   const [meta, setMeta] = useState(null);
   useEffect(() => {
     if (v.platform === 'tiktok' || v.platform === 'youtube') api.oembed(v.url).then(setMeta).catch(() => {});
@@ -303,12 +373,16 @@ function SubmittedVideo({ v, onPlayYouTube }) {
         <span className="play"><Icon name="play" size={18} /></span>
         <span className="badge-plat">{PLATFORM_LABEL[v.platform]}</span>
       </span>
+      {first && <span className="first-feature">First to feature</span>}
       {handle && <span className="strong small">{handle}</span>}
       <span className="small muted clamp-2">{title}</span>
     </>
   );
   if (ytId) return <button className="vcard" onClick={() => onPlayYouTube({ id: ytId, title, channel: handle })}>{inner}</button>;
-  return <a className="vcard" href={v.url} target="_blank" rel="noreferrer">{inner}</a>;
+  return (
+    <a className="vcard" href={v.url} target="_blank" rel="noreferrer"
+      onClick={() => logPlay({ placeId, ref: v.url, platform: v.platform, creator: handle })}>{inner}</a>
+  );
 }
 
 function DealCard({ d }) {

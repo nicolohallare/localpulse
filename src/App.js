@@ -8,11 +8,13 @@ import Deals from './screens/Deals';
 import You from './screens/You';
 import Creators from './screens/Creators';
 import NearbyCheckIn from './screens/NearbyCheckIn';
+import Ranks from './screens/Ranks';
 
 function parseHash() {
   const h = window.location.hash.replace(/^#\/?/, '');
   const [name, id] = h.split('/');
   if (name === 'place' && id) return { name: 'place', id: decodeURIComponent(id) };
+  if (name === 'ranks') return { name, id: id === 'creators' ? 'creators' : 'diners' };
   if (['deals', 'creators', 'you', 'checkin'].includes(name)) return { name };
   return { name: 'discover' };
 }
@@ -73,8 +75,9 @@ export default function App() {
             onOpen={openPlace} onOpenProfile={() => go('/you')} />
         )}
         {tab === 'deals' && <Deals onOpen={openPlace} />}
-        {tab === 'you' && <You onOpen={openPlace} onOpenCreators={() => go('/creators')} />}
-        {tab === 'creators' && <Creators onBack={back} />}
+        {tab === 'you' && <You onOpen={openPlace} onOpenCreators={() => go('/creators')} onOpenRanks={() => go('/ranks')} />}
+        {tab === 'creators' && <Creators onBack={back} onOpenRanks={() => go('/ranks/creators')} />}
+        {tab === 'ranks' && <Ranks key={route.id} initial={route.id} onBack={back} />}
         {route.name === 'place' && (
           <Place key={route.id} id={route.id} loc={loc} michelin={michelin} onBack={back} onOpenCreators={() => go('/creators')} />
         )}
