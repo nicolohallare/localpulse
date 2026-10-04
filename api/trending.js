@@ -98,7 +98,7 @@ export default async function handler(req, res) {
     const picks = await extractPlaces(videos, area);
 
     const seen = new Set();
-    const resolved = await Promise.all(picks.slice(0, 10).map(async (p) => {
+    const resolved = await Promise.all(picks.slice(0, 12).map(async (p) => {
       const video = videos[p.i];
       if (!video) return null;
       try {
@@ -121,7 +121,18 @@ export default async function handler(req, res) {
       }
     }));
 
-    const items = resolved.filter((x) => x && !seen.has(x.place.id) && seen.add(x.place.id)).slice(0, 8);
+    // Keep it local: only places within 15 km of the user.
+    const km = (pl) => {
+      const rad = (x) => (x * Math.PI) / 180;
+      const dLat = rad(pl.lat - lat);
+      const dLng = rad(pl.lng - lng);
+      const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat)) * Math.cos(rad(pl.lat)) * Math.sin(dLng / 2) ** 2;
+      return 12742 * Math.asin(Math.sqrt(h));
+    };
+    const items = resolved
+      .filter((x) => x && x.place.lat != null && km(x.place) <= 15)
+      .filter((x) => !seen.has(x.place.id) && seen.add(x.place.id))
+      .slice(0, 8);
     send(res, 200, { area, days: DAYS, items }, 'public, s-maxage=21600, stale-while-revalidate=3600');
   } catch (e) {
     send(res, 200, { items: [], error: 'Trending unavailable right now' }, 'public, s-maxage=600');
