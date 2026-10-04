@@ -5,6 +5,7 @@ import {
 } from '../lib';
 import { game, logPlay, shareUrl, shareLink } from '../game';
 import { SaveSheet } from './Lists';
+import { MediaStrip, AddMediaSheet, loadMedia } from '../media';
 import { Icon, PlacePhoto, Spinner, Notice, Empty, Sheet } from '../ui';
 import CheckIn from './CheckIn';
 
@@ -27,6 +28,8 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
   const [dishes, setDishes] = useState(null);
   const [saving, setSaving] = useState(false);
   const [shared, setShared] = useState(null);
+  const [media, setMedia] = useState({});
+  const [addingMedia, setAddingMedia] = useState(null);
 
   const loadOwn = useCallback(async () => {
     const [s, f, v, d] = await Promise.all([
@@ -37,6 +40,7 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
     ]);
     setStat(s.data || null);
     setFeed(f.data || []);
+    loadMedia((f.data || []).map((r) => r.id)).then(setMedia).catch(() => {});
     setVideos(v.data || []);
     setDeals(d.data || []);
     if (s.data && s.data.visit_count >= 3) api.summary(id).then(setSummary).catch(() => {});
@@ -308,6 +312,10 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
                   <div className="row-wrap"><span className="tiny strong bad-ink">👎 Skip</span>{r.dishes_bad.map((d) => <span key={d} className="dish-chip dish-bad">{d}</span>)}</div>
                 )}
                 {r.review && <p>{r.review}</p>}
+                <MediaStrip media={media[r.id]} />
+                {mine.has(r.id) && (media[r.id] || []).length < 5 && (
+                  <button className="link-btn left" onClick={() => setAddingMedia(r.id)}>📷 Add photos or video to your take</button>
+                )}
                 {r.tags && r.tags.length > 0 && <div className="row-wrap">{r.tags.map((t) => <span key={t} className="soft-chip">{t}</span>)}</div>}
                 <div className="row-between">
                   <span className="tiny muted">{timeAgo(r.created_at)}</span>
@@ -371,6 +379,10 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
       )}
       {addingVideo && <AddVideo place={place} onClose={() => setAddingVideo(false)} />}
       {saving && <SaveSheet place={place} onClose={() => setSaving(false)} />}
+      {addingMedia && (
+        <AddMediaSheet visitId={addingMedia} existing={(media[addingMedia] || []).length}
+          onClose={() => setAddingMedia(null)} onDone={() => loadOwn()} />
+      )}
       {player && (
         <Sheet title={player.channel || 'YouTube'} onClose={() => setPlayer(null)}>
           {player.kind === 'tiktok' ? (

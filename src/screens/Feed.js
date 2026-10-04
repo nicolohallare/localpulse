@@ -2,13 +2,17 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { api, currentUser, timeAgo, initials } from '../lib';
 import { game, levelFor, follow, logTouch } from '../game';
 import { Icon, Spinner, Empty, Notice } from '../ui';
+import { MediaStrip, loadMedia } from '../media';
 
 // Load live place names for a set of takes (Google data is never stored).
 export async function withPlaces(rows) {
   const ids = [...new Set((rows || []).map((r) => r.google_place_id))];
-  const names = await api.names(ids).catch(() => []);
+  const [names, media] = await Promise.all([
+    api.names(ids).catch(() => []),
+    loadMedia((rows || []).map((r) => r.id)).catch(() => ({})),
+  ]);
   const byId = Object.fromEntries(names.map((n) => [n.id, n]));
-  return (rows || []).map((r) => ({ ...r, place: byId[r.google_place_id] || {} }));
+  return (rows || []).map((r) => ({ ...r, place: byId[r.google_place_id] || {}, media: media[r.id] || [] }));
 }
 
 export function TakeCard({ t, author, onOpenPlace, onOpenUser, showPlace = true }) {
@@ -43,6 +47,7 @@ export function TakeCard({ t, author, onOpenPlace, onOpenUser, showPlace = true 
         <div className="row-wrap"><span className="tiny strong bad-ink">👎 Skip</span>{t.dishes_bad.map((d) => <span key={d} className="dish-chip dish-bad">{d}</span>)}</div>
       )}
       {t.review && <p>{t.review}</p>}
+      <MediaStrip media={t.media} />
       {!who.name && <span className="tiny muted">{timeAgo(t.created_at)} · {t.score}/10</span>}
     </article>
   );
