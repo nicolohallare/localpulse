@@ -30,10 +30,10 @@ export const api = {
   details: (id) => getJSON(`/api/places/details?${qs({ id })}`).then((d) => d.place),
   names: (ids) => (ids.length ? getJSON(`/api/places/names?${qs({ ids: ids.join(',') })}`).then((d) => d.places) : Promise.resolve([])),
   youtube: (q) => getJSON(`/api/youtube?${qs({ q })}`),
-  oembed: (url) => getJSON(`/api/oembed?${qs({ url })}`),
+  oembed: (url) => getJSON(`/api/video/oembed?${qs({ url })}`),
   summary: (id) => getJSON(`/api/summary?${qs({ id })}`),
   config: () => getJSON('/api/config'),
-  matchVideo: (url, lat, lng) => getJSON(`/api/match-video?${qs({ url, lat: lat.toFixed(2), lng: lng.toFixed(2) })}`),
+  matchVideo: (url, lat, lng) => getJSON(`/api/video/match?${qs({ url, lat: lat.toFixed(2), lng: lng.toFixed(2) })}`),
   trending: (lat, lng, area) => getJSON(`/api/trending?${qs({ lat: lat.toFixed(2), lng: lng.toFixed(2), area })}`),
 };
 
