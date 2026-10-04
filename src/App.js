@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './styles.css';
-import { supabase, getLocation, DEFAULT_LOCATION, findVideoUrl } from './lib';
+import { api, supabase, getLocation, DEFAULT_LOCATION, findVideoUrl } from './lib';
+import { Sheet, Spinner } from './ui';
 
 import { Icon } from './ui';
 import Discover from './screens/Discover';
@@ -60,15 +61,35 @@ export default function App() {
     window.scrollTo(0, 0);
   }, [route]);
 
+  const [picking, setPicking] = useState(false);
+
+  // Use the phone's location. If it's blocked, use the area the person picked before,
+  // or ask them where they are (instead of silently assuming one city).
   const locate = useCallback(async () => {
     try {
       const here = await getLocation();
       setLoc({ lat: here.lat, lng: here.lng, label: 'Near you', isDefault: false });
       setLocNote(null);
     } catch (e) {
-      setLoc(DEFAULT_LOCATION);
-      setLocNote(`${e.message} Showing BGC, Taguig — tap the location button to try again.`);
+      let saved = null;
+      try { saved = JSON.parse(localStorage.getItem('lp-area') || 'null'); } catch (x) { saved = null; }
+      if (saved && saved.lat != null) {
+        setLoc({ ...saved, isDefault: false, manual: true });
+        setLocNote(null);
+      } else {
+        setLoc({ ...DEFAULT_LOCATION, label: 'Set your area' });
+        setLocNote(`${e.message} Tap “Set your area” to see places near you.`);
+        setPicking(true);
+      }
     }
+  }, []);
+
+  const pickArea = useCallback((p) => {
+    const area = { lat: p.lat, lng: p.lng, label: p.name };
+    try { localStorage.setItem('lp-area', JSON.stringify(area)); } catch (x) { /* private mode */ }
+    setLoc({ ...area, isDefault: false, manual: true });
+    setLocNote(null);
+    setPicking(false);
   }, []);
 
   useEffect(() => { locate(); }, [locate]);
@@ -106,7 +127,7 @@ export default function App() {
     <div className="app">
       <main className="app-main">
         {(tab === 'discover') && route.name !== 'place' && (
-          <Discover loc={loc} locNote={locNote} onRetryLocation={locate} michelin={michelin}
+          <Discover loc={loc} locNote={locNote} onRetryLocation={() => setPicking(true)} michelin={michelin}
             onOpen={openPlace} onOpenProfile={() => go('/you')} onAddVideo={() => go('/add')} />
         )}
         {tab === 'deals' && <Deals onOpen={openPlace} />}
@@ -127,6 +148,8 @@ export default function App() {
             onOpenUser={openUser} onNewPoll={(pid) => go(`/poll/new?with=${encodeURIComponent(pid)}`)} />
         )}
       </main>
+
+      {picking && <AreaPicker onPick={pickArea} onUseGps={() => { setPicking(false); locate(); }} onClose={() => setPicking(false)} />}
 
       {route.name === 'checkin' && (
         <NearbyCheckIn onClose={back} onPick={(id) => { window.location.replace(`#/place/${encodeURIComponent(id)}`); }} />
@@ -154,5 +177,39 @@ function TabLink({ icon, label, active, onClick }) {
       <Icon name={icon} size={23} />
       <span>{label}</span>
     </button>
+  );
+}
+
+function AreaPicker({ onPick, onUseGps, onClose }) {
+  const [q, setQ] = useState('');
+  const [results, setResults] = useState(null);
+  const [busy, setBusy] = useState(false);
+  async function search(e) {
+    e.preventDefault();
+    if (!q.trim()) return;
+    setBusy(true);
+    const r = await api.search(`${q.trim()} Philippines`).catch(() => []);
+    setResults(r);
+    setBusy(false);
+  }
+  return (
+    <Sheet title="Where are you?" onClose={onClose}>
+      <div className="stack-12">
+        <button className="btn btn-primary" onClick={onUseGps}>Use my current location</button>
+        <p className="small muted center">or type your city, town or area</p>
+        <form className="dish-add" onSubmit={search}>
+          <label className="sr-only" htmlFor="area-q">City or area</label>
+          <input id="area-q" placeholder="e.g. Antipolo, Cebu City, Kapitolyo" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
+          <button className="soft-btn" disabled={!q.trim() || busy}>Search</button>
+        </form>
+        {busy && <Spinner />}
+        {results && results.length === 0 && <p className="small muted">No matches. Try a bigger area, like the city name.</p>}
+        {(results || []).slice(0, 6).map((p) => (
+          <button key={p.id} className="pick-row" onClick={() => onPick({ ...p, name: q.trim().replace(/^./, (c) => c.toUpperCase()) })}>
+            <span className="grow"><span className="row-title-sm block">{p.name}</span>{p.address && <span className="tiny muted">{p.address}</span>}</span>
+          </button>
+        ))}
+      </div>
+    </Sheet>
   );
 }
