@@ -3,6 +3,7 @@ import { supabase, ensureUser, getLocation, distanceM, fmtDistance, CHECKIN_RADI
 import { Icon, Sheet, Spinner, Notice } from '../ui';
 import { game, levelFor, badgeState } from '../game';
 import { pushStatus, enablePush } from '../push';
+import { MediaPicker, uploadMedia } from '../media';
 
 const TAGS = ['Must try', 'Worth the wait', 'Good value', 'Date night', 'Slow service', 'Good for groups', 'Kid-friendly', 'Pet-friendly', 'Aircon', 'Parking'];
 const LABEL = ['', 'Skip it', 'Poor', 'Meh', 'Below average', 'Okay', 'Decent', 'Good', 'Great', 'Excellent', 'Unforgettable'];
@@ -26,6 +27,8 @@ export default function CheckIn({ place, onClose, onDone }) {
   const [after, setAfter] = useState(null);
   const [placeGame, setPlaceGame] = useState(null);
   const [crown, setCrown] = useState(false);
+  const [media, setMedia] = useState([]);
+  const [uploadNote, setUploadNote] = useState(null);
 
   async function start(skipDistance = false) {
     setProblem(null);
@@ -93,6 +96,11 @@ export default function CheckIn({ place, onClose, onDone }) {
       if (!r.ok) throw Object.assign(new Error(data.error || 'Could not save your check-in.'), { hint: data.hint });
       if (data.distance != null) setDistance(data.distance);
       setCrown(!!data.crown);
+      if (media.length && data.id) {
+        setStep('uploading');
+        const ok = await uploadMedia(data.id, media, (a, b) => setUploadNote(`Uploading ${a} of ${b}…`));
+        setUploadNote(ok < media.length ? `${media.length - ok} file${media.length - ok === 1 ? '' : 's'} couldn’t upload — you can add them later from the place page.` : null);
+      }
       const [a, pgm] = await Promise.all([game.me().catch(() => null), game.place(place.id).catch(() => null)]);
       setAfter(a);
       setPlaceGame(pgm);
@@ -109,6 +117,7 @@ export default function CheckIn({ place, onClose, onDone }) {
   return (
     <Sheet title={step === 'done' ? 'Checked in' : `Check in at ${place.name}`} onClose={onClose} tall={step === 'rate' || step === 'saving'}>
       {step === 'locating' && <Spinner label="Confirming you’re here…" />}
+      {step === 'uploading' && <Spinner label={uploadNote || 'Uploading your photos…'} />}
 
       {step === 'error' && problem && (
         <div className="stack-12">
@@ -156,6 +165,8 @@ export default function CheckIn({ place, onClose, onDone }) {
           <DishPicker label="👍 Order this" tone="good" items={good} setItems={setGood} other={bad} suggest={suggest} />
           <DishPicker label="👎 Skip this" tone="bad" items={bad} setItems={setBad} other={good} suggest={suggest} />
 
+          <MediaPicker items={media} setItems={setMedia} />
+
           <label className="field">Your take (optional)
             <textarea rows={3} maxLength={500} placeholder="What should people know before going?"
               value={review} onChange={(e) => setReview(e.target.value)} />
@@ -180,6 +191,7 @@ export default function CheckIn({ place, onClose, onDone }) {
           <span className="done-icon"><Icon name="check" size={36} stroke={2.4} /></span>
           <h3 className="display-xs">Your take is live</h3>
           <p className="muted">Your {score}/10 now counts toward {place.name}’s LocalPulse score. If someone goes because of your take, you earn influence points.</p>
+          {uploadNote && <p className="small muted">{uploadNote}</p>}
           <Reward before={before} after={after} placeGame={placeGame} crown={crown} />
           <NotifyOffer />
           <button className="btn btn-primary" onClick={onClose}>Done</button>

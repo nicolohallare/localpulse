@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { api, supabase, PLATFORM_LABEL } from '../lib';
 import { Icon, Spinner, Notice, Empty } from '../ui';
+import { mediaUrl, deleteMedia } from '../media';
 
 // #/admin — approve videos, read creator applications, manage deals.
 export default function Admin({ loc, onBack, onOpenPlace }) {
@@ -94,6 +95,7 @@ export default function Admin({ loc, onBack, onOpenPlace }) {
               <button role="tab" aria-selected={tab === 'videos'} className={tab === 'videos' ? 'seg-on' : ''} onClick={() => setTab('videos')}>Videos · {q.videos.length}</button>
               <button role="tab" aria-selected={tab === 'apps'} className={tab === 'apps' ? 'seg-on' : ''} onClick={() => setTab('apps')}>Creators · {q.applications.length}</button>
               <button role="tab" aria-selected={tab === 'deals'} className={tab === 'deals' ? 'seg-on' : ''} onClick={() => setTab('deals')}>Deals · {q.deals.length}</button>
+              <button role="tab" aria-selected={tab === 'media'} className={tab === 'media' ? 'seg-on' : ''} onClick={() => setTab('media')}>Media</button>
             </div>
 
             {tab === 'videos' && (
@@ -120,6 +122,7 @@ export default function Admin({ loc, onBack, onOpenPlace }) {
             )}
 
             {tab === 'deals' && <DealsAdmin q={q} loc={loc} reload={load} />}
+            {tab === 'media' && <MediaAdmin onOpenPlace={onOpenPlace} />}
           </section>
           <section className="section"><button className="btn btn-quiet" onClick={() => supabase.auth.signOut()}>Sign out of admin</button></section>
         </>
@@ -225,6 +228,32 @@ function DealsAdmin({ q, loc, reload }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function MediaAdmin({ onOpenPlace }) {
+  const [rows, setRows] = useState(null);
+  useEffect(() => { supabase.rpc('admin_recent_media', { p_limit: 60 }).then(({ data }) => setRows(data || [])); }, []);
+  async function remove(m) {
+    if (!window.confirm('Delete this upload? This can’t be undone.')) return;
+    await deleteMedia(m);
+    setRows((cur) => cur.filter((x) => x.id !== m.id));
+  }
+  if (!rows) return <Spinner />;
+  if (!rows.length) return <Empty icon="image" title="No uploads yet" />;
+  return (
+    <div className="admin-media">
+      {rows.map((m) => (
+        <div key={m.id} className="admin-media-cell">
+          {m.kind === 'photo' ? <img src={mediaUrl(m.path)} alt="" loading="lazy" /> : <video src={`${mediaUrl(m.path)}#t=0.1`} controls preload="metadata" playsInline />}
+          <span className="tiny muted clamp-1">{m.display_name} · {new Date(m.created_at).toLocaleDateString('en-PH')}</span>
+          <div className="row-6">
+            <button className="soft-btn grow" onClick={() => onOpenPlace(m.google_place_id)}>Place</button>
+            <button className="soft-btn grow" onClick={() => remove(m)}>Delete</button>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
