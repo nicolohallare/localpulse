@@ -29,6 +29,8 @@ export const BADGES = [
   { id: 'helpful', glyph: '🙌', name: 'Helpful', how: 'Get 10 helpful votes on your takes', goal: 10, val: (s) => s.helpful },
   { id: 'night_owl', glyph: '🦉', name: 'Night Owl', how: 'Check in between 10 pm and 4 am', goal: 1, val: (s) => (s.night_owl ? 1 : 0) },
   { id: 'on_a_roll', glyph: '🔥', name: 'On a Roll', how: 'Check in 4 weeks in a row', goal: 4, val: (s) => s.streak },
+  { id: 'tastemaker', glyph: '📣', name: 'Tastemaker', how: '5 people go somewhere because of your takes', goal: 5, val: (s) => s.influenced },
+  { id: 'trusted', glyph: '🤝', name: 'Trusted', how: 'Get 10 followers', goal: 10, val: (s) => s.followers },
 ];
 
 export function badgeState(stats) {
@@ -44,6 +46,7 @@ export const POINT_RULES = [
   ['Written take (40+ characters)', '+5'],
   ['First on LocalPulse to check in at a place', '+25'],
   ['Each “helpful” vote on your take (up to 10)', '+2'],
+  ['Someone goes because of your take (within 14 days)', '+5'],
 ];
 
 // ── Creator tiers (Pulse visits in the last 30 days) ───────────────────────
@@ -65,7 +68,45 @@ export const game = {
   place: (id) => rpc('get_place_game', { p_place: id }),
   leaderboard: (period = 'week') => rpc('get_leaderboard', { p_period: period, p_limit: 50 }),
   creators: (days = 30) => rpc('get_creator_board', { p_days: days, p_limit: 50 }),
+  influencers: (days = 30) => rpc('get_influencer_board', { p_days: days, p_limit: 50 }),
+  feed: (mode = 'everyone', before = null) => rpc('get_feed', { p_mode: mode, p_before: before, p_limit: 30 }),
+  profile: (id) => rpc('get_profile', { p_user: id }),
+  takes: (id) => rpc('get_user_takes', { p_user: id, p_limit: 40 }),
+  dishes: (placeId) => rpc('get_place_dishes', { p_place: placeId }),
+  dishRank: (dish) => rpc('get_dish_rank', { p_dish: dish, p_limit: 20 }),
 };
+
+export async function follow(userId, on) {
+  const u = await ensureUser();
+  if (on) {
+    const { error } = await supabase.from('follows').insert({ follower: u.id, followee: userId });
+    if (error && !/duplicate/i.test(error.message)) throw error;
+  } else {
+    await supabase.from('follows').delete().eq('follower', u.id).eq('followee', userId);
+  }
+}
+
+// Someone opened a place from another person's take: credit them if a visit follows.
+export async function logTouch(placeId, influencerId) {
+  try {
+    const u = await ensureUser();
+    if (!influencerId || u.id === influencerId) return;
+    await supabase.rpc('log_touch', { p_place: placeId, p_influencer: influencerId });
+  } catch (e) { /* never block navigation */ }
+}
+
+// Shareable short links with rich previews (see api/share.js).
+export const shareUrl = (kind, id) => `${window.location.origin}/${kind}/${encodeURIComponent(id)}`;
+
+export async function shareLink({ title, text, url }) {
+  try {
+    if (navigator.share) { await navigator.share({ title, text, url }); return 'shared'; }
+    await navigator.clipboard.writeText(url);
+    return 'copied';
+  } catch (e) {
+    return 'cancelled';
+  }
+}
 
 // Record that someone played a creator's video in LocalPulse (for Pulse visits).
 export async function logPlay({ placeId, ref, platform, creator }) {

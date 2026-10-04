@@ -10,11 +10,13 @@ export default async function handler(req, res) {
       .slice(0, 20);
     const results = await Promise.all(
       ids.map((id) =>
-        places(`places/${id}?languageCode=en`, { fieldMask: 'id,displayName,shortFormattedAddress' })
+        places(`places/${id}?languageCode=en`, { fieldMask: 'id,displayName,shortFormattedAddress,location' })
           .then((p) => ({
             id,
             name: (p.displayName && p.displayName.text) || null,
             address: p.shortFormattedAddress || null,
+            lat: p.location ? p.location.latitude : null,
+            lng: p.location ? p.location.longitude : null,
           }))
           .catch(() => ({ id, name: null, address: null }))
       )

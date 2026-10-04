@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib';
+import { api, supabase } from '../lib';
 import { Icon, Spinner, Empty } from '../ui';
 
 const FILTERS = [
@@ -16,7 +16,12 @@ export default function Deals({ onOpen }) {
 
   useEffect(() => {
     supabase.from('deal_listings').select('*').order('created_at', { ascending: false })
-      .then(({ data }) => setDeals(data || []));
+      .then(async ({ data }) => {
+        const rows = data || [];
+        const names = await api.names([...new Set(rows.map((d) => d.google_place_id).filter(Boolean))]).catch(() => []);
+        const byId = Object.fromEntries(names.map((n) => [n.id, n.name]));
+        setDeals(rows.map((d) => ({ ...d, liveName: byId[d.google_place_id] || null })));
+      });
   }, []);
 
   const shown = (deals || []).filter((d) => filter === 'all' || d.kind === filter);
@@ -43,7 +48,7 @@ export default function Deals({ onOpen }) {
           <div key={d.id} className={`deal ${d.kind === 'creator_code' ? 'deal-code' : ''}`}>
             <span className="eyebrow">{d.kind === 'creator_code' ? 'Creator code' : d.kind === 'card_promo' ? 'Card promo' : 'Restaurant promo'}</span>
             <span className="strong">{d.title}</span>
-            <span className="small muted">{[d.place_name, d.detail].filter(Boolean).join(' · ')}</span>
+            <span className="small muted">{[d.liveName, d.detail].filter(Boolean).join(' · ')}</span>
             <div className="row-between">
               {d.code ? (
                 <button className="soft-btn" onClick={() => { navigator.clipboard && navigator.clipboard.writeText(d.code); setCopied(d.id); }}>

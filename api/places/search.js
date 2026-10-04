@@ -1,4 +1,4 @@
-import { places, shapePlace, LIST_FIELDS, send, fail, num } from '../_lib.js';
+import { places, shapePlace, LIST_FIELDS, AMENITY_FIELDS, send, fail, num } from '../_lib.js';
 
 // GET /api/places/search?q=ramen&lat=14.55&lng=121.05
 export default async function handler(req, res) {
@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     if (Number.isFinite(lat) && Number.isFinite(lng)) {
       body.locationBias = { circle: { center: { latitude: lat, longitude: lng }, radius: 15000 } };
     }
-    const data = await places('places:searchText', { method: 'POST', fieldMask: LIST_FIELDS, body });
+    const data = await places('places:searchText', { method: 'POST', fieldMask: LIST_FIELDS + (req.query.amenities ? AMENITY_FIELDS : ''), body });
     send(res, 200, { places: (data.places || []).map((p) => shapePlace(p, 1)) }, 'public, s-maxage=300');
   } catch (e) {
     fail(res, e);

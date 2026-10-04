@@ -1,6 +1,6 @@
 // LocalPulse service worker: makes the app installable and keeps the app shell
 // available on flaky connections. API responses are never cached here.
-const SHELL = 'lp-shell-v1';
+const SHELL = 'lp-shell-v2';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(SHELL).then((c) => c.addAll(['/', '/manifest.json'])).then(() => self.skipWaiting()));
@@ -35,4 +35,28 @@ self.addEventListener('fetch', (event) => {
       }))
     );
   }
+});
+
+// ── Push notifications ──────────────────────────────────────────────────────
+self.addEventListener('push', (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch (e) { data = { title: 'LocalPulse', body: event.data && event.data.text() }; }
+  event.waitUntil(self.registration.showNotification(data.title || 'LocalPulse', {
+    body: data.body || '',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    data: { url: data.url || '/' },
+  }));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
+      const open = wins.find((w) => w.url.startsWith(self.location.origin));
+      if (open) { open.navigate(url); return open.focus(); }
+      return self.clients.openWindow(url);
+    })
+  );
 });
