@@ -23,7 +23,7 @@ async function youtubeSearch(key, area) {
   const params = new URLSearchParams({
     part: 'snippet',
     type: 'video',
-    maxResults: '15',
+    maxResults: '25',
     q: `${area} food review restaurant`,
     order: 'viewCount',
     publishedAfter: new Date(Date.now() - DAYS * 864e5).toISOString(),
@@ -98,7 +98,7 @@ export default async function handler(req, res) {
     const picks = await extractPlaces(videos, area);
 
     const seen = new Set();
-    const resolved = await Promise.all(picks.slice(0, 12).map(async (p) => {
+    const resolved = await Promise.all(picks.slice(0, 15).map(async (p) => {
       const video = videos[p.i];
       if (!video) return null;
       try {
@@ -129,11 +129,16 @@ export default async function handler(req, res) {
       const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat)) * Math.cos(rad(pl.lat)) * Math.sin(dLng / 2) ** 2;
       return 12742 * Math.asin(Math.sqrt(h));
     };
-    const items = resolved
-      .filter((x) => x && x.place.lat != null && km(x.place) <= 15)
+    // Metro Manila is dense: prefer places within 7 km, widen to 12 km only if that leaves too few.
+    const unique = resolved
+      .filter((x) => x && x.place.lat != null)
       .filter((x) => !seen.has(x.place.id) && seen.add(x.place.id))
-      .slice(0, 8);
-    send(res, 200, { area, days: DAYS, items }, 'public, s-maxage=21600, stale-while-revalidate=3600');
+      .map((x) => ({ ...x, km: km(x.place) }));
+    let radius = 7;
+    let items = unique.filter((x) => x.km <= radius);
+    if (items.length < 3) { radius = 12; items = unique.filter((x) => x.km <= radius); }
+    items = items.slice(0, 8).map(({ km: _k, ...x }) => x);
+    send(res, 200, { area, days: DAYS, radiusKm: radius, items }, 'public, s-maxage=21600, stale-while-revalidate=3600');
   } catch (e) {
     send(res, 200, { items: [], error: 'Trending unavailable right now' }, 'public, s-maxage=600');
   }

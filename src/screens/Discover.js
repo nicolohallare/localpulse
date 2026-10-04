@@ -356,7 +356,7 @@ function TrendingRail({ data, loc, onOpen, onPlay }) {
     <section className="section trend">
       <div className="row-between">
         <h2 className="h2">Trending on YouTube</h2>
-        {data && data.area && <span className="tiny muted">{data.area} · last {data.days} days</span>}
+        {data && data.area && <span className="tiny muted">Within {data.radiusKm || 7} km · last {data.days} days</span>}
       </div>
       {!data && <Spinner label="Finding what food creators are talking about…" />}
       {data && (
