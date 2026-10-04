@@ -41,7 +41,7 @@ export default function Deals({ onOpen }) {
         {!deals && <Spinner label="Loading deals…" />}
         {deals && shown.length === 0 && (
           <Empty icon="tag" title="No deals yet">
-            We’re lining up creator codes and promos for BGC and Makati. Check back soon.
+            We’re lining up creator codes and promos near you. Check back soon.
           </Empty>
         )}
         {shown.map((d) => (

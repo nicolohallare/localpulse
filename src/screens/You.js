@@ -61,7 +61,7 @@ export default function You({ onOpen, onOpenCreators, onOpenRanks, onOpenUser, o
             <label className="sr-only" htmlFor="nm">Display name</label>
             <input id="nm" className="name-input" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} autoFocus />
             <label className="sr-only" htmlFor="bio">Bio</label>
-            <input id="bio" className="name-input" value={bio} maxLength={160} placeholder="Short bio, e.g. Sisig hunter · BGC" onChange={(e) => setBio(e.target.value)} />
+            <input id="bio" className="name-input" value={bio} maxLength={160} placeholder="Short bio, e.g. Sisig hunter · Antipolo" onChange={(e) => setBio(e.target.value)} />
             <button className="btn btn-light">Save</button>
           </form>
         ) : (

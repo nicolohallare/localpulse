@@ -59,7 +59,7 @@ export function SaveSheet({ place, onClose }) {
       {!lists && <Spinner />}
       {lists && (
         <div className="stack-8">
-          {lists.length === 0 && <p className="small muted">Make your first list — like “Best sisig in BGC” or “Date night ₱₱”. Lists are shareable.</p>}
+          {lists.length === 0 && <p className="small muted">Make your first list — like “Best sisig near me” or “Date night ₱₱”. Lists are shareable.</p>}
           {lists.map((l) => {
             const on = inList.has(l.id);
             return (
@@ -72,7 +72,7 @@ export function SaveSheet({ place, onClose }) {
           })}
           <form className="dish-add" onSubmit={create}>
             <label className="sr-only" htmlFor="newlist">New list name</label>
-            <input id="newlist" placeholder="New list, e.g. Best sisig in BGC" value={title} maxLength={60} onChange={(e) => setTitle(e.target.value)} />
+            <input id="newlist" placeholder="New list, e.g. Best sisig near me" value={title} maxLength={60} onChange={(e) => setTitle(e.target.value)} />
             <button className="soft-btn" disabled={busy || !title.trim()}>Create</button>
           </form>
         </div>

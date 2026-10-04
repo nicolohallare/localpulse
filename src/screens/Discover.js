@@ -164,7 +164,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
     <div className="screen">
       <header className="disc-head">
         <div className="row-between">
-          <button className="pill-btn" onClick={onRetryLocation} aria-label={`Location: ${loc.label}. Tap to refresh`}>
+          <button className="pill-btn" onClick={onRetryLocation} aria-label={`Location: ${loc.label}. Tap to change`}>
             <Icon name="pin" size={18} className="ube" />
             <span>{loc.label}</span>
           </button>
