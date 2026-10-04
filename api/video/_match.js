@@ -1,5 +1,5 @@
-import { send, places, shapePlace, LIST_FIELDS, num } from './_lib.js';
-import { shapeOembed } from './oembed.js';
+import { send, places, shapePlace, LIST_FIELDS, num } from '../_lib.js';
+import { shapeOembed } from './_oembed.js';
 
 // GET /api/match-video?url=<tiktok/youtube link>&lat=..&lng=..
 // Reads the video's public caption (oEmbed), asks Claude which restaurant it features,

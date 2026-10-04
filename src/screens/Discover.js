@@ -1,8 +1,29 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { api, supabase, distanceM, fmtDistance, fmtCount, timeAgo, matchMichelin, DISTINCTION, directionsUrl } from '../lib';
-import { logPlay } from '../game';
+import { logPlay, game } from '../game';
 import { Icon, PlacePhoto, Spinner, Notice, Empty, ScoreBadge, Sheet } from '../ui';
 import MapView from '../MapView';
+
+const CRAVINGS = ['Sisig', 'Lechon', 'Ramen', 'Samgyup', 'Kare-kare', 'Chicken wings', 'Pizza', 'Burger', 'Milk tea', 'Coffee', 'Halo-halo', 'Bulalo'];
+const FILTERS = [
+  { k: 'open', label: 'Open now', test: (p) => p.openNow === true },
+  { k: 'p1', label: '₱', test: (p) => p.price === '₱' },
+  { k: 'p2', label: '₱₱', test: (p) => p.price === '₱₱' },
+  { k: 'p3', label: '₱₱₱+', test: (p) => p.price === '₱₱₱' || p.price === '₱₱₱₱' },
+  { k: 'groups', label: 'Groups', amen: true, test: (p) => p.amenities && p.amenities.groups },
+  { k: 'kids', label: 'Kid-friendly', amen: true, test: (p) => p.amenities && p.amenities.kids },
+  { k: 'pets', label: 'Pet-friendly', amen: true, test: (p) => p.amenities && p.amenities.pets },
+  { k: 'parking', label: 'Parking', amen: true, test: (p) => p.amenities && p.amenities.parking },
+];
+
+function applyFilters(list, active) {
+  if (!active.length) return list;
+  const prices = active.filter((k) => k.startsWith('p'));
+  const others = active.filter((k) => !k.startsWith('p'));
+  return list.filter((p) =>
+    (!prices.length || prices.some((k) => FILTERS.find((f) => f.k === k).test(p))) &&
+    others.every((k) => FILTERS.find((f) => f.k === k).test(p)));
+}
 
 const MODES = [
   { k: 'near', label: 'Near me' },
@@ -22,6 +43,11 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
   const [opening, setOpening] = useState(null);
   const [trending, setTrending] = useState(null);
   const [player, setPlayer] = useState(null);
+  const [filters, setFilters] = useState([]);
+  const [craving, setCraving] = useState(null);
+  const [crave, setCrave] = useState(null);
+  const amen = filters.some((k) => FILTERS.find((f) => f.k === k).amen);
+  const trendAsked = useRef(false);
 
   const loadStats = useCallback(async (list) => {
     const ids = list.map((p) => p.id);
@@ -36,21 +62,50 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
     setLoading(true);
     setError(null);
     try {
-      const list = await api.nearby(loc.lat, loc.lng, 1500);
+      const list = await api.nearby(loc.lat, loc.lng, 1500, amen);
       setPlaces(list);
       loadStats(list);
-      setTrending(null);
-      api.trending(loc.lat, loc.lng, areaOf(list))
-        .then((d) => setTrending(d))
-        .catch(() => setTrending({ items: [] }));
+      if (!trendAsked.current) {
+        trendAsked.current = true;
+        api.trending(loc.lat, loc.lng, areaOf(list))
+          .then((d) => setTrending(d))
+          .catch(() => setTrending({ items: [] }));
+      }
     } catch (e) {
       setError(e);
     } finally {
       setLoading(false);
     }
-  }, [loc.lat, loc.lng, loadStats]);
+  }, [loc.lat, loc.lng, loadStats, amen]);
 
-  useEffect(() => { loadNearby(); }, [loadNearby]);
+  useEffect(() => {
+    if (query.trim()) doSearch(query.trim()); else loadNearby();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadNearby]);
+
+  useEffect(() => {
+    if (!craving) { setCrave(null); return; }
+    let off = false;
+    setCrave(null);
+    (async () => {
+      const [ranked, google] = await Promise.all([
+        game.dishRank(craving.toLowerCase()).catch(() => []),
+        api.search(craving, loc.lat, loc.lng, amen).catch(() => []),
+      ]);
+      const names = await api.names((ranked || []).map((r) => r.google_place_id)).catch(() => []);
+      const byId = Object.fromEntries(names.map((n) => [n.id, n]));
+      if (!off) {
+        setCrave({
+          locals: (ranked || []).map((r) => ({ ...r, ...(byId[r.google_place_id] || {}) })).filter((r) => r.name),
+          google: (google || []).map((p) => ({ ...p, dist: distanceM(loc, p) })),
+        });
+        loadStats(google || []);
+      }
+    })();
+    return () => { off = true; };
+  }, [craving, loc, amen, loadStats]);
+
+  const toggleFilter = (k) => setFilters((cur) => (cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k]));
 
   useEffect(() => {
     if (mode !== 'top' || top) return;
@@ -66,12 +121,16 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
   async function runSearch(e) {
     e.preventDefault();
     const q = query.trim();
-    if (!q) return;
+    if (q) doSearch(q);
+  }
+
+  async function doSearch(q) {
     setSearching(true);
     setError(null);
     setMode('near');
     try {
-      const list = await api.search(q, loc.lat, loc.lng);
+      setCraving(null);
+      const list = await api.search(q, loc.lat, loc.lng, amen);
       setPlaces(list);
       loadStats(list);
     } catch (err) {
@@ -99,7 +158,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
     }
   }
 
-  const sorted = places.map((p) => ({ ...p, dist: distanceM(loc, p) }));
+  const sorted = applyFilters(places.map((p) => ({ ...p, dist: distanceM(loc, p) })), filters);
 
   return (
     <div className="screen">
@@ -132,11 +191,55 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
       {mode === 'near' && (
         <>
           <MapView center={loc} places={sorted} stats={stats} onPick={(p) => onOpen(p.id)} />
-          {!query && <TrendingRail data={trending} loc={loc} onOpen={onOpen} onPlay={(it) => {
+          <div className="chips filter-chips" aria-label="Filters">
+            {FILTERS.map((f) => (
+              <button key={f.k} className={`chip chip-sm ${filters.includes(f.k) ? 'chip-soft-on' : ''}`} aria-pressed={filters.includes(f.k)} onClick={() => toggleFilter(f.k)}>{f.label}</button>
+            ))}
+          </div>
+          {!query && (
+            <section className="section crave">
+              <h2 className="h3">What are you craving?</h2>
+              <div className="crave-rail">
+                {CRAVINGS.map((c) => (
+                  <button key={c} className={`crave-chip ${craving === c ? 'crave-on' : ''}`} aria-pressed={craving === c} onClick={() => setCraving(craving === c ? null : c)}>{c}</button>
+                ))}
+              </div>
+            </section>
+          )}
+          {craving && (
+            <section className="section stack-12">
+              <div className="row-between"><h2 className="h2">Best {craving.toLowerCase()} near you</h2><button className="link-btn" onClick={() => setCraving(null)}>Clear</button></div>
+              {!crave && <Spinner label={`Finding the best ${craving.toLowerCase()}…`} />}
+              {crave && crave.locals.length > 0 && (
+                <div className="stack-8">
+                  <span className="eyebrow">Locals say order it here</span>
+                  {crave.locals.map((r, i) => (
+                    <button key={r.google_place_id} className="top-row" onClick={() => onOpen(r.google_place_id)}>
+                      <span className="top-rank">{i + 1}</span>
+                      <span className="top-main"><span className="row-title">{r.name}</span><span className="muted small">{r.address || ''}</span></span>
+                      <span className="top-score"><span className="dish-chip dish-good">👍 {r.recommends}</span>{r.skips > 0 && <span className="tiny muted">👎 {r.skips}</span>}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {crave && crave.locals.length === 0 && (
+                <p className="small muted">No locals have rated {craving.toLowerCase()} nearby yet. Tried it somewhere? Check in and tell people whether to order it.</p>
+              )}
+              {crave && crave.google.length > 0 && (
+                <div className="place-list">
+                  <span className="eyebrow">More {craving.toLowerCase()} spots on Google Maps</span>
+                  {applyFilters(crave.google, filters).map((p) => (
+                    <PlaceRow key={p.id} place={p} stat={stats[p.id]} michelin={matchMichelin(p.name, michelin)} onOpen={() => onOpen(p.id)} />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+          {!query && !craving && <TrendingRail data={trending} loc={loc} onOpen={onOpen} onPlay={(it) => {
             setPlayer(it);
             logPlay({ placeId: it.place.id, ref: it.video.id, platform: 'youtube', creator: it.video.channel });
           }} />}
-          {!query && (
+          {!query && !craving && (
             <section className="section">
               <button className="creator-cta" onClick={onAddVideo}>
                 <span className="cta-icon"><Icon name="video" size={22} /></span>
@@ -148,7 +251,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
               </button>
             </section>
           )}
-          <section className="section">
+          {!craving && <section className="section">
             <h2 className="h2">{query && !searching ? `Results for “${query}”` : 'Popular near you'}</h2>
             {(loading || searching) && <Spinner label={searching ? 'Searching…' : 'Finding places near you…'} />}
             {error && !loading && (
@@ -164,8 +267,9 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
                 <PlaceRow key={p.id} place={p} stat={stats[p.id]} michelin={matchMichelin(p.name, michelin)} onOpen={() => onOpen(p.id)} />
               ))}
             </div>
+            {!loading && places.length > 0 && sorted.length === 0 && <p className="small muted">No places match those filters. Try removing one.</p>}
             {sorted.length > 0 && <p className="attribution">Places, ratings and photos from Google Maps</p>}
-          </section>
+          </section>}
         </>
       )}
 

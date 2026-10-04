@@ -96,8 +96,19 @@ export function shapePlace(p, maxPhotos = 8) {
     mapsUri: p.googleMapsUri || null,
     website: p.websiteUri || null,
     phone: p.nationalPhoneNumber || null,
+    amenities: p.goodForGroups === undefined && p.goodForChildren === undefined && p.allowsDogs === undefined && !p.parkingOptions
+      ? undefined
+      : {
+        groups: p.goodForGroups === true,
+        kids: p.goodForChildren === true,
+        pets: p.allowsDogs === true,
+        parking: !!(p.parkingOptions && Object.values(p.parkingOptions).some((v) => v === true)),
+      },
   };
 }
+
+// Extra fields only requested when someone filters by them (they cost more per call).
+export const AMENITY_FIELDS = ',places.goodForGroups,places.goodForChildren,places.allowsDogs,places.parkingOptions';
 
 export const LIST_FIELDS = [
   'places.id', 'places.displayName', 'places.primaryTypeDisplayName', 'places.location',

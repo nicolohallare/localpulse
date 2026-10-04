@@ -25,15 +25,15 @@ async function getJSON(url) {
 const qs = (o) => new URLSearchParams(Object.entries(o).filter(([, v]) => v !== undefined && v !== null)).toString();
 
 export const api = {
-  nearby: (lat, lng, radius = 1500) => getJSON(`/api/places/nearby?${qs({ lat, lng, radius })}`).then((d) => d.places),
-  search: (q, lat, lng) => getJSON(`/api/places/search?${qs({ q, lat, lng })}`).then((d) => d.places),
+  nearby: (lat, lng, radius = 1500, amenities) => getJSON(`/api/places/nearby?${qs({ lat, lng, radius, amenities: amenities ? 1 : null })}`).then((d) => d.places),
+  search: (q, lat, lng, amenities) => getJSON(`/api/places/search?${qs({ q, lat, lng, amenities: amenities ? 1 : null })}`).then((d) => d.places),
   details: (id) => getJSON(`/api/places/details?${qs({ id })}`).then((d) => d.place),
   names: (ids) => (ids.length ? getJSON(`/api/places/names?${qs({ ids: ids.join(',') })}`).then((d) => d.places) : Promise.resolve([])),
   youtube: (q) => getJSON(`/api/youtube?${qs({ q })}`),
-  oembed: (url) => getJSON(`/api/oembed?${qs({ url })}`),
+  oembed: (url) => getJSON(`/api/video/oembed?${qs({ url })}`),
   summary: (id) => getJSON(`/api/summary?${qs({ id })}`),
   config: () => getJSON('/api/config'),
-  matchVideo: (url, lat, lng) => getJSON(`/api/match-video?${qs({ url, lat: lat.toFixed(2), lng: lng.toFixed(2) })}`),
+  matchVideo: (url, lat, lng) => getJSON(`/api/video/match?${qs({ url, lat: lat.toFixed(2), lng: lng.toFixed(2) })}`),
   trending: (lat, lng, area) => getJSON(`/api/trending?${qs({ lat: lat.toFixed(2), lng: lng.toFixed(2), area })}`),
 };
 

@@ -1,4 +1,4 @@
-import { send } from './_lib.js';
+import { send } from '../_lib.js';
 
 // GET /api/oembed?url=<tiktok or youtube link>
 // Uses each platform's public oEmbed endpoint to get a title and thumbnail.

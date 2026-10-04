@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — LocalPulse</title>
+<style>
+  :root { --accent: #5B2A86; --text: #1f1b24; --muted: #5d5766; --line: #e6e1ec; --bg: #ffffff; --notice: #f6f1fa; }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Figtree', system-ui, sans-serif; font-size: 16px; line-height: 1.6; }
+  main { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
+  a { color: var(--accent); text-underline-offset: 2px; overflow-wrap: anywhere; }
+  .back { display: inline-block; font-size: 14px; text-decoration: none; margin-bottom: 20px; }
+  .back:hover { text-decoration: underline; }
+  h1 { color: var(--accent); font-size: 30px; line-height: 1.2; margin: 0 0 4px; }
+  h2 { color: var(--accent); font-size: 20px; line-height: 1.3; margin: 32px 0 8px; }
+  h3 { color: var(--accent); font-size: 17px; margin: 20px 0 6px; }
+  p, ul { margin: 0 0 12px; }
+  ul { padding-left: 22px; }
+  li { margin-bottom: 4px; }
+  .updated { color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+  .notice { background: var(--notice); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 8px; padding: 12px 14px; font-size: 15px; color: var(--muted); margin: 0 0 24px; }
+  .placeholder { background: #fff7e0; border: 1px dashed #c9a227; border-radius: 6px; padding: 8px 12px; display: inline-block; }
+  footer { border-top: 1px solid var(--line); margin-top: 40px; padding-top: 16px; font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="/">← Back to LocalPulse</a>
+
+  <h1>Privacy Policy</h1>
+  <p class="updated">Last updated: 4 October 2026</p>
+
+  <div class="notice">This is a starting draft. Please have it reviewed by a Philippine lawyer before relying on it.</div>
+
+  <p>LocalPulse helps people in the Philippines find good places to eat, based on real check-ins. LocalPulse is run by an individual developer based in the Philippines. In this policy, "LocalPulse", "we" and "us" mean the app and the person who runs it.</p>
+  <p>This page explains what data we collect, why, who we share it with, and what rights you have under the Philippine Data Privacy Act of 2012 (Republic Act No. 10173).</p>
+
+  <h2>1. Your account</h2>
+  <p>You don't need to sign up. When you first use LocalPulse, an anonymous account is created for you automatically (using Supabase anonymous sign-in). You choose a display name. We don't ask for your email or phone number to use the app.</p>
+
+  <h2>2. What we collect</h2>
+  <h3>Check-ins</h3>
+  <p>To check in, your browser asks to share your device's location once. Our server compares it with the restaurant's location from Google Maps and stores only the <strong>distance in metres</strong>. We do not store your coordinates.</p>
+  <p>For each check-in we store:</p>
+  <ul>
+    <li>the place ID (which restaurant)</li>
+    <li>your score from 1 to 10</li>
+    <li>your optional written take (up to 500 characters)</li>
+    <li>dish names you mark as "order this" or "skip this"</li>
+    <li>tags you choose</li>
+    <li>the date and time</li>
+    <li>the distance in metres</li>
+  </ul>
+
+  <h3>Activity in the app</h3>
+  <ul>
+    <li>Points, levels, badges, Suki crowns and weekly leaderboard positions.</li>
+    <li>Who you follow and who follows you.</li>
+    <li>Lists you create, and whether they are public.</li>
+    <li>Poll votes.</li>
+    <li>Your push notification subscription, if you turn notifications on.</li>
+  </ul>
+
+  <h3>Influence tracking</h3>
+  <ul>
+    <li><strong>Takes:</strong> if you open a place from someone's take and then check in there within 14 days, that take's author gets credit.</li>
+    <li><strong>Creator videos:</strong> when you play a creator's YouTube or TikTok video in the app, we keep a private play record (your account, the place, the video, the creator's name, and the time). We use it to credit creators. It is never shown publicly per person — only as totals.</li>
+  </ul>
+
+  <h3>Creator applications</h3>
+  <p>If you apply to be a creator, we collect your name, email, social media handles and video links.</p>
+
+  <h2>3. What other people can see</h2>
+  <p>LocalPulse is a public, social app by design. Other users can see:</p>
+  <ul>
+    <li>your display name</li>
+    <li>your check-ins and takes</li>
+    <li>your points, badges and Suki crowns</li>
+    <li>your followers and who you follow</li>
+    <li>lists you mark as public</li>
+    <li>your poll votes (your name is shown inside a poll)</li>
+  </ul>
+  <p>Please don't put personal details you want to keep private in your display name or takes.</p>
+
+  <h2>4. Why we use your data</h2>
+  <ul>
+    <li>To run the app: show check-ins, takes, lists, polls and profiles.</li>
+    <li>To confirm a check-in happened near the restaurant.</li>
+    <li>To calculate points, levels, badges and leaderboards. Points never depend on whether a review is positive or negative. There are no cash rewards.</li>
+    <li>To credit take authors and creators.</li>
+    <li>To send push notifications you've allowed.</li>
+    <li>To summarise check-in text and match videos to restaurants (see Anthropic below).</li>
+    <li>To review creator applications.</li>
+    <li>To keep the app fair and stop cheating.</li>
+  </ul>
+
+  <h2>5. Push notifications</h2>
+  <p>Push notifications are optional. Your browser asks for permission first. If you allow them, we use them to tell you when:</p>
+  <ul>
+    <li>someone takes your Suki crown</li>
+    <li>people you follow post a take</li>
+    <li>your weekly rank is ready</li>
+  </ul>
+  <p>You can turn them off at any time in your browser settings.</p>
+
+  <h2>6. Cookies and local storage</h2>
+  <p>We use cookies and browser storage only to:</p>
+  <ul>
+    <li>keep you signed in (your auth session), and</li>
+    <li>let the app work offline (service worker cache).</li>
+  </ul>
+  <p>We do not use advertising trackers.</p>
+
+  <h2>7. Services we use</h2>
+  <p>We rely on these third-party services. Some of your data passes through them.</p>
+  <ul>
+    <li><strong>Google Maps Platform</strong> — place details, photos and ratings. These are shown live and attributed to Google. Google's privacy policy applies to Google content: <a href="https://policies.google.com/privacy">policies.google.com/privacy</a>.</li>
+    <li><strong>YouTube</strong> — embedded video player via youtube-nocookie.com, using YouTube API Services. <strong>By using YouTube features in LocalPulse, you agree to the <a href="https://www.youtube.com/t/terms">YouTube Terms of Service</a> and the <a href="https://policies.google.com/privacy">Google Privacy Policy</a>.</strong></li>
+    <li><strong>TikTok</strong> — embedded video player and public oEmbed data.</li>
+    <li><strong>Anthropic (Claude API)</strong> — we send check-in text to summarise it, and video captions to identify which restaurant they mention.</li>
+    <li><strong>Supabase</strong> — database and sign-in hosting.</li>
+    <li><strong>Vercel</strong> — website hosting.</li>
+  </ul>
+  <p>When you watch an embedded YouTube or TikTok video, those platforms may collect data under their own policies.</p>
+  <p>MICHELIN Guide distinctions are shown as facts with links to the Guide. LocalPulse is not affiliated with Michelin, Google, YouTube or TikTok.</p>
+
+  <h2>8. Data outside the Philippines</h2>
+  <p>Some of the service providers above may store or process your data outside the Philippines. We choose providers that protect data, and we only share what they need to do their job.</p>
+
+  <h2>9. How long we keep data, and deleting it</h2>
+  <ul>
+    <li>We keep your data while your account is active.</li>
+    <li>You can delete your own check-ins in the app.</li>
+    <li>To delete your whole account and data, email us at the contact address below.</li>
+  </ul>
+
+  <h2>10. Your rights</h2>
+  <p>Under the Data Privacy Act of 2012, you have the right:</p>
+  <ul>
+    <li><strong>To be informed</strong> — to know how your data is collected and used.</li>
+    <li><strong>To access</strong> — to get a copy of your personal data.</li>
+    <li><strong>To object</strong> — to say no to certain processing.</li>
+    <li><strong>To erasure or blocking</strong> — to ask us to delete or block your data.</li>
+    <li><strong>To rectification</strong> — to correct wrong data.</li>
+    <li><strong>To data portability</strong> — to get your data in a format you can use elsewhere.</li>
+    <li><strong>To damages</strong> — to be compensated if you are harmed by wrong or unauthorised use of your data.</li>
+    <li><strong>To file a complaint</strong> with the National Privacy Commission: <a href="https://privacy.gov.ph">privacy.gov.ph</a>.</li>
+  </ul>
+  <p>To use any of these rights, contact us using the details below.</p>
+
+  <h2>11. Age</h2>
+  <p>You must be at least 13 years old to use LocalPulse. If you are under 18, please use it with a parent's or guardian's permission.</p>
+
+  <h2>12. Changes to this policy</h2>
+  <p>We may update this policy. When we do, we'll change the "Last updated" date at the top.</p>
+
+  <h2>13. Contact</h2>
+  <p class="placeholder">Contact: privacy@localpulse.ph (placeholder — replace before launch)</p>
+
+  <footer>
+    <p>See also: <a href="/terms.html">Terms of Service</a></p>
+  </footer>
+</main>
+</body>
+</html>

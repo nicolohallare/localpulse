@@ -2,14 +2,21 @@ import React, { useEffect, useState } from 'react';
 import { api, supabase, currentUser, timeAgo, initials } from '../lib';
 import { Icon, Spinner, Empty, ScoreBadge } from '../ui';
 import { game, levelFor, badgeState } from '../game';
+import { pushStatus, enablePush } from '../push';
 
-export default function You({ onOpen, onOpenCreators, onOpenRanks }) {
+export default function You({ onOpen, onOpenCreators, onOpenRanks, onOpenUser, onOpenLists, onOpenAdmin }) {
   const [user, setUser] = useState(undefined);
   const [profile, setProfile] = useState(null);
   const [visits, setVisits] = useState(null);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState('');
   const [stats, setStats] = useState(null);
+  const [push, setPush] = useState(null);
+  const [pushMsg, setPushMsg] = useState(null);
+  const [admin, setAdmin] = useState(false);
+  const [bio, setBio] = useState('');
+
+  useEffect(() => { pushStatus().then(setPush).catch(() => setPush('unsupported')); }, []);
 
   useEffect(() => {
     (async () => {
@@ -17,12 +24,14 @@ export default function You({ onOpen, onOpenCreators, onOpenRanks }) {
       setUser(u);
       if (!u) { setVisits([]); return; }
       const [{ data: p }, { data: v }] = await Promise.all([
-        supabase.from('profiles').select('display_name').eq('id', u.id).maybeSingle(),
+        supabase.from('profiles').select('display_name,bio').eq('id', u.id).maybeSingle(),
         supabase.from('visits').select('id,google_place_id,score,review,created_at').eq('user_id', u.id).order('created_at', { ascending: false }).limit(50),
       ]);
       game.me().then(setStats).catch(() => {});
+      supabase.rpc('is_admin').then(({ data }) => setAdmin(!!data));
       setProfile(p || null);
       setName((p && p.display_name) || '');
+      setBio((p && p.bio) || '');
       const rows = v || [];
       const names = await api.names([...new Set(rows.map((r) => r.google_place_id))]).catch(() => []);
       const byId = Object.fromEntries(names.map((n) => [n.id, n]));
@@ -34,8 +43,8 @@ export default function You({ onOpen, onOpenCreators, onOpenRanks }) {
     e.preventDefault();
     const n = name.trim().slice(0, 40);
     if (!n || !user) return;
-    const { error } = await supabase.from('profiles').upsert({ id: user.id, display_name: n });
-    if (!error) { setProfile({ display_name: n }); setEditing(false); }
+    const { error } = await supabase.from('profiles').upsert({ id: user.id, display_name: n, bio: bio.trim().slice(0, 160) || null });
+    if (!error) { setProfile({ display_name: n, bio: bio.trim() || null }); setEditing(false); }
   }
 
   const places = visits ? new Set(visits.map((v) => v.google_place_id)).size : 0;
@@ -48,15 +57,23 @@ export default function You({ onOpen, onOpenCreators, onOpenRanks }) {
       <div className="you-hero">
         <span className="you-avatar">{profile ? initials(profile.display_name) : <Icon name="user" size={28} />}</span>
         {editing ? (
-          <form className="row-6" onSubmit={saveName}>
+          <form className="stack-8" onSubmit={saveName}>
             <label className="sr-only" htmlFor="nm">Display name</label>
             <input id="nm" className="name-input" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} autoFocus />
+            <label className="sr-only" htmlFor="bio">Bio</label>
+            <input id="bio" className="name-input" value={bio} maxLength={160} placeholder="Short bio, e.g. Sisig hunter · BGC" onChange={(e) => setBio(e.target.value)} />
             <button className="btn btn-light">Save</button>
           </form>
         ) : (
           <div className="stack-4">
             <h1 className="display-xs light">{profile ? profile.display_name : 'Your food log'}</h1>
-            {profile && <button className="link-btn light" onClick={() => setEditing(true)}>Edit name</button>}
+            {profile && profile.bio && <p className="small light-soft">{profile.bio}</p>}
+            {profile && (
+              <span className="row-6">
+                <button className="link-btn light" onClick={() => setEditing(true)}>Edit profile</button>
+                {user && <button className="link-btn light" onClick={() => onOpenUser(user.id)}>View public profile</button>}
+              </span>
+            )}
           </div>
         )}
         <div className="stack-6">
@@ -72,8 +89,8 @@ export default function You({ onOpen, onOpenCreators, onOpenRanks }) {
         <div className="you-stats">
           <div><strong>{visits ? visits.length : '–'}</strong><span>check-ins</span></div>
           <div><strong>{visits ? places : '–'}</strong><span>places</span></div>
-          <div><strong>{stats && stats.streak ? `${stats.streak}🔥` : '0'}</strong><span>week streak</span></div>
-          <div><strong>{stats ? stats.sukis : 0}</strong><span>👑 suki</span></div>
+          <div><strong>{stats ? stats.influenced : 0}</strong><span>went because of you</span></div>
+          <div><strong>{stats ? stats.followers : 0}</strong><span>followers</span></div>
         </div>
       </div>
 
@@ -86,6 +103,29 @@ export default function You({ onOpen, onOpenCreators, onOpenRanks }) {
           </span>
           <Icon name="back" size={18} style={{ transform: 'rotate(180deg)' }} />
         </button>
+      </section>
+
+      <section className="section stack-8">
+        <button className="log-row" onClick={onOpenLists}>
+          <span className="avatar">📋</span>
+          <span className="grow"><span className="row-title-sm block">Your lists</span><span className="tiny muted">Saved places you can share</span></span>
+          <Icon name="back" size={16} style={{ transform: 'rotate(180deg)' }} />
+        </button>
+        <div className="log-row">
+          <span className="avatar"><Icon name="bell" size={18} /></span>
+          <span className="grow">
+            <span className="row-title-sm block">Notifications</span>
+            <span className="tiny muted">
+              {push === 'on' ? 'On — crown alerts, people you follow, weekly rank'
+                : push === 'denied' ? 'Blocked in your browser settings'
+                  : push === 'needs-install' ? 'On iPhone: Share → Add to Home Screen first, then open LocalPulse from there'
+                    : push === 'unsupported' ? 'Not available in this browser'
+                      : 'Crown alerts, people you follow, weekly rank'}
+            </span>
+            {pushMsg && <span className="tiny muted block">{pushMsg}</span>}
+          </span>
+          {push === 'off' && <button className="soft-btn" onClick={() => enablePush().then(setPush).catch((e) => setPushMsg(e.message))}>Turn on</button>}
+        </div>
       </section>
 
       <section className="section stack-12">
@@ -131,6 +171,9 @@ export default function You({ onOpen, onOpenCreators, onOpenRanks }) {
           </span>
           <Icon name="back" size={18} style={{ transform: 'rotate(180deg)' }} />
         </button>
+        <p className="tiny muted about">
+          <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a>{admin && <> · <button className="link-btn" onClick={onOpenAdmin}>Admin</button></>}
+        </p>
         <p className="tiny muted about">
           LocalPulse scores come only from verified check-ins. Google ratings and photos are shown live from Google Maps. MICHELIN distinctions are listed as facts with a link to the Guide.
         </p>

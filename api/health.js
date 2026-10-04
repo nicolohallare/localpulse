@@ -9,6 +9,8 @@ export default async function handler(req, res) {
     mapsBrowserKey: !!(process.env.REACT_APP_GOOGLE_MAPS_KEY || process.env.GOOGLE_MAPS_BROWSER_KEY),
     youtubeKey: !!(process.env.YOUTUBE_API_KEY || SERVER_GOOGLE_KEY),
     claudeKey: !!(process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY),
+    serverSecret: !!process.env.LP_SERVER_SECRET,
+    pushKeys: !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY),
   };
   if (req.query.probe) {
     try {

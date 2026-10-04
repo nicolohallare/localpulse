@@ -5,7 +5,7 @@ import { Icon, Spinner, Empty, Notice } from '../ui';
 
 const MEDAL = { 1: 'rank-gold', 2: 'rank-silver', 3: 'rank-bronze' };
 
-export default function Ranks({ onBack, initial = 'diners' }) {
+export default function Ranks({ onBack, initial = 'diners', onOpenUser }) {
   const [board, setBoard] = useState(initial);
   const [period, setPeriod] = useState('week');
   const [rows, setRows] = useState(null);
@@ -15,7 +15,7 @@ export default function Ranks({ onBack, initial = 'diners' }) {
     let off = false;
     setRows(null);
     setErr(null);
-    const load = board === 'diners' ? game.leaderboard(period) : game.creators(30);
+    const load = board === 'diners' ? game.leaderboard(period) : board === 'influencers' ? game.influencers(30) : game.creators(30);
     load.then((d) => !off && setRows(d || [])).catch((e) => !off && setErr(e));
     return () => { off = true; };
   }, [board, period]);
@@ -31,13 +31,16 @@ export default function Ranks({ onBack, initial = 'diners' }) {
         <p className="muted">
           {board === 'diners'
             ? 'Points come from verified visits. Your score never changes your points — honest 4/10s count the same as 10/10s.'
-            : 'Creators climb when people watch their video on LocalPulse and then actually go.'}
+            : board === 'influencers'
+              ? 'Everyone’s an influencer. These locals sent the most people to places through their takes this month.'
+              : 'Creators climb when people watch their video on LocalPulse and then actually go.'}
         </p>
       </header>
 
       <section className="section stack-12">
         <div className="seg" role="tablist" aria-label="Board">
           <button role="tab" aria-selected={board === 'diners'} className={board === 'diners' ? 'seg-on' : ''} onClick={() => setBoard('diners')}>Diners</button>
+          <button role="tab" aria-selected={board === 'influencers'} className={board === 'influencers' ? 'seg-on' : ''} onClick={() => setBoard('influencers')}>Influencers</button>
           <button role="tab" aria-selected={board === 'creators'} className={board === 'creators' ? 'seg-on' : ''} onClick={() => setBoard('creators')}>Creators</button>
         </div>
 
@@ -54,7 +57,9 @@ export default function Ranks({ onBack, initial = 'diners' }) {
         {rows && rows.length === 0 && (
           board === 'diners'
             ? <Empty icon="check" title={period === 'week' ? 'Nobody’s on the board this week' : 'No check-ins yet'}>The first verified check-in takes the top spot.</Empty>
-            : <Empty icon="video" title="No Pulse visits yet">When someone watches a creator’s video here and then checks in at that place, the creator shows up on this board.</Empty>
+            : board === 'influencers'
+              ? <Empty icon="user" title="No influence yet">When someone opens a place from your take and then checks in there, you’ll show up here.</Empty>
+              : <Empty icon="video" title="No Pulse visits yet">When someone watches a creator’s video here and then checks in at that place, the creator shows up on this board.</Empty>
         )}
 
         {rows && rows.length > 0 && (
@@ -68,6 +73,19 @@ export default function Ranks({ onBack, initial = 'diners' }) {
                   <span className="tiny muted">{levelFor(r.points).name} · {r.visits} check-in{r.visits === 1 ? '' : 's'} · {r.places} place{r.places === 1 ? '' : 's'}</span>
                 </span>
                 <span className="rank-pts">{r.points}<small>pts</small></span>
+              </li>
+            ))}
+            {board === 'influencers' && rows.map((r) => (
+              <li key={r.user_id} className={`rank-row ${r.is_me ? 'rank-me' : ''}`}>
+                <span className={`rank-num ${MEDAL[r.rank] || ''}`}>{r.rank}</span>
+                <button className="rank-open" onClick={() => onOpenUser && onOpenUser(r.user_id)}>
+                  <span className="avatar">{initials(r.display_name)}</span>
+                  <span className="grow">
+                    <span className="strong small block">{r.display_name}{r.is_me ? ' (you)' : ''}</span>
+                    <span className="tiny muted">{r.followers} follower{r.followers === 1 ? '' : 's'}</span>
+                  </span>
+                </button>
+                <span className="rank-pts">{r.influenced}<small>went</small></span>
               </li>
             ))}
             {board === 'creators' && rows.map((r) => {

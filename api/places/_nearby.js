@@ -1,4 +1,4 @@
-import { places, shapePlace, LIST_FIELDS, send, fail, num } from '../_lib.js';
+import { places, shapePlace, LIST_FIELDS, AMENITY_FIELDS, send, fail, num } from '../_lib.js';
 
 // GET /api/places/nearby?lat=14.55&lng=121.05&radius=1500
 export default async function handler(req, res) {
@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     const radius = num(req.query.radius, 50, 5000, 1500);
     const data = await places('places:searchNearby', {
       method: 'POST',
-      fieldMask: LIST_FIELDS,
+      fieldMask: LIST_FIELDS + (req.query.amenities ? AMENITY_FIELDS : ''),
       body: {
         includedTypes: ['restaurant', 'cafe', 'bar', 'bakery', 'meal_takeaway'],
         maxResultCount: 20,

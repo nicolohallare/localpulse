@@ -3,11 +3,12 @@ import {
   api, supabase, distanceM, fmtDistance, fmtCount, timeAgo, initials, matchMichelin, DISTINCTION,
   PLATFORM_LABEL, detectPlatform, youtubeId, ensureUser,
 } from '../lib';
-import { game, logPlay } from '../game';
+import { game, logPlay, shareUrl, shareLink } from '../game';
+import { SaveSheet } from './Lists';
 import { Icon, PlacePhoto, Spinner, Notice, Empty, Sheet } from '../ui';
 import CheckIn from './CheckIn';
 
-export default function Place({ id, loc, michelin, onBack, onOpenCreators }) {
+export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpenUser, onNewPoll }) {
   const [place, setPlace] = useState(null);
   const [error, setError] = useState(null);
   const [stat, setStat] = useState(null);
@@ -23,6 +24,9 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators }) {
   const [player, setPlayer] = useState(null);
   const [pg, setPg] = useState(null);
   const [voting, setVoting] = useState(null);
+  const [dishes, setDishes] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [shared, setShared] = useState(null);
 
   const loadOwn = useCallback(async () => {
     const [s, f, v, d] = await Promise.all([
@@ -37,6 +41,7 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators }) {
     setDeals(d.data || []);
     if (s.data && s.data.visit_count >= 3) api.summary(id).then(setSummary).catch(() => {});
     game.place(id).then(setPg).catch(() => {});
+    game.dishes(id).then(setDishes).catch(() => {});
   }, [id]);
 
   const play = useCallback((p) => {
@@ -97,11 +102,8 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators }) {
   }
 
   async function share() {
-    const url = `${window.location.origin}/#/place/${id}`;
-    try {
-      if (navigator.share) await navigator.share({ title: place.name, text: `${place.name} on LocalPulse`, url });
-      else { await navigator.clipboard.writeText(url); alert('Link copied'); }
-    } catch (e) { /* user cancelled */ }
+    const r = await shareLink({ title: place.name, text: `${place.name} on LocalPulse`, url: shareUrl('p', id) });
+    if (r === 'copied') { setShared('Link copied'); setTimeout(() => setShared(null), 2500); }
   }
 
   return (
@@ -204,6 +206,18 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators }) {
           </div>
         )}
 
+        {dishes && (dishes.good.length > 0 || dishes.bad.length > 0) && (
+          <section className="order-card">
+            <h2 className="h3">What locals say to order</h2>
+            {dishes.good.length > 0 && (
+              <div className="row-wrap">{dishes.good.map((d) => <span key={d.dish} className="dish-chip dish-good">👍 {d.dish}{d.n > 1 ? ` · ${d.n}` : ''}</span>)}</div>
+            )}
+            {dishes.bad.length > 0 && (
+              <div className="row-wrap">{dishes.bad.map((d) => <span key={d.dish} className="dish-chip dish-bad">👎 skip {d.dish}{d.n > 1 ? ` · ${d.n}` : ''}</span>)}</div>
+            )}
+          </section>
+        )}
+
         {summary && summary.summary && (
           <section className="summary-card">
             <div className="row-between">
@@ -278,13 +292,21 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators }) {
             {feed.map((r) => (
               <article key={r.id} className="review">
                 <div className="row-10">
-                  <span className="avatar">{initials(r.display_name)}</span>
-                  <span className="grow">
-                    <span className="strong small block">{r.display_name}</span>
-                    <span className="verified"><Icon name="shield" size={13} /> Verified visit · location</span>
-                  </span>
-                  <span className="score-chip">{r.score}/10</span>
+                  <button className="take-author" onClick={() => r.user_id && onOpenUser(r.user_id)}>
+                    <span className="avatar">{initials(r.display_name)}</span>
+                    <span className="grow">
+                      <span className="strong small block">{r.display_name}</span>
+                      <span className="verified"><Icon name="shield" size={13} /> Verified visit · location</span>
+                    </span>
+                  </button>
+                  <span className={`score-chip ${r.score >= 8 ? 'score-hi' : r.score <= 4 ? 'score-lo' : ''}`}>{r.score}/10</span>
                 </div>
+                {r.dishes_good && r.dishes_good.length > 0 && (
+                  <div className="row-wrap"><span className="tiny strong good-ink">👍 Order</span>{r.dishes_good.map((d) => <span key={d} className="dish-chip dish-good">{d}</span>)}</div>
+                )}
+                {r.dishes_bad && r.dishes_bad.length > 0 && (
+                  <div className="row-wrap"><span className="tiny strong bad-ink">👎 Skip</span>{r.dishes_bad.map((d) => <span key={d} className="dish-chip dish-bad">{d}</span>)}</div>
+                )}
                 {r.review && <p>{r.review}</p>}
                 {r.tags && r.tags.length > 0 && <div className="row-wrap">{r.tags.map((t) => <span key={t} className="soft-chip">{t}</span>)}</div>}
                 <div className="row-between">
@@ -337,7 +359,10 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators }) {
         </section>
       </div>
 
+      {shared && <div className="toast" role="status">{shared}</div>}
       <div className="action-bar">
+        <button className="action-icon" onClick={() => setSaving(true)} aria-label="Save to a list"><Icon name="bookmark" size={20} /><span>Save</span></button>
+        <button className="action-icon" onClick={() => onNewPoll(id)} aria-label="Start a group poll"><Icon name="poll" size={20} /><span>Poll</span></button>
         <button className="btn btn-primary grow" onClick={() => setCheckingIn(true)}><Icon name="check" size={20} stroke={2.4} /> Check in here</button>
       </div>
 
@@ -345,6 +370,7 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators }) {
         <CheckIn place={place} onClose={() => setCheckingIn(false)} onDone={() => { loadOwn(); setTab('visits'); }} />
       )}
       {addingVideo && <AddVideo place={place} onClose={() => setAddingVideo(false)} />}
+      {saving && <SaveSheet place={place} onClose={() => setSaving(false)} />}
       {player && (
         <Sheet title={player.channel || 'YouTube'} onClose={() => setPlayer(null)}>
           {player.kind === 'tiktok' ? (
