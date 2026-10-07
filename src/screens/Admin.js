@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { api, supabase, PLATFORM_LABEL } from '../lib';
+import { api, supabase, PLATFORM_LABEL, findVideoUrl } from '../lib';
 import { Icon, Spinner, Notice, Empty } from '../ui';
 import { mediaUrl, deleteMedia } from '../media';
 
@@ -96,6 +96,7 @@ export default function Admin({ loc, onBack, onOpenPlace }) {
               <button role="tab" aria-selected={tab === 'apps'} className={tab === 'apps' ? 'seg-on' : ''} onClick={() => setTab('apps')}>Creators · {q.applications.length}</button>
               <button role="tab" aria-selected={tab === 'deals'} className={tab === 'deals' ? 'seg-on' : ''} onClick={() => setTab('deals')}>Deals · {q.deals.length}</button>
               <button role="tab" aria-selected={tab === 'media'} className={tab === 'media' ? 'seg-on' : ''} onClick={() => setTab('media')}>Media</button>
+              <button role="tab" aria-selected={tab === 'import'} className={tab === 'import' ? 'seg-on' : ''} onClick={() => setTab('import')}>Import</button>
             </div>
 
             {tab === 'videos' && (
@@ -123,6 +124,7 @@ export default function Admin({ loc, onBack, onOpenPlace }) {
 
             {tab === 'deals' && <DealsAdmin q={q} loc={loc} reload={load} />}
             {tab === 'media' && <MediaAdmin onOpenPlace={onOpenPlace} />}
+            {tab === 'import' && <BulkImport loc={loc} onOpenPlace={onOpenPlace} />}
           </section>
           <section className="section"><button className="btn btn-quiet" onClick={() => supabase.auth.signOut()}>Sign out of admin</button></section>
         </>
@@ -252,6 +254,73 @@ function MediaAdmin({ onOpenPlace }) {
             <button className="soft-btn grow" onClick={() => onOpenPlace(m.google_place_id)}>Place</button>
             <button className="soft-btn grow" onClick={() => remove(m)}>Delete</button>
           </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Paste many TikTok/YouTube links → each is matched to its restaurant and published right away.
+function BulkImport({ loc, onOpenPlace }) {
+  const [text, setText] = useState('');
+  const [rows, setRows] = useState([]);
+  const [busy, setBusy] = useState(false);
+
+  async function run() {
+    const links = [...new Set(text.split(/\s+/).map((t) => findVideoUrl(t)).filter(Boolean))].slice(0, 30);
+    if (!links.length) return;
+    setBusy(true);
+    setRows(links.map((url) => ({ url, status: 'Waiting…' })));
+    for (let i = 0; i < links.length; i += 1) {
+      const url = links[i];
+      const update = (patch) => setRows((cur) => cur.map((r) => (r.url === url ? { ...r, ...patch } : r)));
+      update({ status: 'Finding the restaurant…' });
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const m = await api.matchVideo(url, loc.lat, loc.lng);
+        const place = m.candidates && m.candidates[0];
+        if (!place) { update({ status: 'No restaurant named in the caption — add it from the place page', ok: false }); continue; }
+        const v = m.video;
+        // eslint-disable-next-line no-await-in-loop
+        const { error } = await supabase.rpc('admin_add_video', {
+          p_place: place.id, p_platform: v.platform, p_url: v.url,
+          p_handle: v.handle ? `@${v.handle}` : (v.author || ''), p_title: v.title || '',
+        });
+        update(error ? { status: 'Could not save', ok: false } : { status: 'Published', ok: true, place, others: m.candidates.slice(1, 3), video: v });
+      } catch (e) {
+        update({ status: 'Could not read this link', ok: false });
+      }
+    }
+    setBusy(false);
+  }
+
+  async function move(r, place) {
+    // Re-file under a different place: publish there and unpublish the first one.
+    const { data } = await supabase.from('place_videos').select('id').eq('url', r.video.url).eq('google_place_id', r.place.id).maybeSingle();
+    await supabase.rpc('admin_add_video', { p_place: place.id, p_platform: r.video.platform, p_url: r.video.url, p_handle: r.video.handle ? `@${r.video.handle}` : '', p_title: r.video.title || '' });
+    if (data) await supabase.rpc('admin_review_video', { p_id: data.id, p_approve: false });
+    setRows((cur) => cur.map((x) => (x.url === r.url ? { ...x, place, others: [] } : x)));
+  }
+
+  return (
+    <div className="stack-12">
+      <p className="small muted">Paste TikTok or YouTube links, one per line (up to 30). Each is matched to the restaurant named in its caption and published immediately.</p>
+      <label className="field">Video links
+        <textarea rows={6} value={text} onChange={(e) => setText(e.target.value)} placeholder={'https://www.tiktok.com/@…/video/…\nhttps://vt.tiktok.com/…'} />
+      </label>
+      <button className="btn btn-primary" disabled={busy || !text.trim()} onClick={run}>{busy ? 'Importing…' : 'Import & publish'}</button>
+      {rows.map((r) => (
+        <div key={r.url} className="card stack-4">
+          <span className="tiny muted clamp-1">{r.url}</span>
+          <span className={`small strong ${r.ok === false ? 'bad-ink' : r.ok ? 'good-ink' : ''}`}>{r.status}{r.place ? ` → ${r.place.name}` : ''}</span>
+          {r.place && <span className="tiny muted">{r.place.address}</span>}
+          {r.ok && r.others && r.others.length > 0 && (
+            <div className="row-wrap">
+              <span className="tiny muted">Wrong branch?</span>
+              {r.others.map((o) => <button key={o.id} className="chip chip-sm" onClick={() => move(r, o)}>{o.name}</button>)}
+            </div>
+          )}
+          {r.place && <button className="link-btn left" onClick={() => onOpenPlace(r.place.id)}>Open place →</button>}
         </div>
       ))}
     </div>
