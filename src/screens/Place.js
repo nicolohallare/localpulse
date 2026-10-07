@@ -29,6 +29,7 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
   const [saving, setSaving] = useState(false);
   const [shared, setShared] = useState(null);
   const [media, setMedia] = useState({});
+  const [tiktoks, setTiktoks] = useState(null);
   const [addingMedia, setAddingMedia] = useState(null);
 
   const loadOwn = useCallback(async () => {
@@ -46,6 +47,7 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
     if (s.data && s.data.visit_count >= 3) api.summary(id).then(setSummary).catch(() => {});
     game.place(id).then(setPg).catch(() => {});
     game.dishes(id).then(setDishes).catch(() => {});
+    api.discoverTiktok(id).then(setTiktoks).catch(() => setTiktoks({ videos: [] }));
   }, [id]);
 
   const play = useCallback((p) => {
@@ -84,7 +86,9 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
   const dist = distanceM(loc, place);
   const photo = place.photos[photoIdx] || place.photos[0];
   const ytVideos = (yt && yt.videos) || [];
-  const videoCount = videos.length + ytVideos.length;
+  const known = new Set(videos.map((v) => v.url));
+  const foundTiktoks = ((tiktoks && tiktoks.videos) || []).filter((t) => !known.has(t.url));
+  const videoCount = videos.length + ytVideos.length + foundTiktoks.length;
   const helpful = (pg && pg.helpful) || {};
   const myHelpful = new Set((pg && pg.my_helpful) || []);
   const mine = new Set((pg && pg.my_visit_ids) || []);
@@ -259,6 +263,18 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
                       first={pg && pg.first_feature && pg.first_feature.id === v.id} />
                   ))}
                 </div>
+              </div>
+            )}
+            {foundTiktoks.length > 0 && (
+              <div className="stack-10">
+                <h3 className="eyebrow">TikToks about this place</h3>
+                <div className="video-grid">
+                  {foundTiktoks.map((t) => (
+                    <SubmittedVideo key={t.url} placeId={id} onPlayYouTube={play}
+                      v={{ id: t.url, platform: 'tiktok', url: t.url, creator_handle: t.handle ? `@${t.handle}` : t.author, title: t.title }} />
+                  ))}
+                </div>
+                <p className="tiny muted">Public TikToks found with Brave Search. Plays from the creator’s original post.</p>
               </div>
             )}
             <div className="stack-10">

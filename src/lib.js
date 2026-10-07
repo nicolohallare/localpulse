@@ -33,6 +33,7 @@ export const api = {
   oembed: (url) => getJSON(`/api/video/oembed?${qs({ url })}`),
   summary: (id) => getJSON(`/api/summary?${qs({ id })}`),
   config: () => getJSON('/api/config'),
+  discoverTiktok: (placeId) => getJSON(`/api/video/discover?${qs({ place: placeId })}`),
   matchVideo: (url, lat, lng) => getJSON(`/api/video/match?${qs({ url, lat: lat.toFixed(2), lng: lng.toFixed(2) })}`),
   trending: (lat, lng, area) => getJSON(`/api/trending?${qs({ lat: lat.toFixed(2), lng: lng.toFixed(2), area })}`),
 };
