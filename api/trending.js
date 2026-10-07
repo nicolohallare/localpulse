@@ -86,6 +86,77 @@ async function extractPlaces(videos, area) {
   }
 }
 
+// Step 1 (cached per general area for 6 h): YouTube search → Claude picks the restaurant → Google Places match.
+async function candidates(ytKey, area, lat, lng) {
+  const videos = await youtubeSearch(ytKey, area);
+  const picks = await extractPlaces(videos, area);
+  const seen = new Set();
+  const resolved = await Promise.all(picks.slice(0, 15).map(async (p) => {
+    const video = videos[p.i];
+    if (!video) return null;
+    try {
+      const data = await places('places:searchText', {
+        method: 'POST',
+        fieldMask: LIST_FIELDS,
+        body: {
+          textQuery: `${p.place} ${p.branch || area}`,
+          pageSize: 1,
+          regionCode: 'PH',
+          locationBias: { circle: { center: { latitude: lat, longitude: lng }, radius: 30000 } },
+        },
+      });
+      const hit = data.places && data.places[0];
+      if (!hit || !sameName(p.place, hit.displayName && hit.displayName.text)) return null;
+      const { description, ...v } = video;
+      return { place: shapePlace(hit, 1), video: v };
+    } catch (e) {
+      return null;
+    }
+  }));
+  return resolved
+    .filter((x) => x && x.place.lat != null)
+    .filter((x) => !seen.has(x.place.id) && seen.add(x.place.id));
+}
+
+// Step 2 (per person): real driving time with current traffic (Google Routes API).
+async function driveMinutes(lat, lng, list) {
+  const key = SERVER_GOOGLE_KEY;
+  if (!key || !list.length) return null;
+  const r = await fetch('https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': key,
+      'X-Goog-FieldMask': 'originIndex,destinationIndex,duration,condition',
+    },
+    body: JSON.stringify({
+      origins: [{ waypoint: { location: { latLng: { latitude: lat, longitude: lng } } } }],
+      destinations: list.map((x) => ({ waypoint: { location: { latLng: { latitude: x.place.lat, longitude: x.place.lng } } } })),
+      travelMode: 'DRIVE',
+      routingPreference: 'TRAFFIC_AWARE',
+      regionCode: 'PH',
+    }),
+  });
+  if (!r.ok) return null;
+  const rows = await r.json();
+  const out = {};
+  (Array.isArray(rows) ? rows : []).forEach((e) => {
+    if (e.condition === 'ROUTE_EXISTS' && e.duration) out[e.destinationIndex] = Math.max(1, Math.round(parseInt(e.duration, 10) / 60));
+  });
+  return out;
+}
+
+function straightKm(lat, lng, pl) {
+  const rad = (x) => (x * Math.PI) / 180;
+  const dLat = rad(pl.lat - lat);
+  const dLng = rad(pl.lng - lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat)) * Math.cos(rad(pl.lat)) * Math.sin(dLng / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(h));
+}
+
+const CLOSE_MIN = 20; // what "near" means in Metro Manila traffic
+const WIDER_MIN = 35; // only if fewer than 3 places are within 20 minutes
+
 export default async function handler(req, res) {
   const lat = num(req.query.lat, -90, 90, 14.5509);
   const lng = num(req.query.lng, -180, 180, 121.0509);
@@ -93,52 +164,47 @@ export default async function handler(req, res) {
   const ytKey = process.env.YOUTUBE_API_KEY || SERVER_GOOGLE_KEY;
   if (!ytKey) return send(res, 200, { items: [], error: 'YouTube key not set' }, 'public, s-maxage=300');
 
+  // Internal step: candidate list for a ~10 km grid cell, cached at the edge.
+  if (req.query.stage === 'candidates') {
+    try {
+      const list = await candidates(ytKey, area, lat, lng);
+      return send(res, 200, { list }, 'public, s-maxage=21600, stale-while-revalidate=3600');
+    } catch (e) {
+      return send(res, 200, { list: [] }, 'public, s-maxage=600');
+    }
+  }
+
   try {
-    const videos = await youtubeSearch(ytKey, area);
-    const picks = await extractPlaces(videos, area);
+    // Reuse the cached candidates for this general area (rounded to ~10 km), falling back to computing them here.
+    let list = null;
+    const host = String(req.headers['x-forwarded-host'] || req.headers.host || '');
+    if (host) {
+      const qs = new URLSearchParams({ stage: 'candidates', area, lat: lat.toFixed(1), lng: lng.toFixed(1) });
+      list = await fetch(`https://${host}/api/trending?${qs}`).then((r) => (r.ok ? r.json() : null)).then((d) => d && d.list).catch(() => null);
+    }
+    if (!Array.isArray(list)) list = await candidates(ytKey, area, Number(lat.toFixed(1)), Number(lng.toFixed(1)));
 
-    const seen = new Set();
-    const resolved = await Promise.all(picks.slice(0, 15).map(async (p) => {
-      const video = videos[p.i];
-      if (!video) return null;
-      try {
-        const data = await places('places:searchText', {
-          method: 'POST',
-          fieldMask: LIST_FIELDS,
-          body: {
-            textQuery: `${p.place} ${p.branch || area}`,
-            pageSize: 1,
-            regionCode: 'PH',
-            locationBias: { circle: { center: { latitude: lat, longitude: lng }, radius: 30000 } },
-          },
-        });
-        const hit = data.places && data.places[0];
-        if (!hit || !sameName(p.place, hit.displayName && hit.displayName.text)) return null;
-        const { description, ...v } = video;
-        return { place: shapePlace(hit, 1), video: v };
-      } catch (e) {
-        return null;
-      }
-    }));
-
-    // Keep it local: only places within 15 km of the user.
-    const km = (pl) => {
-      const rad = (x) => (x * Math.PI) / 180;
-      const dLat = rad(pl.lat - lat);
-      const dLng = rad(pl.lng - lng);
-      const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat)) * Math.cos(rad(pl.lat)) * Math.sin(dLng / 2) ** 2;
-      return 12742 * Math.asin(Math.sqrt(h));
-    };
-    // Metro Manila is dense: prefer places within 7 km, widen to 12 km only if that leaves too few.
-    const unique = resolved
-      .filter((x) => x && x.place.lat != null)
-      .filter((x) => !seen.has(x.place.id) && seen.add(x.place.id))
-      .map((x) => ({ ...x, km: km(x.place) }));
-    let radius = 7;
-    let items = unique.filter((x) => x.km <= radius);
-    if (items.length < 3) { radius = 12; items = unique.filter((x) => x.km <= radius); }
-    items = items.slice(0, 8).map(({ km: _k, ...x }) => x);
-    send(res, 200, { area, days: DAYS, radiusKm: radius, items }, 'public, s-maxage=21600, stale-while-revalidate=3600');
+    const mins = await driveMinutes(lat, lng, list).catch(() => null);
+    let items;
+    let limit;
+    let basis;
+    if (mins && Object.keys(mins).length) {
+      basis = 'drive';
+      const timed = list.map((x, i) => ({ ...x, minutes: mins[i] })).filter((x) => x.minutes != null);
+      limit = CLOSE_MIN;
+      items = timed.filter((x) => x.minutes <= limit);
+      if (items.length < 3) { limit = WIDER_MIN; items = timed.filter((x) => x.minutes <= limit); }
+    } else {
+      // Routes API unavailable: fall back to straight-line distance, kept tight for dense cities.
+      basis = 'distance';
+      const withKm = list.map((x) => ({ ...x, km: straightKm(lat, lng, x.place) }));
+      limit = 4;
+      items = withKm.filter((x) => x.km <= limit);
+      if (items.length < 3) { limit = 8; items = withKm.filter((x) => x.km <= limit); }
+      items = items.map(({ km: _k, ...x }) => x);
+    }
+    items = items.slice(0, 8);
+    send(res, 200, { area, days: DAYS, basis, limit, items }, 'public, s-maxage=1800, stale-while-revalidate=600');
   } catch (e) {
     send(res, 200, { items: [], error: 'Trending unavailable right now' }, 'public, s-maxage=600');
   }

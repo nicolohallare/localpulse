@@ -421,3 +421,11 @@ a.btn { text-decoration: none; }
 .admin-media { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .admin-media-cell { display: flex; flex-direction: column; gap: 6px; }
 .admin-media-cell img, .admin-media-cell video { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 12px; background: var(--tint); }
+
+/* ── Go there: Google Maps / Waze ──────────────────── */
+.go-row { display: flex; gap: 8px; width: 100%; }
+.go-btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 46px; border-radius: 12px; font-weight: 700; font-size: 14px; text-decoration: none; }
+.go-sm .go-btn { min-height: 38px; font-size: 12px; border-radius: 10px; }
+.go-gmaps { background: var(--ube); color: #fff; }
+.go-waze { background: #33ccff; color: #0b2b3a; }
+.trend-go { margin: 4px 12px 12px; }
