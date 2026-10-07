@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { api, supabase, ensureUser, currentUser, directionsUrl, distanceM, fmtDistance } from '../lib';
+import { api, supabase, ensureUser, currentUser, distanceM, fmtDistance } from '../lib';
 import { shareUrl, shareLink } from '../game';
-import { Icon, PlacePhoto, Spinner, Notice } from '../ui';
+import { Icon, PlacePhoto, Spinner, Notice, GoButtons } from '../ui';
 
 // ── Create: #/poll/new (optionally ?with=<placeId>) ──────────────────────────
 export function PollNew({ loc, withPlace, onBack, onCreated }) {
@@ -213,9 +213,10 @@ export function PollView({ id, fresh, onBack, onOpenPlace }) {
         })}
         {err && <Notice tone="warn">{err}</Notice>}
         {leader && total > 0 && (
-          <a className="btn btn-primary" href={directionsUrl(leader)} target="_blank" rel="noreferrer">
-            <Icon name="nav" size={18} /> Directions to {leader.name}
-          </a>
+          <div className="stack-8">
+            <span className="field-label">Winning so far: {leader.name} — let’s go</span>
+            <GoButtons place={leader} />
+          </div>
         )}
         <p className="tiny muted">Votes update live. The poll closes {new Date(poll.closes_at).toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric' })}.</p>
       </section>

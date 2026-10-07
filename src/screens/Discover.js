@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { api, supabase, distanceM, fmtDistance, fmtCount, timeAgo, matchMichelin, DISTINCTION, directionsUrl } from '../lib';
+import { api, supabase, distanceM, fmtDistance, fmtCount, timeAgo, matchMichelin, DISTINCTION } from '../lib';
 import { logPlay, game } from '../game';
-import { Icon, PlacePhoto, Spinner, Notice, Empty, ScoreBadge, Sheet } from '../ui';
+import { Icon, PlacePhoto, Spinner, Notice, Empty, ScoreBadge, Sheet, GoButtons } from '../ui';
 import MapView from '../MapView';
 
 const CRAVINGS = ['Sisig', 'Lechon', 'Ramen', 'Samgyup', 'Kare-kare', 'Chicken wings', 'Pizza', 'Burger', 'Milk tea', 'Coffee', 'Halo-halo', 'Bulalo'];
@@ -324,9 +324,8 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
           </div>
           <p className="strong">{player.video.title}</p>
           <div className="row-wrap">
-            <a className="btn btn-primary" href={directionsUrl(player.place)} target="_blank" rel="noreferrer">
-              <Icon name="nav" size={18} /> Directions to {player.place.name}
-            </a>
+            <span className="field-label" style={{ flexBasis: '100%' }}>Go to {player.place.name}</span>
+            <GoButtons place={player.place} />
             <button className="soft-btn" onClick={() => { const id = player.place.id; setPlayer(null); onOpen(id); }}>
               See on LocalPulse
             </button>
@@ -356,7 +355,7 @@ function TrendingRail({ data, loc, onOpen, onPlay }) {
     <section className="section trend">
       <div className="row-between">
         <h2 className="h2">Trending on YouTube</h2>
-        {data && data.area && <span className="tiny muted">Within {data.radiusKm || 7} km · last {data.days} days</span>}
+        {data && data.area && <span className="tiny muted">{data.basis === 'drive' ? `Within ${data.limit} min drive` : `Within ${data.limit} km`} · last {data.days} days</span>}
       </div>
       {!data && <Spinner label="Finding what food creators are talking about…" />}
       {data && (
@@ -373,12 +372,10 @@ function TrendingRail({ data, loc, onOpen, onPlay }) {
                 </button>
                 <button className="trend-body" onClick={() => onOpen(it.place.id)}>
                   <span className="row-title-sm clamp-1">{it.place.name}</span>
-                  <span className="tiny muted clamp-1">{[it.place.type, d != null ? fmtDistance(d) : null].filter(Boolean).join(' · ')}</span>
+                  <span className="tiny muted clamp-1">{[it.minutes != null ? `🚗 ~${it.minutes} min` : (d != null ? fmtDistance(d) : null), it.place.type].filter(Boolean).join(' · ')}</span>
                   <span className="tiny muted clamp-1">▶ {it.video.channel} · {timeAgo(it.video.published)}</span>
                 </button>
-                <a className="trend-dir" href={directionsUrl(it.place)} target="_blank" rel="noreferrer">
-                  <Icon name="nav" size={16} /> Directions
-                </a>
+                <div className="trend-go"><GoButtons place={it.place} size="sm" /></div>
               </article>
             );
           })}

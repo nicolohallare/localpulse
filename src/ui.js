@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { photoUrl } from './lib';
+import { photoUrl, directionsUrl, wazeUrl } from './lib';
 
 const paths = {
   pin: <><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.5" /></>,
@@ -69,6 +69,21 @@ export function Sheet({ title, onClose, children, tall }) {
         </div>
         <div className="sheet-body">{children}</div>
       </div>
+    </div>
+  );
+}
+
+// "Go there" buttons: Google Maps and Waze, each opening navigation to the place.
+export function GoButtons({ place, size = 'md' }) {
+  if (!place || !place.id) return null;
+  return (
+    <div className={`go-row go-${size}`}>
+      <a className="go-btn go-gmaps" href={directionsUrl(place)} target="_blank" rel="noreferrer" aria-label={`Directions to ${place.name} in Google Maps`}>
+        <Icon name="nav" size={size === 'sm' ? 15 : 18} /> Google Maps
+      </a>
+      <a className="go-btn go-waze" href={wazeUrl(place)} target="_blank" rel="noreferrer" aria-label={`Drive to ${place.name} with Waze`}>
+        <Icon name="nav" size={size === 'sm' ? 15 : 18} /> Waze
+      </a>
     </div>
   );
 }

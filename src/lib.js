@@ -41,6 +41,11 @@ export const api = {
 export const directionsUrl = (p) =>
   `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(p.name || 'Destination')}&destination_place_id=${encodeURIComponent(p.id)}`;
 
+// Opens Waze with turn-by-turn navigation to the place.
+export const wazeUrl = (p) => (p.lat != null && p.lng != null
+  ? `https://waze.com/ul?ll=${p.lat},${p.lng}&navigate=yes`
+  : `https://waze.com/ul?q=${encodeURIComponent(p.name || '')}&navigate=yes`);
+
 export const photoUrl = (name, w = 800) => `/api/places/photo?${qs({ name, w })}`;
 
 // ── Location ────────────────────────────────────────────────────────────────

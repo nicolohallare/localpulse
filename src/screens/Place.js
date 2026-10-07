@@ -6,7 +6,7 @@ import {
 import { game, logPlay, shareUrl, shareLink } from '../game';
 import { SaveSheet } from './Lists';
 import { MediaStrip, AddMediaSheet, loadMedia } from '../media';
-import { Icon, PlacePhoto, Spinner, Notice, Empty, Sheet } from '../ui';
+import { Icon, PlacePhoto, Spinner, Notice, Empty, Sheet, GoButtons } from '../ui';
 import CheckIn from './CheckIn';
 
 export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpenUser, onNewPoll }) {
@@ -141,6 +141,7 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
             {dist != null && <span className="muted">{fmtDistance(dist)} away</span>}
           </p>
         </div>
+        <GoButtons place={place} />
 
         {mich && (
           <div className="mich-card">
@@ -349,7 +350,7 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
           {place.fullAddress && (
             <div className="info-row">
               <span className="grow"><span className="tiny muted block">Address</span><span className="small strong">{place.fullAddress}</span></span>
-              {place.mapsUri && <a className="soft-btn" href={place.mapsUri} target="_blank" rel="noreferrer"><Icon name="nav" size={16} /> Directions</a>}
+
             </div>
           )}
           {place.hours.length > 0 && (
