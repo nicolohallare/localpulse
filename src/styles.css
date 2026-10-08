@@ -429,3 +429,18 @@ a.btn { text-decoration: none; }
 .go-gmaps { background: var(--ube); color: #fff; }
 .go-waze { background: #33ccff; color: #0b2b3a; }
 .trend-go { margin: 4px 12px 12px; }
+
+/* ── Trending: related TikToks & clip switcher ─────── */
+.trend-tt { margin: 2px 12px 0; display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 0 10px; border-radius: 10px; border: 0; background: #111; color: #fff; font-size: 12px; font-weight: 700; text-align: left; }
+.tt-stack { display: inline-flex; }
+.tt-dot { width: 20px; height: 20px; border-radius: 999px; overflow: hidden; border: 2px solid #111; margin-left: -6px; background: #333; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; }
+.tt-dot:first-child { margin-left: 0; }
+.tt-dot img { width: 100%; height: 100%; object-fit: cover; }
+.clip-rail { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.clip-rail::-webkit-scrollbar { display: none; }
+.clip { position: relative; flex: 0 0 auto; width: 72px; aspect-ratio: 9 / 16; border-radius: 10px; overflow: hidden; border: 2px solid transparent; padding: 0; background: #1d1a1f; }
+.clip-youtube { width: 112px; aspect-ratio: 16 / 9; align-self: center; }
+.clip img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.clip-on { border-color: var(--mango); }
+.clip-tag { position: absolute; left: 4px; bottom: 4px; padding: 1px 5px; border-radius: 4px; background: rgba(0,0,0,0.7); color: #fff; font-size: 9px; font-weight: 700; }
+.clip-now { position: absolute; left: 4px; top: 4px; padding: 1px 5px; border-radius: 4px; background: var(--mango); color: var(--ink); font-size: 9px; font-weight: 800; }

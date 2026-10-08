@@ -43,6 +43,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
   const [opening, setOpening] = useState(null);
   const [trending, setTrending] = useState(null);
   const [player, setPlayer] = useState(null);
+  const [related, setRelated] = useState({});
   const [filters, setFilters] = useState([]);
   const [craving, setCraving] = useState(null);
   const [crave, setCrave] = useState(null);
@@ -104,6 +105,58 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
     })();
     return () => { off = true; };
   }, [craving, loc, amen, loadStats]);
+
+  useEffect(() => {
+    const items = (trending && trending.items) || [];
+    if (!items.length) return;
+    let off = false;
+    const ids = items.map((it) => it.place.id);
+    (async () => {
+      const [{ data: imported }, found] = await Promise.all([
+        supabase.from('place_videos').select('google_place_id,url,creator_handle,title').in('google_place_id', ids).eq('platform', 'tiktok'),
+        Promise.all(ids.map((id) => api.discoverTiktok(id).then((d) => [id, (d && d.videos) || []]).catch(() => [id, []]))),
+      ]);
+      const by = {};
+      (imported || []).forEach((v) => { (by[v.google_place_id] = by[v.google_place_id] || []).push({ url: v.url, handle: v.creator_handle, title: v.title }); });
+      found.forEach(([id, vids]) => vids.forEach((v) => { (by[id] = by[id] || []).push({ url: v.url, handle: v.handle ? `@${v.handle}` : v.author, title: v.title, videoId: v.videoId, thumb: v.thumb }); }));
+      // De-duplicate by video id in the URL, keep up to 4 per place.
+      Object.keys(by).forEach((id) => {
+        const seen = new Set();
+        by[id] = by[id].filter((v) => {
+          const k = (String(v.url).match(/video\/(\d+)/) || [])[1] || v.url;
+          if (seen.has(k)) return false;
+          seen.add(k);
+          return true;
+        }).slice(0, 4);
+      });
+      if (!off) setRelated(by);
+    })();
+    return () => { off = true; };
+  }, [trending]);
+
+  // Open the player for a trending place: its YouTube video first, then its TikToks.
+  async function openClips(it, start = 0) {
+    const tiks = related[it.place.id] || [];
+    const clips = [
+      { kind: 'youtube', id: it.video.id, title: it.video.title, channel: it.video.channel, thumb: it.video.thumb, views: it.video.views },
+      ...tiks.map((t) => ({ kind: 'tiktok', id: t.videoId || null, url: t.url, title: t.title, channel: t.handle, thumb: t.thumb })),
+    ];
+    setPlayer({ place: it.place, clips, idx: start });
+    playClip(it.place, clips[start]);
+    // Fill in TikTok video ids / fresh thumbnails for clips that came from imports.
+    const filled = await Promise.all(clips.map(async (c) => {
+      if (c.kind !== 'tiktok' || (c.id && c.thumb)) return c;
+      const m = await api.oembed(c.url).catch(() => null);
+      return m ? { ...c, id: c.id || m.videoId, thumb: m.thumb || c.thumb, title: c.title || m.title, channel: c.channel || (m.handle ? `@${m.handle}` : m.author) } : c;
+    }));
+    setPlayer((cur) => (cur && cur.place.id === it.place.id ? { ...cur, clips: filled } : cur));
+  }
+
+  function playClip(place, c) {
+    if (!c) return;
+    if (c.kind === 'youtube') logPlay({ placeId: place.id, ref: c.id, platform: 'youtube', creator: c.channel });
+    else logPlay({ placeId: place.id, ref: c.url, platform: 'tiktok', creator: c.channel });
+  }
 
   const toggleFilter = (k) => setFilters((cur) => (cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k]));
 
@@ -235,10 +288,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
               )}
             </section>
           )}
-          {!query && !craving && <TrendingRail data={trending} loc={loc} onOpen={onOpen} onPlay={(it) => {
-            setPlayer(it);
-            logPlay({ placeId: it.place.id, ref: it.video.id, platform: 'youtube', creator: it.video.channel });
-          }} />}
+          {!query && !craving && <TrendingRail data={trending} loc={loc} onOpen={onOpen} related={related} onPlay={openClips} />}
           {!query && !craving && (
             <section className="section">
               <button className="creator-cta" onClick={onAddVideo}>
@@ -316,23 +366,51 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
           </div>
         </section>
       )}
-      {player && (
-        <Sheet title={player.video.channel} onClose={() => setPlayer(null)}>
-          <div className="player">
-            <iframe title={player.video.title} src={`https://www.youtube-nocookie.com/embed/${player.video.id}?autoplay=1&playsinline=1&rel=0`}
-              allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />
-          </div>
-          <p className="strong">{player.video.title}</p>
-          <div className="row-wrap">
-            <span className="field-label" style={{ flexBasis: '100%' }}>Go to {player.place.name}</span>
-            <GoButtons place={player.place} />
-            <button className="soft-btn" onClick={() => { const id = player.place.id; setPlayer(null); onOpen(id); }}>
-              See on LocalPulse
-            </button>
-          </div>
-          <a className="link-out" href={`https://www.youtube.com/watch?v=${player.video.id}`} target="_blank" rel="noreferrer">Open on YouTube <Icon name="external" size={14} /></a>
-        </Sheet>
-      )}
+      {player && (() => {
+        const c = player.clips[player.idx];
+        const pick = (i) => { setPlayer({ ...player, idx: i }); playClip(player.place, player.clips[i]); };
+        return (
+          <Sheet title={player.place.name} onClose={() => setPlayer(null)} tall>
+            {c.kind === 'youtube' ? (
+              <div className="player">
+                <iframe title={c.title || 'YouTube video'} src={`https://www.youtube-nocookie.com/embed/${c.id}?autoplay=1&playsinline=1&rel=0`}
+                  allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />
+              </div>
+            ) : c.id ? (
+              <div className="player player-tall">
+                <iframe title={c.title || 'TikTok video'} src={`https://www.tiktok.com/embed/v2/${c.id}`}
+                  allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />
+              </div>
+            ) : <Spinner label="Loading TikTok…" />}
+            <div className="stack-4">
+              <span className="tiny muted">{c.kind === 'youtube' ? 'YouTube' : 'TikTok'}{c.channel ? ` · ${c.channel}` : ''}</span>
+              {c.title && <p className="strong clamp-3">{c.title}</p>}
+            </div>
+            {player.clips.length > 1 && (
+              <div className="stack-8">
+                <span className="field-label">More videos about {player.place.name}</span>
+                <div className="clip-rail">
+                  {player.clips.map((x, i) => (
+                    <button key={`${x.kind}-${x.url || x.id}`} className={`clip ${i === player.idx ? 'clip-on' : ''} clip-${x.kind}`} onClick={() => pick(i)} aria-pressed={i === player.idx}>
+                      {x.thumb && <img src={x.thumb} alt="" loading="lazy" />}
+                      <span className="clip-tag">{x.kind === 'youtube' ? 'YouTube' : 'TikTok'}</span>
+                      {i === player.idx && <span className="clip-now">Playing</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="stack-8">
+              <span className="field-label">Go to {player.place.name}</span>
+              <GoButtons place={player.place} />
+              <button className="soft-btn" onClick={() => { const id = player.place.id; setPlayer(null); onOpen(id); }}>See all takes on LocalPulse</button>
+            </div>
+            <a className="link-out" href={c.kind === 'youtube' ? `https://www.youtube.com/watch?v=${c.id}` : c.url} target="_blank" rel="noreferrer">
+              Open on {c.kind === 'youtube' ? 'YouTube' : 'TikTok'} <Icon name="external" size={14} />
+            </a>
+          </Sheet>
+        );
+      })()}
     </div>
   );
 }
@@ -349,12 +427,12 @@ function areaOf(list) {
   return best ? best[0] : 'Metro Manila';
 }
 
-function TrendingRail({ data, loc, onOpen, onPlay }) {
+function TrendingRail({ data, loc, onOpen, onPlay, related = {} }) {
   if (data && (!data.items || data.items.length === 0)) return null;
   return (
     <section className="section trend">
       <div className="row-between">
-        <h2 className="h2">Trending on YouTube</h2>
+        <h2 className="h2">Trending near you</h2>
         {data && data.area && <span className="tiny muted">{data.basis === 'drive' ? `Within ${data.limit} min drive` : `Within ${data.limit} km`} · last {data.days} days</span>}
       </div>
       {!data && <Spinner label="Finding what food creators are talking about…" />}
@@ -375,13 +453,21 @@ function TrendingRail({ data, loc, onOpen, onPlay }) {
                   <span className="tiny muted clamp-1">{[it.minutes != null ? `🚗 ~${it.minutes} min` : (d != null ? fmtDistance(d) : null), it.place.type].filter(Boolean).join(' · ')}</span>
                   <span className="tiny muted clamp-1">▶ {it.video.channel} · {timeAgo(it.video.published)}</span>
                 </button>
+                {(related[it.place.id] || []).length > 0 && (
+                  <button className="trend-tt" onClick={() => onPlay(it, 1)}>
+                    <span className="tt-stack">
+                      {(related[it.place.id] || []).slice(0, 3).map((t) => <span key={t.url} className="tt-dot">{t.thumb ? <img src={t.thumb} alt="" /> : '♪'}</span>)}
+                    </span>
+                    🎵 {related[it.place.id].length} TikTok{related[it.place.id].length === 1 ? '' : 's'} about it
+                  </button>
+                )}
                 <div className="trend-go"><GoButtons place={it.place} size="sm" /></div>
               </article>
             );
           })}
         </div>
       )}
-      {data && <p className="tiny muted">Most-viewed food videos from YouTube, matched to places on Google Maps.</p>}
+      {data && <p className="tiny muted">Most-viewed food videos from YouTube, plus TikToks about the same places, matched on Google Maps.</p>}
     </section>
   );
 }
