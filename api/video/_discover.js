@@ -4,8 +4,20 @@ import { shapeOembed } from './_oembed.js';
 // GET /api/video/discover?place=<google place id>
 // Finds public TikToks about a place: a web search (Brave Search API) for tiktok.com links,
 // then TikTok's official oEmbed for each one, keeping only videos whose caption names the place.
-// Nothing is stored; results are cached at the edge for 7 days per place.
+// Nothing is stored. The paid web search is cached for 7 days per place; the cheap oEmbed step
+// is refreshed every 12 hours because TikTok's thumbnail links expire after about 2 days.
 const WEEK = 'public, s-maxage=604800, stale-while-revalidate=86400';
+const HALF_DAY = 'public, s-maxage=43200, stale-while-revalidate=3600';
+
+// TikTok video ids start with the upload time (seconds since 1970) in their top 32 bits.
+function postedAt(videoId) {
+  try {
+    const sec = Number(BigInt(videoId) >> 32n);
+    return sec > 1400000000 && sec < Date.now() / 1000 + 86400 ? new Date(sec * 1000).toISOString() : null;
+  } catch (e) {
+    return null;
+  }
+}
 
 function norm(s) {
   return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -40,27 +52,49 @@ async function oembed(url) {
   }
 }
 
+// Step 1 (paid, cached 7 days): search the web for TikTok links about the place.
+async function searchStage(id, key) {
+  const p = await places(`places/${id}`, { fieldMask: 'id,displayName,shortFormattedAddress' });
+  const name = (p.displayName && p.displayName.text) || '';
+  const addr = String(p.shortFormattedAddress || '');
+  const city = addr.split(',').map((x) => x.trim()).filter(Boolean).pop() || '';
+  const words = keyWords(name);
+  if (!words.length) return { urls: [], words };
+  const brand = name.split(/[-–|,(]/)[0].trim();
+  const urls = await braveSearch(`site:tiktok.com "${brand}" ${city}`, key);
+  const videoUrls = [...new Set(urls
+    .map((u) => (u.match(/^https:\/\/(?:www\.)?tiktok\.com\/@[^/?#]+\/video\/\d+/) || [])[0])
+    .filter(Boolean))].slice(0, 10);
+  return { urls: videoUrls, words };
+}
+
 export default async function handler(req, res) {
   const id = String(req.query.place || '');
   if (!PLACE_ID_RE.test(id)) return send(res, 400, { error: 'Invalid place' });
   const key = process.env.BRAVE_SEARCH_KEY;
   if (!key) return send(res, 200, { videos: [], off: true }, 'public, s-maxage=3600');
 
+  if (req.query.stage === 'search') {
+    try {
+      return send(res, 200, await searchStage(id, key), WEEK);
+    } catch (e) {
+      return send(res, 200, { urls: [], words: [] }, 'public, s-maxage=3600');
+    }
+  }
+
   try {
-    const p = await places(`places/${id}`, { fieldMask: 'id,displayName,shortFormattedAddress' });
-    const name = (p.displayName && p.displayName.text) || '';
-    const addr = String(p.shortFormattedAddress || '');
-    const city = addr.split(',').map((x) => x.trim()).filter(Boolean).pop() || '';
-    const words = keyWords(name);
-    if (!words.length) return send(res, 200, { videos: [] }, WEEK);
+    // Reuse the cached search for this place; fall back to searching here.
+    let found = null;
+    const host = String(req.headers['x-forwarded-host'] || req.headers.host || '');
+    if (host) {
+      found = await fetch(`https://${host}/api/video/discover?${new URLSearchParams({ place: id, stage: 'search' })}`)
+        .then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    }
+    if (!found || !Array.isArray(found.urls)) found = await searchStage(id, key);
+    const { urls, words } = found;
+    if (!urls.length || !words.length) return send(res, 200, { videos: [] }, HALF_DAY);
 
-    const brand = name.split(/[-–|,(]/)[0].trim();
-    const urls = await braveSearch(`site:tiktok.com "${brand}" ${city}`, key);
-    const videoUrls = [...new Set(urls
-      .map((u) => (u.match(/^https:\/\/(?:www\.)?tiktok\.com\/@[^/?#]+\/video\/\d+/) || [])[0])
-      .filter(Boolean))].slice(0, 10);
-
-    const metas = await Promise.all(videoUrls.map(async (url) => ({ url, meta: await oembed(url) })));
+    const metas = await Promise.all(urls.map(async (url) => ({ url, meta: await oembed(url) })));
     const videos = metas
       .filter(({ meta }) => meta && meta.videoId)
       // Keep only videos whose caption (or creator) clearly names this place.
@@ -69,17 +103,20 @@ export default async function handler(req, res) {
         const hits = words.filter((w) => text.includes(w)).length;
         return words.length === 1 ? hits === 1 : hits >= Math.min(2, words.length);
       })
-      .slice(0, 6)
       .map(({ url, meta }) => ({
         url,
         videoId: meta.videoId,
+        posted: postedAt(meta.videoId),
         title: meta.title,
         author: meta.author,
         handle: meta.handle,
         thumb: meta.thumb,
-      }));
+      }))
+      // Newest first, so recent buzz beats old posts.
+      .sort((a, b) => String(b.posted || '').localeCompare(String(a.posted || '')))
+      .slice(0, 6);
 
-    send(res, 200, { videos, source: 'brave' }, WEEK);
+    send(res, 200, { videos, source: 'brave' }, HALF_DAY);
   } catch (e) {
     send(res, 200, { videos: [], error: 'TikTok search unavailable' }, 'public, s-maxage=3600');
   }

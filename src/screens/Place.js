@@ -1,8 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   api, supabase, distanceM, fmtDistance, fmtCount, timeAgo, initials, matchMichelin, DISTINCTION,
-  PLATFORM_LABEL, detectPlatform, youtubeId, ensureUser,
-} from '../lib';
+  PLATFORM_LABEL, detectPlatform, youtubeId, ensureUser, tiktokEmbed } from '../lib';
 import { game, logPlay, shareUrl, shareLink } from '../game';
 import { SaveSheet } from './Lists';
 import { MediaStrip, AddMediaSheet, loadMedia } from '../media';
@@ -404,7 +403,7 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
         <Sheet title={player.channel || 'YouTube'} onClose={() => setPlayer(null)}>
           {player.kind === 'tiktok' ? (
             <div className="player player-tall">
-              <iframe title={player.title || 'TikTok video'} src={`https://www.tiktok.com/embed/v2/${player.id}`}
+              <iframe title={player.title || 'TikTok video'} src={tiktokEmbed(player.id)}
                 allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />
             </div>
           ) : (
