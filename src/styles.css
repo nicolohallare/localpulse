@@ -1,26 +1,33 @@
-/* LocalPulse — "Ube & Mango" */
+/* Ube Banana — purple ube, banana yellow, sticker edges */
 :root {
   --bg: #ffffff;
-  --page: #ede9f2;
-  --tint: #f4f1f8;
-  --line: #e6e1ec;
-  --ink: #17131f;
-  --ink-2: #2e2838;
-  --mid: #4e475c;
-  --soft: #6b6479;
-  --ube: #5b2a86;
-  --ube-deep: #3f1d5e;
-  --ube-tint: #eee6f6;
-  --ube-wash: #f6f0fb;
-  --mango: #ffc23d;
-  --mango-tint: #fff3d6;
-  --mango-ink: #7a5200;
-  --green: #0f7a4f;
-  --green-tint: #e3f4ec;
-  --clay: #c9733a;
-  --danger: #a8331f;
-  --radius: 16px;
-  --display: 'Bricolage Grotesque', 'Figtree', system-ui, sans-serif;
+  --page: #efe6fa;
+  --tint: #f5effc;
+  --line: #e4d9f1;
+  --ink: #24123d;
+  --ink-2: #33204f;
+  --mid: #4f3d68;
+  --soft: #6e5d86;
+  --ube: #4b1f7a;
+  --ube-deep: #2e1150;
+  --ube-bright: #7a3ec8;
+  --ube-ink: #24123d;
+  --ube-tint: #ece0f8;
+  --ube-wash: #f6effd;
+  --banana: #ffd23f;
+  --banana-deep: #f2b705;
+  --banana-cream: #fff6d1;
+  --mango: #ffd23f;
+  --mango-tint: #fff6d1;
+  --mango-ink: #6b4a00;
+  --green: #1f7a45;
+  --green-tint: #e2f3e8;
+  --clay: #8a5cc0;
+  --danger: #c0361f;
+  --radius: 18px;
+  --sticker: 0 3px 0 var(--ube-ink);
+  --display: 'Bagel Fat One', 'Figtree', system-ui, sans-serif;
+  --heading: 'Figtree', system-ui, sans-serif;
   --body: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --safe-b: env(safe-area-inset-bottom, 0px);
 }
@@ -445,8 +452,77 @@ a.btn { text-decoration: none; }
 .clip-tag { position: absolute; left: 4px; bottom: 4px; padding: 1px 5px; border-radius: 4px; background: rgba(0,0,0,0.7); color: #fff; font-size: 9px; font-weight: 700; }
 .clip-now { position: absolute; left: 4px; top: 4px; padding: 1px 5px; border-radius: 4px; background: var(--mango); color: var(--ink); font-size: 9px; font-weight: 800; }
 
-/* ── Brand: Ube Banana ─────────────────────────────── */
-.brand-line { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 6px; margin-top: 14px; font-family: var(--display); font-weight: 800; font-size: 20px; letter-spacing: -0.01em; line-height: 1.2; }
-.b-ube { color: var(--ube); }
-.b-banana { color: var(--mango-ink); background: var(--mango); padding: 0 6px; border-radius: 6px; }
-.brand-tag { flex-basis: 100%; font-family: var(--body); font-weight: 600; font-size: 13px; color: var(--soft); letter-spacing: 0; margin-top: 2px; }
+
+/* ── Ube Banana look ───────────────────────────────────────────────────────
+   One loud thing: the ube header with the banana sticker. Everything else is
+   calm: white surfaces, purple ink, banana yellow only for actions and wins.
+   "Sticker" edges (2px ink outline + hard 3px drop) mark things you can press. */
+
+/* Type: Bagel Fat One for the big moments only; Figtree 800 for headings. */
+.display, .display-sm, .display-xs { font-family: var(--display); font-weight: 400; letter-spacing: 0; }
+.display { font-size: 36px; line-height: 1.02; }
+.display-sm { font-size: 30px; line-height: 1.05; }
+.display-xs { font-size: 24px; line-height: 1.1; }
+.h2, .h3, .row-title, .mich-name, .mich-card-title { font-family: var(--heading); font-weight: 800; letter-spacing: -0.01em; }
+.tile-big, .reward-pts, .level-pts, .top-rank { font-family: var(--display); font-weight: 400; letter-spacing: 0; }
+.eyebrow, .mich-tag, .mich-dist { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 800; }
+
+/* Header band on Discover. */
+.disc-head { background: var(--ube); color: #fff; padding: 14px 20px 22px; border-radius: 0 0 28px 28px; position: relative; overflow: hidden; }
+.disc-head::after { content: ''; position: absolute; width: 220px; height: 220px; right: -70px; top: -90px; border-radius: 50%; background: var(--ube-bright); opacity: 0.45; pointer-events: none; }
+.disc-head > * { position: relative; z-index: 1; }
+.disc-head .display { color: var(--banana); font-size: 40px; }
+.disc-head .pill-btn { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.25); color: #fff; }
+.disc-head .pill-btn .ube { color: var(--banana); }
+.disc-head .avatar-btn { background: var(--banana); color: var(--ube-ink); box-shadow: var(--sticker); border: 2px solid var(--ube-ink); }
+.disc-head .search { background: #fff; color: var(--soft); border: 2px solid var(--ube-ink); box-shadow: var(--sticker); }
+.brand-line { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.brand-banana { flex-shrink: 0; transform: rotate(-14deg); filter: drop-shadow(0 3px 0 rgba(0,0,0,0.25)); }
+.wordmark { font-family: var(--display); font-size: 26px; line-height: 1; color: #fff; }
+.brand-tag { font-weight: 700; font-size: 13px; color: var(--banana-cream); opacity: 0.9; margin-top: 3px; }
+
+/* Buttons: banana stickers you can press. */
+.btn { border-radius: 16px; font-weight: 800; }
+.btn-primary { background: var(--banana); color: var(--ube-ink); border: 2px solid var(--ube-ink); box-shadow: var(--sticker); text-decoration: none; transition: transform 0.08s ease, box-shadow 0.08s ease; }
+.btn-primary:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 0 0 var(--ube-ink); }
+.btn-primary:disabled { background: var(--tint); color: var(--soft); border-color: var(--line); box-shadow: none; }
+.btn-quiet { background: var(--ube-tint); color: var(--ube); }
+.soft-btn { background: var(--ube-tint); color: var(--ube); border-radius: 999px; padding: 0 16px; }
+.link-btn, .link-out, a { color: var(--ube-bright); }
+.dashed-btn { border-color: var(--ube-bright); border-radius: 16px; color: var(--ube); }
+
+/* Chips. */
+.chip { border: 2px solid var(--line); font-weight: 700; }
+.chip-on { background: var(--ube); border-color: var(--ube); color: var(--banana); }
+.chip-soft-on { background: var(--banana-cream); border: 2px solid var(--ube-ink); color: var(--ube-ink); }
+.pill-tag { background: var(--banana); color: var(--ube-ink); font-weight: 800; }
+
+/* Scores read as little stickers. */
+.score-badge { background: var(--ube); color: var(--banana); border-radius: 8px; }
+.ube-tile { background: var(--ube); color: #fff; }
+.ube-tile .tile-big { color: var(--banana); }
+.score-tile { border-width: 2px; }
+.place-thumb { border-radius: 16px; }
+
+/* Tab bar: the check-in button is the banana. */
+.tabbar { border-top: 2px solid var(--line); }
+.tab-on { color: var(--ube); font-weight: 800; }
+.tab-fab { background: var(--banana); color: var(--ube-ink); border: 3px solid var(--ube-ink); box-shadow: 0 4px 0 var(--ube-ink); width: 60px; height: 60px; margin-top: -26px; }
+.tab-center:active .tab-fab { transform: translateY(3px); box-shadow: 0 1px 0 var(--ube-ink); }
+
+/* Sheets and cards stay quiet. */
+.sheet { border-radius: 28px 28px 0 0; }
+.sheet-handle { background: var(--ube-tint); width: 48px; height: 5px; }
+.card { border: 2px solid var(--line); border-radius: 20px; }
+.summary-card { background: var(--banana-cream); }
+.reward { background: var(--banana-cream); border: 2px solid var(--ube-ink); box-shadow: var(--sticker); }
+.reward-pts { color: var(--ube); }
+.level-chip { background: var(--banana); border: 2px solid var(--ube-ink); }
+.level-bar span { background: var(--banana); }
+.seg { background: var(--ube-tint); }
+.seg .seg-on { color: var(--ube); }
+.app { box-shadow: 0 0 0 2px var(--line); }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary, .tab-fab { transition: none; }
+}
