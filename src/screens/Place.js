@@ -109,7 +109,7 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
   }
 
   async function share() {
-    const r = await shareLink({ title: place.name, text: `${place.name} on LocalPulse`, url: shareUrl('p', id) });
+    const r = await shareLink({ title: place.name, text: `${place.name} on Ube Banana`, url: shareUrl('p', id) });
     if (r === 'copied') { setShared('Link copied'); setTimeout(() => setShared(null), 2500); }
   }
 
@@ -158,7 +158,7 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
 
         <div className="score-grid">
           <div className="score-tile ube-tile">
-            <span className="tile-label">LocalPulse score</span>
+            <span className="tile-label">Ube Banana score</span>
             {stat ? (
               <>
                 <span className="tile-big">{Number(stat.avg_score).toFixed(1)}<small>/10</small></span>
@@ -183,7 +183,7 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
             )}
           </div>
         </div>
-        <p className="tiny muted">The two scores are kept separate. LocalPulse counts verified visits only.</p>
+        <p className="tiny muted">The two scores are kept separate. Ube Banana counts verified visits only.</p>
 
         {pg && (
           <div className="stack-8">
@@ -300,14 +300,14 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
             <button className="dashed-btn" onClick={() => setAddingVideo(true)}>
               <Icon name="plus" size={18} /> Saw a TikTok or Reel about this place? Add it
             </button>
-            <button className="link-btn left" onClick={onOpenCreators}>Food creator? Put your videos on LocalPulse →</button>
+            <button className="link-btn left" onClick={onOpenCreators}>Food creator? Put your videos on Ube Banana →</button>
           </div>
         )}
 
         {tab === 'visits' && (
           <div className="stack-12">
             {feed.length === 0 && (
-              <Empty icon="check" title="No check-ins yet">Visiting? Check in to give this place its first LocalPulse score.</Empty>
+              <Empty icon="check" title="No check-ins yet">Visiting? Check in to give this place its first Ube Banana score.</Empty>
             )}
             {feed.map((r) => (
               <article key={r.id} className="review">

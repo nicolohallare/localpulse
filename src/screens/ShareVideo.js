@@ -3,7 +3,7 @@ import { api, supabase, ensureUser, detectPlatform, distanceM, fmtDistance, PLAT
 import { Icon, PlacePhoto, Spinner, Notice } from '../ui';
 
 // Add a creator video (TikTok, YouTube, Reels) to a place.
-// Opened from the app, or straight from TikTok via Share → LocalPulse.
+// Opened from the app, or straight from TikTok via Share → Ube Banana.
 export default function ShareVideo({ initialUrl = '', loc, onBack, onOpen }) {
   const [url, setUrl] = useState(initialUrl);
   const [match, setMatch] = useState(null);
@@ -76,7 +76,7 @@ export default function ShareVideo({ initialUrl = '', loc, onBack, onOpen }) {
       <header className="px stack-8">
         <span className="pill-tag">Add a food video</span>
         <h1 className="display">Pin a TikTok to the map</h1>
-        <p className="muted">Paste a link, or in TikTok tap <strong className="ink">Share → LocalPulse</strong>. We’ll find the restaurant for you.</p>
+        <p className="muted">Paste a link, or in TikTok tap <strong className="ink">Share → Ube Banana</strong>. We’ll find the restaurant for you.</p>
       </header>
 
       {state === 'done' ? (

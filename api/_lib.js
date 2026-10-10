@@ -1,4 +1,4 @@
-// Shared helpers for LocalPulse server functions.
+// Shared helpers for Ube Banana server functions.
 // Files starting with "_" are not exposed as endpoints by Vercel.
 
 export const SUPABASE_URL = process.env.SUPABASE_URL || 'https://bncqflgnfsuwutjazppk.supabase.co';

@@ -1,6 +1,6 @@
-// LocalPulse service worker: makes the app installable and keeps the app shell
+// Ube Banana service worker: makes the app installable and keeps the app shell
 // available on flaky connections. API responses are never cached here.
-const SHELL = 'lp-shell-v2';
+const SHELL = 'ub-shell-v3';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(SHELL).then((c) => c.addAll(['/', '/manifest.json'])).then(() => self.skipWaiting()));
@@ -40,8 +40,8 @@ self.addEventListener('fetch', (event) => {
 // ── Push notifications ──────────────────────────────────────────────────────
 self.addEventListener('push', (event) => {
   let data = {};
-  try { data = event.data ? event.data.json() : {}; } catch (e) { data = { title: 'LocalPulse', body: event.data && event.data.text() }; }
-  event.waitUntil(self.registration.showNotification(data.title || 'LocalPulse', {
+  try { data = event.data ? event.data.json() : {}; } catch (e) { data = { title: 'Ube Banana', body: event.data && event.data.text() }; }
+  event.waitUntil(self.registration.showNotification(data.title || 'Ube Banana', {
     body: data.body || '',
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',

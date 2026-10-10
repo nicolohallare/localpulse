@@ -118,7 +118,7 @@ export default function You({ onOpen, onOpenCreators, onOpenRanks, onOpenUser, o
             <span className="tiny muted">
               {push === 'on' ? 'On — crown alerts, people you follow, weekly rank'
                 : push === 'denied' ? 'Blocked in your browser settings'
-                  : push === 'needs-install' ? 'On iPhone: Share → Add to Home Screen first, then open LocalPulse from there'
+                  : push === 'needs-install' ? 'On iPhone: Share → Add to Home Screen first, then open Ube Banana from there'
                     : push === 'unsupported' ? 'Not available in this browser'
                       : 'Crown alerts, people you follow, weekly rank'}
             </span>
@@ -148,7 +148,7 @@ export default function You({ onOpen, onOpenCreators, onOpenRanks, onOpenUser, o
         <h2 className="h2">Your check-ins</h2>
         {user === undefined || visits === null ? <Spinner /> : null}
         {visits && visits.length === 0 && (
-          <Empty icon="check" title="No check-ins yet">When you’re at a restaurant, tap Check in. Your scores build LocalPulse’s rankings.</Empty>
+          <Empty icon="check" title="No check-ins yet">When you’re at a restaurant, tap Check in. Your scores build Ube Banana’s rankings.</Empty>
         )}
         {(visits || []).map((v) => (
           <button key={v.id} className="log-row" onClick={() => onOpen(v.google_place_id)}>
@@ -175,7 +175,7 @@ export default function You({ onOpen, onOpenCreators, onOpenRanks, onOpenUser, o
           <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a>{admin && <> · <button className="link-btn" onClick={onOpenAdmin}>Admin</button></>}
         </p>
         <p className="tiny muted about">
-          LocalPulse scores come only from verified check-ins. Google ratings and photos are shown live from Google Maps. MICHELIN distinctions are listed as facts with a link to the Guide.
+          Ube Banana scores come only from verified check-ins. Google ratings and photos are shown live from Google Maps. MICHELIN distinctions are listed as facts with a link to the Guide.
         </p>
       </section>
     </div>

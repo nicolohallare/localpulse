@@ -131,7 +131,7 @@ export default function CheckIn({ place, onClose, onDone }) {
         <div className="stack-12 center">
           <span className="far-icon"><Icon name="pin" size={30} /></span>
           <p className="strong">You’re {fmtDistance(distance)} away</p>
-          <p className="small muted">Check-ins only count when you’re at the restaurant, so every LocalPulse take comes from a real visit.</p>
+          <p className="small muted">Check-ins only count when you’re at the restaurant, so every Ube Banana take comes from a real visit.</p>
           <button className="btn btn-primary" onClick={() => start()}>I’m here now — try again</button>
           {isPreviewHost() && <button className="btn btn-quiet" onClick={() => start(true)}>Preview only: skip location check</button>}
         </div>
@@ -190,7 +190,7 @@ export default function CheckIn({ place, onClose, onDone }) {
         <div className="stack-12 center">
           <span className="done-icon"><Icon name="check" size={36} stroke={2.4} /></span>
           <h3 className="display-xs">Your take is live</h3>
-          <p className="muted">Your {score}/10 now counts toward {place.name}’s LocalPulse score. If someone goes because of your take, you earn influence points.</p>
+          <p className="muted">Your {score}/10 now counts toward {place.name}’s Ube Banana score. If someone goes because of your take, you earn influence points.</p>
           {uploadNote && <p className="small muted">{uploadNote}</p>}
           <Reward before={before} after={after} placeGame={placeGame} crown={crown} />
           <NotifyOffer />
@@ -265,7 +265,7 @@ function Reward({ before, after, placeGame, crown }) {
         <span className="reward-pts">+{gained} pts</span>
         <span className="small muted">{after.points} total</span>
       </div>
-      {trail && <div className="reward-row"><span className="badge-medal">🧭</span> First on LocalPulse here — Trailblazer bonus!</div>}
+      {trail && <div className="reward-row"><span className="badge-medal">🧭</span> First on Ube Banana here — Trailblazer bonus!</div>}
       {lvlAfter.index > lvlBefore.index && (
         <div className="reward-row"><span className="badge-medal">⭐</span> Level up: you’re now {lvlAfter.name}</div>
       )}

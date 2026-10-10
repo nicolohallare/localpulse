@@ -140,7 +140,7 @@ function card({ kicker, title, body = [], google = false, maxTitle = 84 }) {
     // Wordmark.
     div({ alignItems: 'center', fontSize: 32, letterSpacing: 1 }, [
       div({ width: 18, height: 18, borderRadius: 18, background: MANGO, marginRight: 12 }, []),
-      'LocalPulse',
+      'Ube Banana',
     ]),
 
     // Main block.
@@ -153,7 +153,7 @@ function card({ kicker, title, body = [], google = false, maxTitle = 84 }) {
 
     // Footer.
     div({ justifyContent: 'space-between', alignItems: 'flex-end', fontSize: 22, color: SOFT, width: '100%' }, [
-      div({}, 'localpulse-two.vercel.app'),
+      div({}, 'Everyone’s a food influencer'),
       google ? div({}, 'Place info: Google Maps') : div({}, ''),
     ]),
   ]);
@@ -173,7 +173,7 @@ async function placeCard(id) {
   const visits = num(s.visit_count);
   const score = fmtScore(s.avg_score);
   const pills = [];
-  if (visits > 0 && score) pills.push(pill(`${score}/10 LocalPulse`, { accent: true }));
+  if (visits > 0 && score) pills.push(pill(`${score}/10 Ube Banana`, { accent: true }));
   if (visits > 0) pills.push(pill(plural(visits, 'verified visit')));
   if (game && game.suki && game.suki.name) {
     pills.push(pill(`Suki: ${clip(game.suki.name, 22)}`, { icon: crown(30, MANGO) }));

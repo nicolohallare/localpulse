@@ -27,7 +27,7 @@ export async function pushStatus() {
 }
 
 export async function enablePush() {
-  if (!pushSupported()) throw new Error('This phone can’t get notifications from LocalPulse yet.');
+  if (!pushSupported()) throw new Error('This phone can’t get notifications from Ube Banana yet.');
   const perm = await Notification.requestPermission();
   if (perm !== 'granted') throw new Error('Notifications are blocked. You can allow them in your browser settings.');
   const user = await ensureUser();
