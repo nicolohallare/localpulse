@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { api, supabase, distanceM, fmtDistance, fmtCount, timeAgo, matchMichelin, DISTINCTION } from '../lib';
+import { api, supabase, distanceM, fmtDistance, fmtCount, timeAgo, tiktokEmbed, matchMichelin, DISTINCTION } from '../lib';
 import { logPlay, game } from '../game';
 import { Icon, PlacePhoto, Spinner, Notice, Empty, ScoreBadge, Sheet, GoButtons } from '../ui';
 import MapView from '../MapView';
@@ -118,7 +118,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
       ]);
       const by = {};
       (imported || []).forEach((v) => { (by[v.google_place_id] = by[v.google_place_id] || []).push({ url: v.url, handle: v.creator_handle, title: v.title }); });
-      found.forEach(([id, vids]) => vids.forEach((v) => { (by[id] = by[id] || []).push({ url: v.url, handle: v.handle ? `@${v.handle}` : v.author, title: v.title, videoId: v.videoId, thumb: v.thumb }); }));
+      found.forEach(([id, vids]) => vids.forEach((v) => { (by[id] = by[id] || []).push({ url: v.url, handle: v.handle ? `@${v.handle}` : v.author, title: v.title, videoId: v.videoId, thumb: v.thumb, posted: v.posted }); }));
       // De-duplicate by video id in the URL, keep up to 4 per place.
       Object.keys(by).forEach((id) => {
         const seen = new Set();
@@ -138,8 +138,8 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
   async function openClips(it, start = 0) {
     const tiks = related[it.place.id] || [];
     const clips = [
-      { kind: 'youtube', id: it.video.id, title: it.video.title, channel: it.video.channel, thumb: it.video.thumb, views: it.video.views },
-      ...tiks.map((t) => ({ kind: 'tiktok', id: t.videoId || null, url: t.url, title: t.title, channel: t.handle, thumb: t.thumb })),
+      { kind: 'youtube', id: it.video.id, title: it.video.title, channel: it.video.channel, thumb: it.video.thumb, views: it.video.views, posted: it.video.published },
+      ...tiks.map((t) => ({ kind: 'tiktok', id: t.videoId || null, url: t.url, title: t.title, channel: t.handle, thumb: t.thumb, posted: t.posted })),
     ];
     setPlayer({ place: it.place, clips, idx: start });
     playClip(it.place, clips[start]);
@@ -378,12 +378,12 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
               </div>
             ) : c.id ? (
               <div className="player player-tall">
-                <iframe title={c.title || 'TikTok video'} src={`https://www.tiktok.com/embed/v2/${c.id}`}
-                  allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />
+                <iframe title={c.title || 'TikTok video'} src={tiktokEmbed(c.id)}
+                  allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />
               </div>
             ) : <Spinner label="Loading TikTok…" />}
             <div className="stack-4">
-              <span className="tiny muted">{c.kind === 'youtube' ? 'YouTube' : 'TikTok'}{c.channel ? ` · ${c.channel}` : ''}</span>
+              <span className="tiny muted">{c.kind === 'youtube' ? 'YouTube' : 'TikTok'}{c.channel ? ` · ${c.channel}` : ''}{c.posted ? ` · ${timeAgo(c.posted)}` : ''}</span>
               {c.title && <p className="strong clamp-3">{c.title}</p>}
             </div>
             {player.clips.length > 1 && (
@@ -392,7 +392,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
                 <div className="clip-rail">
                   {player.clips.map((x, i) => (
                     <button key={`${x.kind}-${x.url || x.id}`} className={`clip ${i === player.idx ? 'clip-on' : ''} clip-${x.kind}`} onClick={() => pick(i)} aria-pressed={i === player.idx}>
-                      {x.thumb && <img src={x.thumb} alt="" loading="lazy" />}
+                      {x.thumb && <img src={x.thumb} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
                       <span className="clip-tag">{x.kind === 'youtube' ? 'YouTube' : 'TikTok'}</span>
                       {i === player.idx && <span className="clip-now">Playing</span>}
                     </button>

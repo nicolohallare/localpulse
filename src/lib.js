@@ -94,7 +94,9 @@ export function timeAgo(iso) {
   if (h < 24) return `${Math.floor(h)} h ago`;
   const d = h / 24;
   if (d < 7) return `${Math.floor(d)} d ago`;
-  return new Date(iso).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+  const dt = new Date(iso);
+  const sameYear = dt.getFullYear() === new Date().getFullYear();
+  return dt.toLocaleDateString('en-PH', sameYear ? { month: 'short', day: 'numeric' } : { month: 'short', year: 'numeric' });
 }
 
 export function initials(name) {
@@ -142,6 +144,9 @@ export function youtubeId(url) {
   const m = String(url).match(/(?:youtu\.be\/|v=|shorts\/|embed\/)([A-Za-z0-9_-]{11})/);
   return m ? m[1] : null;
 }
+
+// TikTok's official embed player: fills its box, plays inline on phones.
+export const tiktokEmbed = (id) => `https://www.tiktok.com/player/v1/${id}?autoplay=1&description=1&music_info=0&rel=0&native_context_menu=0&closed_caption=1`;
 
 export const PLATFORM_LABEL = { youtube: 'YouTube', tiktok: 'TikTok', instagram: 'Instagram', facebook: 'Facebook' };
 

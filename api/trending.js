@@ -137,7 +137,12 @@ async function driveMinutes(lat, lng, list) {
       regionCode: 'PH',
     }),
   });
-  if (!r.ok) return null;
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    const err = new Error((e.error && e.error.message) || `Routes API ${r.status}`);
+    err.status = r.status;
+    throw err;
+  }
   const rows = await r.json();
   const out = {};
   (Array.isArray(rows) ? rows : []).forEach((e) => {
@@ -184,7 +189,8 @@ export default async function handler(req, res) {
     }
     if (!Array.isArray(list)) list = await candidates(ytKey, area, Number(lat.toFixed(1)), Number(lng.toFixed(1)));
 
-    const mins = await driveMinutes(lat, lng, list).catch(() => null);
+    let routesError = null;
+    const mins = await driveMinutes(lat, lng, list).catch((e) => { routesError = `${e.status || ''} ${e.message}`.trim().slice(0, 200); return null; });
     let items;
     let limit;
     let basis;
@@ -204,7 +210,7 @@ export default async function handler(req, res) {
       items = items.map(({ km: _k, ...x }) => x);
     }
     items = items.slice(0, 8);
-    send(res, 200, { area, days: DAYS, basis, limit, items }, 'public, s-maxage=1800, stale-while-revalidate=600');
+    send(res, 200, { area, days: DAYS, basis, limit, items, ...(routesError ? { routesError } : {}) }, 'public, s-maxage=1800, stale-while-revalidate=600');
   } catch (e) {
     send(res, 200, { items: [], error: 'Trending unavailable right now' }, 'public, s-maxage=600');
   }
