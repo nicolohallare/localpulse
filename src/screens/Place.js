@@ -413,7 +413,7 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
             </div>
           )}
           {player.kind === 'tiktok' && (
-            <a className="soft-btn" href={player.url} target="_blank" rel="noreferrer">Video not loading? Watch it on TikTok <Icon name="external" size={14} /></a>
+            <a className="btn btn-primary" href={player.url} target="_blank" rel="noreferrer">Not playing? Watch on TikTok <Icon name="external" size={14} /></a>
           )}
           {player.title && <p className="strong clamp-3">{player.title}</p>}
           <a className="link-out" href={player.kind === 'tiktok' ? player.url : `https://www.youtube.com/watch?v=${player.id}`} target="_blank" rel="noreferrer">
