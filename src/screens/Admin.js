@@ -52,7 +52,7 @@ export default function Admin({ loc, onBack, onOpenPlace }) {
   return (
     <div className="screen">
       <div className="px pad-top row-6"><button className="icon-btn ring" onClick={onBack} aria-label="Back"><Icon name="back" /></button></div>
-      <header className="px stack-8"><span className="pill-tag">Admin</span><h1 className="display">LocalPulse admin</h1></header>
+      <header className="px stack-8"><span className="pill-tag">Admin</span><h1 className="display">Ube Banana admin</h1></header>
 
       {session === undefined && <section className="section"><Spinner /></section>}
 

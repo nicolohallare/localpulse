@@ -2,7 +2,7 @@ import { send, decodeEntities, SERVER_GOOGLE_KEY } from './_lib.js';
 
 // GET /api/youtube?q=<place name and area>
 // Live YouTube search for a place. Results are shown as YouTube's own content
-// (embedded player + link) and are never turned into LocalPulse scores.
+// (embedded player + link) and are never turned into Ube Banana scores.
 export default async function handler(req, res) {
   const q = String(req.query.q || '').trim().slice(0, 120);
   if (!q) return send(res, 400, { error: 'q is required' });

@@ -90,8 +90,8 @@ async function placeMeta(id) {
   const good = (dishes && Array.isArray(dishes.good) ? dishes.good : []).map((d) => d.dish).filter(Boolean).slice(0, 3);
   if (good.length) parts.push(`Order: ${good.join(', ')}`);
   return {
-    title: `${name || 'A place'} on LocalPulse`,
-    description: parts.length ? parts.join(' · ') : 'Be the first to check in on LocalPulse',
+    title: `${name || 'A place'} on Ube Banana`,
+    description: parts.length ? parts.join(' · ') : 'Be the first to check in on Ube Banana',
   };
 }
 
@@ -127,7 +127,7 @@ async function listMeta(id) {
   if (!list) throw new Error('List not found');
   const desc = String(list.description || '').trim();
   return {
-    title: `${list.title || 'Untitled list'} — a LocalPulse list`,
+    title: `${list.title || 'Untitled list'} — a Ube Banana list`,
     description: desc ? truncate(desc, 200) : plural((items || []).length, 'place'),
   };
 }
@@ -137,7 +137,7 @@ async function userMeta(id) {
   if (!p || !p.name) throw new Error('Profile not found');
   const num = (v) => Number(v) || 0;
   return {
-    title: `${p.name} on LocalPulse`,
+    title: `${p.name} on Ube Banana`,
     description: `${num(p.points)} pts · ${plural(num(p.visits), 'check-in')} · ${num(p.influenced)} ${num(p.influenced) === 1 ? 'person' : 'people'} went because of their takes`,
   };
 }
@@ -145,7 +145,7 @@ async function userMeta(id) {
 const LOADERS = { p: placeMeta, v: pollMeta, l: listMeta, u: userMeta };
 
 const GENERIC = {
-  title: 'LocalPulse — real takes on where to eat',
+  title: 'Ube Banana — Everyone’s a food influencer',
   description: 'Verified check-ins, honest scores, and group polls for where to eat in the Philippines.',
 };
 
@@ -166,7 +166,7 @@ function page({ title, description, url, image, appPath }) {
 <meta name="description" content="${d}">
 <meta name="theme-color" content="#5B2A86">
 <link rel="canonical" href="${u}">
-<meta property="og:site_name" content="LocalPulse">
+<meta property="og:site_name" content="Ube Banana">
 <meta property="og:type" content="website">
 <meta property="og:title" content="${t}">
 <meta property="og:description" content="${d}">
@@ -195,10 +195,10 @@ function page({ title, description, url, image, appPath }) {
 </head>
 <body>
 <main>
-  <div class="brand">LocalPulse</div>
+  <div class="brand">Ube Banana</div>
   <h1>${t}</h1>
   <p>${d}</p>
-  <a class="btn" href="${href}">Open in LocalPulse</a>
+  <a class="btn" href="${href}">Open in Ube Banana</a>
 </main>
 <script>location.replace(${jsPath});</script>
 </body>

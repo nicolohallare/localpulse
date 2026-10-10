@@ -18,7 +18,7 @@ import Admin from './screens/Admin';
 import { PollNew, PollView } from './screens/Poll';
 import { MyLists, ListView } from './screens/Lists';
 
-// Shared from another app (TikTok → Share → LocalPulse): /?url=…&text=…
+// Shared from another app (TikTok → Share → Ube Banana): /?url=…&text=…
 (function takeShare() {
   const q = new URLSearchParams(window.location.search);
   if (!q.has('url') && !q.has('text') && !q.has('title')) return;

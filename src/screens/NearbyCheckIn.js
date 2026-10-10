@@ -31,7 +31,7 @@ export default function NearbyCheckIn({ onPick, onClose }) {
       {state === 'loading' && <Spinner label="Looking for places around you…" />}
       {state === 'error' && (
         <div className="stack-12">
-          <Notice tone="warn" title={err.message}>{err.hint || 'Allow location access for LocalPulse in your browser settings, then try again.'}</Notice>
+          <Notice tone="warn" title={err.message}>{err.hint || 'Allow location access for Ube Banana in your browser settings, then try again.'}</Notice>
           <button className="btn btn-primary" onClick={load}>Try again</button>
         </div>
       )}

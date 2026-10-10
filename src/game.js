@@ -1,6 +1,6 @@
 import { supabase, ensureUser } from './lib';
 
-// ── Levels (from total Pulse points) ───────────────────────────────────────
+// ── Levels (from total points) ───────────────────────────────────────
 export const LEVELS = [
   { name: 'Tikim', min: 0 },
   { name: 'Foodie', min: 100 },
@@ -21,7 +21,7 @@ export function levelFor(points = 0) {
 // ── Badges (computed from the stats the database returns) ──────────────────
 export const BADGES = [
   { id: 'first_bite', glyph: '🍴', name: 'First Bite', how: 'Make your first check-in', goal: 1, val: (s) => s.visits },
-  { id: 'trailblazer', glyph: '🧭', name: 'Trailblazer', how: 'Be first on LocalPulse to check in somewhere', goal: 1, val: (s) => s.trailblazers },
+  { id: 'trailblazer', glyph: '🧭', name: 'Trailblazer', how: 'Be first on Ube Banana to check in somewhere', goal: 1, val: (s) => s.trailblazers },
   { id: 'suki', glyph: '👑', name: 'Suki', how: 'Hold the Suki crown at a place', goal: 1, val: (s) => s.sukis },
   { id: 'explorer', glyph: '🗺️', name: 'Explorer', how: 'Check in at 10 different places', goal: 10, val: (s) => s.places },
   { id: 'food_tripper', glyph: '🛵', name: 'Food Tripper', how: 'Check in at 25 different places', goal: 25, val: (s) => s.places },
@@ -44,14 +44,14 @@ export function badgeState(stats) {
 export const POINT_RULES = [
   ['Verified check-in', '+10'],
   ['Written take (40+ characters)', '+5'],
-  ['First on LocalPulse to check in at a place', '+25'],
+  ['First on Ube Banana to check in at a place', '+25'],
   ['Each “helpful” vote on your take (up to 10)', '+2'],
   ['Someone goes because of your take (within 14 days)', '+5'],
 ];
 
-// ── Creator tiers (Pulse visits in the last 30 days) ───────────────────────
+// ── Creator tiers (Visits sent in the last 30 days) ───────────────────────
 export function creatorTier(pulseVisits = 0) {
-  if (pulseVisits >= 25) return { name: 'Pulse Pick', cls: 'tier-pick' };
+  if (pulseVisits >= 25) return { name: 'Ube Pick', cls: 'tier-pick' };
   if (pulseVisits >= 10) return { name: 'Trending', cls: 'tier-trend' };
   return { name: 'Rising', cls: 'tier-rising' };
 }
@@ -108,7 +108,7 @@ export async function shareLink({ title, text, url }) {
   }
 }
 
-// Record that someone played a creator's video in LocalPulse (for Pulse visits).
+// Record that someone played a creator's video in Ube Banana (for visits sent).
 export async function logPlay({ placeId, ref, platform, creator }) {
   try {
     await ensureUser();

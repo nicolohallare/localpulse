@@ -33,7 +33,7 @@ export default function Ranks({ onBack, initial = 'diners', onOpenUser }) {
             ? 'Points come from verified visits. Your score never changes your points — honest 4/10s count the same as 10/10s.'
             : board === 'influencers'
               ? 'Everyone’s an influencer. These locals sent the most people to places through their takes this month.'
-              : 'Creators climb when people watch their video on LocalPulse and then actually go.'}
+              : 'Creators climb when people watch their video on Ube Banana and then actually go.'}
         </p>
       </header>
 
@@ -59,7 +59,7 @@ export default function Ranks({ onBack, initial = 'diners', onOpenUser }) {
             ? <Empty icon="check" title={period === 'week' ? 'Nobody’s on the board this week' : 'No check-ins yet'}>The first verified check-in takes the top spot.</Empty>
             : board === 'influencers'
               ? <Empty icon="user" title="No influence yet">When someone opens a place from your take and then checks in there, you’ll show up here.</Empty>
-              : <Empty icon="video" title="No Pulse visits yet">When someone watches a creator’s video here and then checks in at that place, the creator shows up on this board.</Empty>
+              : <Empty icon="video" title="No visits sent yet">When someone watches a creator’s video here and then checks in at that place, the creator shows up on this board.</Empty>
         )}
 
         {rows && rows.length > 0 && (
@@ -118,14 +118,14 @@ export default function Ranks({ onBack, initial = 'diners', onOpenUser }) {
         ) : (
           <div className="card stack-8">
             <h2 className="h3">How creators climb</h2>
-            <p className="small"><strong>Pulse visit</strong> — someone plays your video on LocalPulse, then checks in at that place within 14 days. Each viewer counts once per video.</p>
+            <p className="small"><strong>Visit sent</strong> — someone plays your video on Ube Banana, then checks in at that place within 14 days. Each viewer counts once per video.</p>
             <p className="small"><strong>First to feature</strong> — the first approved video of a place keeps a permanent credit on its page.</p>
             <div className="row-wrap">
               <span className="tier tier-rising">Rising · 1+</span>
               <span className="tier tier-trend">Trending · 10+</span>
-              <span className="tier tier-pick">Pulse Pick · 25+</span>
+              <span className="tier tier-pick">Ube Pick · 25+</span>
             </div>
-            <p className="tiny muted">Pulse visits in the last 30 days. Based only on activity in LocalPulse.</p>
+            <p className="tiny muted">Visits sent in the last 30 days. Based only on activity in Ube Banana.</p>
           </div>
         )}
       </section>

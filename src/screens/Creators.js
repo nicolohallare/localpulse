@@ -29,7 +29,7 @@ export default function Creators({ onBack, onOpenRanks, onAddVideo }) {
       <header className="px stack-8 creator-head">
         <span className="pill-tag">For creators</span>
         <h1 className="display">Put your food videos on the map</h1>
-        <p className="muted">Your reviews show on each restaurant’s LocalPulse page and play from your original post, so views go to you. You choose which videos appear, and can remove them anytime.</p>
+        <p className="muted">Your reviews show on each restaurant’s Ube Banana page and play from your original post, so views go to you. You choose which videos appear, and can remove them anytime.</p>
       </header>
 
       <section className="section">
@@ -44,7 +44,7 @@ export default function Creators({ onBack, onOpenRanks, onAddVideo }) {
         <button className="btn btn-primary" style={{ width: '100%' }} onClick={onAddVideo}>
           <Icon name="plus" size={18} /> Add a TikTok or YouTube video
         </button>
-        <p className="tiny muted" style={{ marginTop: 8 }}>On Android, install LocalPulse to your home screen and you can share straight from TikTok.</p>
+        <p className="tiny muted" style={{ marginTop: 8 }}>On Android, install Ube Banana to your home screen and you can share straight from TikTok.</p>
       </section>
 
       <section className="section stack-12">
@@ -52,9 +52,9 @@ export default function Creators({ onBack, onOpenRanks, onAddVideo }) {
           <h2 className="h2">Creator leaderboard</h2>
           <button className="link-btn" onClick={onOpenRanks}>See all</button>
         </div>
-        <p className="small muted">Ranked by <strong className="ink">Pulse visits</strong>: people who watched your video on LocalPulse, then went and checked in. Proof you sent real customers.</p>
+        <p className="small muted">Ranked by <strong className="ink">visits sent</strong>: people who watched your video on Ube Banana, then went and checked in. Proof you sent real customers.</p>
         {top && top.length === 0 && (
-          <div className="card small muted">No Pulse visits yet this month — the first creator to send a diner takes #1.</div>
+          <div className="card small muted">No visits sent yet this month — the first creator to send a diner takes #1.</div>
         )}
         {top && top.length > 0 && (
           <ol className="rank-list">
@@ -77,7 +77,7 @@ export default function Creators({ onBack, onOpenRanks, onAddVideo }) {
         <div className="row-wrap">
           <span className="tier tier-rising">Rising · 1+</span>
           <span className="tier tier-trend">Trending · 10+</span>
-          <span className="tier tier-pick">Pulse Pick · 25+</span>
+          <span className="tier tier-pick">Ube Pick · 25+</span>
           <span className="first-feature">First to feature</span>
         </div>
       </section>
@@ -102,7 +102,7 @@ export default function Creators({ onBack, onOpenRanks, onAddVideo }) {
             <label className="field">Anything else? (optional)<textarea rows={2} maxLength={1000} value={form.note} onChange={set('note')} /></label>
             {err && <Notice tone="warn">{err}</Notice>}
             <button className="btn btn-primary" disabled={state === 'saving'}>{state === 'saving' ? 'Sending…' : 'Send application'}</button>
-            <p className="tiny muted">We only use your email to reply about LocalPulse.</p>
+            <p className="tiny muted">We only use your email to reply about Ube Banana.</p>
           </form>
         )}
       </section>

@@ -130,7 +130,7 @@ export function ListView({ id, loc, onBack, onOpenPlace, onOpenUser }) {
   }, [id]);
 
   async function share() {
-    const r = await shareLink({ title: list.title, text: `${list.title} — on LocalPulse`, url: shareUrl('l', id) });
+    const r = await shareLink({ title: list.title, text: `${list.title} — on Ube Banana`, url: shareUrl('l', id) });
     if (r === 'copied') setNote('Link copied');
   }
   async function remove(pid) {

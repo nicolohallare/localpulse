@@ -1,7 +1,7 @@
 import { send, SUPABASE_URL, SUPABASE_KEY, PLACE_ID_RE } from './_lib.js';
 
 // GET /api/summary?id=<google place id>
-// AI summary written ONLY from LocalPulse check-in reviews (first-party data).
+// AI summary written ONLY from Ube Banana check-in reviews (first-party data).
 export default async function handler(req, res) {
   const id = String(req.query.id || '');
   if (!PLACE_ID_RE.test(id)) return send(res, 400, { error: 'Invalid place id' });

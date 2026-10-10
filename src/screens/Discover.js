@@ -223,6 +223,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
           </button>
           <button className="avatar-btn" onClick={onOpenProfile} aria-label="Your profile"><Icon name="user" size={22} /></button>
         </div>
+        <p className="brand-line"><span className="b-ube">Ube</span> <span className="b-banana">Banana</span><span className="brand-tag">Everyone’s a food influencer</span></p>
         <h1 className="display">Where to eat<br />tonight?</h1>
         <form className="search" onSubmit={runSearch} role="search">
           <Icon name="search" size={20} />
@@ -326,7 +327,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
       {mode === 'michelin' && (
         <section className="section">
           <h2 className="h2">MICHELIN Guide Philippines</h2>
-          <p className="muted small">Restaurants recognised in the 2026 selection. Tap one to see it on LocalPulse.</p>
+          <p className="muted small">Restaurants recognised in the 2026 selection. Tap one to see it on Ube Banana.</p>
           <div className="place-list">
             {(michelin || []).map((l) => (
               <button key={l.id} className="mich-row" onClick={() => openMichelin(l)} disabled={opening === l.id}>
@@ -344,7 +345,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
 
       {mode === 'top' && (
         <section className="section">
-          <h2 className="h2">Most checked-in on LocalPulse</h2>
+          <h2 className="h2">Most checked-in on Ube Banana</h2>
           {!top && <Spinner label="Loading…" />}
           {top && top.length === 0 && (
             <Empty icon="check" title="No check-ins yet">Be the first: open a place you’re at and tap “Check in here”.</Empty>
@@ -406,7 +407,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
             <div className="stack-8">
               <span className="field-label">Go to {player.place.name}</span>
               <GoButtons place={player.place} />
-              <button className="soft-btn" onClick={() => { const id = player.place.id; setPlayer(null); onOpen(id); }}>See all takes on LocalPulse</button>
+              <button className="soft-btn" onClick={() => { const id = player.place.id; setPlayer(null); onOpen(id); }}>See all takes on Ube Banana</button>
             </div>
             <a className="link-out" href={c.kind === 'youtube' ? `https://www.youtube.com/watch?v=${c.id}` : c.url} target="_blank" rel="noreferrer">
               Open on {c.kind === 'youtube' ? 'YouTube' : 'TikTok'} <Icon name="external" size={14} />
@@ -484,7 +485,7 @@ function PlaceRow({ place: p, stat, michelin, onOpen }) {
         <span className="muted small">{[p.type, fmtDistance(p.dist), p.price].filter(Boolean).join(' · ')}</span>
         <span className="score-line">
           {stat ? (
-            <><ScoreBadge score={stat.avg_score} /><span className="small strong">LocalPulse</span></>
+            <><ScoreBadge score={stat.avg_score} /><span className="small strong">Ube Banana</span></>
           ) : (
             <span className="small muted">No check-ins yet</span>
           )}

@@ -32,7 +32,7 @@ export default function Profile({ id, onBack, onOpenPlace, onOpenUser, onOpenLis
   }
 
   async function share() {
-    const r = await shareLink({ title: `${p.name} on LocalPulse`, text: `Follow ${p.name}’s food takes on LocalPulse`, url: shareUrl('u', id) });
+    const r = await shareLink({ title: `${p.name} on Ube Banana`, text: `Follow ${p.name}’s food takes on Ube Banana`, url: shareUrl('u', id) });
     if (r === 'copied') setNote('Link copied');
   }
 

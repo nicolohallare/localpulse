@@ -1,7 +1,7 @@
 {
-  "name": "LocalPulse",
-  "short_name": "LocalPulse",
-  "description": "Find out if a restaurant is worth it — verified check-ins, creator videos and Michelin picks near you.",
+  "name": "Ube Banana",
+  "short_name": "Ube Banana",
+  "description": "Everyone's a food influencer. Check in, say what's good or bad, and see where people near you are eating.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
