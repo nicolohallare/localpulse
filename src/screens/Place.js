@@ -412,6 +412,9 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
                 allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />
             </div>
           )}
+          {player.kind === 'tiktok' && (
+            <a className="soft-btn" href={player.url} target="_blank" rel="noreferrer">Video not loading? Watch it on TikTok <Icon name="external" size={14} /></a>
+          )}
           {player.title && <p className="strong clamp-3">{player.title}</p>}
           <a className="link-out" href={player.kind === 'tiktok' ? player.url : `https://www.youtube.com/watch?v=${player.id}`} target="_blank" rel="noreferrer">
             Open on {player.kind === 'tiktok' ? 'TikTok' : 'YouTube'} <Icon name="external" size={14} />

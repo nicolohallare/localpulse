@@ -382,6 +382,9 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
                   allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />
               </div>
             ) : <Spinner label="Loading TikTok…" />}
+            {c.kind === 'tiktok' && (
+              <a className="soft-btn" href={c.url} target="_blank" rel="noreferrer">Video not loading? Watch it on TikTok <Icon name="external" size={14} /></a>
+            )}
             <div className="stack-4">
               <span className="tiny muted">{c.kind === 'youtube' ? 'YouTube' : 'TikTok'}{c.channel ? ` · ${c.channel}` : ''}{c.posted ? ` · ${timeAgo(c.posted)}` : ''}</span>
               {c.title && <p className="strong clamp-3">{c.title}</p>}
