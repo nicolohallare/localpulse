@@ -28,6 +28,19 @@ const paths = {
   locate: <><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" /><circle cx="12" cy="12" r="7" /></>,
 };
 
+// The Ube Banana mark: a banana sticker. Decorative unless given a title.
+export function Banana({ size = 40, className, title }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" className={className} role={title ? 'img' : undefined} aria-hidden={title ? undefined : 'true'}>
+      {title && <title>{title}</title>}
+      <path d="M17 31 C 19 74, 72 88, 89 27 C 76 55, 37 63, 25 30 Z" fill="var(--banana, #FFD23F)" stroke="var(--ube-ink, #24123D)" strokeWidth="5" strokeLinejoin="round" />
+      <path d="M27 44 C 38 62, 64 66, 79 46" fill="none" stroke="var(--banana-deep, #F2B705)" strokeWidth="5" strokeLinecap="round" />
+      <path d="M17 31 L 12 20 L 20 17 L 25 30" fill="#6B4A12" stroke="var(--ube-ink, #24123D)" strokeWidth="4" strokeLinejoin="round" />
+      <circle cx="89" cy="27" r="4" fill="var(--ube-ink, #24123D)" />
+    </svg>
+  );
+}
+
 export function Icon({ name, size = 22, stroke = 2, style, className }) {
   if (name === 'play') {
     return (

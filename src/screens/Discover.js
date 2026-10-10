@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { api, supabase, distanceM, fmtDistance, fmtCount, timeAgo, tiktokEmbed, matchMichelin, DISTINCTION } from '../lib';
 import { logPlay, game } from '../game';
-import { Icon, PlacePhoto, Spinner, Notice, Empty, ScoreBadge, Sheet, GoButtons } from '../ui';
+import { Banana, Icon, PlacePhoto, Spinner, Notice, Empty, ScoreBadge, Sheet, GoButtons } from '../ui';
 import MapView from '../MapView';
 
 const CRAVINGS = ['Sisig', 'Lechon', 'Ramen', 'Samgyup', 'Kare-kare', 'Chicken wings', 'Pizza', 'Burger', 'Milk tea', 'Coffee', 'Halo-halo', 'Bulalo'];
@@ -223,7 +223,13 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
           </button>
           <button className="avatar-btn" onClick={onOpenProfile} aria-label="Your profile"><Icon name="user" size={22} /></button>
         </div>
-        <p className="brand-line"><span className="b-ube">Ube</span> <span className="b-banana">Banana</span><span className="brand-tag">Everyone’s a food influencer</span></p>
+        <div className="brand-line">
+          <Banana size={62} className="brand-banana" />
+          <div>
+            <p className="wordmark">Ube Banana</p>
+            <p className="brand-tag">Everyone’s a food influencer</p>
+          </div>
+        </div>
         <h1 className="display">Where to eat<br />tonight?</h1>
         <form className="search" onSubmit={runSearch} role="search">
           <Icon name="search" size={20} />
