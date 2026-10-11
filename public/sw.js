@@ -1,6 +1,6 @@
 // Ube Banana service worker: makes the app installable and keeps the app shell
 // available on flaky connections. API responses are never cached here.
-const SHELL = 'ub-shell-v4';
+const SHELL = 'ub-shell-v5';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(SHELL).then((c) => c.addAll(['/', '/manifest.json'])).then(() => self.skipWaiting()));
