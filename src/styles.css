@@ -550,3 +550,7 @@ a.btn { text-decoration: none; }
 .trend-why { font-size: 13px; font-weight: 600; color: var(--ink-2); line-height: 1.35; }
 .why-card { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border-radius: 18px; background: var(--banana-cream); border: 2px solid var(--ube-ink); box-shadow: var(--sticker); }
 .why-line { font-family: var(--display); font-weight: 700; font-size: 19px; line-height: 1.25; font-variation-settings: 'SOFT' 100, 'WONK' 1, 'opsz' 36; color: var(--ube); }
+
+.row-why { display: flex; flex-direction: column; gap: 2px; font-size: 13px; font-weight: 600; color: var(--ube); line-height: 1.35; }
+.row-why .tiny { color: var(--ink-2); font-weight: 500; }
+.mich-chip { max-width: 240px; white-space: normal; }

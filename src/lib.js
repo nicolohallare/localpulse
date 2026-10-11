@@ -11,6 +11,8 @@ export const DEFAULT_LOCATION = { lat: 14.5509, lng: 121.0509, label: 'BGC, Tagu
 export const CHECKIN_RADIUS_M = 200;
 
 // ── Server API ──────────────────────────────────────────────────────────────
+const whyCache = {};
+
 async function getJSON(url) {
   const r = await fetch(url);
   const data = await r.json().catch(() => ({}));
@@ -33,6 +35,21 @@ export const api = {
   youtube: (q) => getJSON(`/api/youtube?${qs({ q })}`),
   oembed: (url) => getJSON(`/api/video/oembed?${qs({ url })}`),
   summary: (id) => getJSON(`/api/summary?${qs({ id })}`),
+  // "Why go" lines for a list of places, a few at a time, remembered for this session.
+  whyMany: async (ids, onEach) => {
+    const todo = ids.filter((id) => !(id in whyCache));
+    let i = 0;
+    const worker = async () => {
+      while (i < todo.length) {
+        const id = todo[i++];
+        whyCache[id] = null;
+        try { whyCache[id] = await getJSON(`/api/summary?${qs({ id })}`); } catch (e) { whyCache[id] = { why: null }; }
+        onEach(id, whyCache[id]);
+      }
+    };
+    ids.forEach((id) => { if (whyCache[id]) onEach(id, whyCache[id]); });
+    await Promise.all([worker(), worker(), worker(), worker()]);
+  },
   config: () => getJSON('/api/config'),
   discoverTiktok: (placeId) => getJSON(`/api/video/discover?${qs({ place: placeId })}`),
   matchVideo: (url, lat, lng) => getJSON(`/api/video/match?${qs({ url, lat: lat.toFixed(2), lng: lng.toFixed(2) })}`),

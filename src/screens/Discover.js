@@ -34,6 +34,8 @@ const MODES = [
 export default function Discover({ loc, locNote, onRetryLocation, michelin, onOpen, onOpenProfile, onAddVideo }) {
   const [headline] = useState(() => mealLine());
   const [michSort, setMichSort] = useState('near');
+  const [why, setWhy] = useState({});
+  const gotWhy = useCallback((id, w) => setWhy((cur) => (cur[id] === w ? cur : { ...cur, [id]: w })), []);
   const [mode, setMode] = useState('near');
   const [places, setPlaces] = useState([]);
   const [stats, setStats] = useState({});
@@ -225,6 +227,8 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
     ? (a, b) => (a.km ?? 1e9) - (b.km ?? 1e9) || byAward(a, b)
     : byAward);
   const michNear = michWithKm.filter((l) => l.km != null && l.km <= 6).sort((a, b) => a.km - b.km).slice(0, 6);
+  const whyIds = [...sorted.slice(0, 12).map((p) => p.id), ...(mode === 'michelin' ? michList : michNear).map((l) => l.google_place_id).filter(Boolean).slice(0, 15)].join(',');
+  useEffect(() => { if (whyIds) api.whyMany(whyIds.split(','), gotWhy); }, [whyIds, gotWhy]);
 
   return (
     <div className="screen">
@@ -302,7 +306,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
                 <div className="place-list">
                   <span className="eyebrow">More {craving.toLowerCase()} spots on Google Maps</span>
                   {applyFilters(crave.google, filters).map((p) => (
-                    <PlaceRow key={p.id} place={p} stat={stats[p.id]} michelin={matchMichelin(p.name, michelin)} onOpen={() => onOpen(p.id)} />
+                    <PlaceRow key={p.id} place={p} stat={stats[p.id]} why={why[p.id]} michelin={matchMichelin(p.name, michelin)} onOpen={() => onOpen(p.id)} />
                   ))}
                 </div>
               )}
@@ -318,6 +322,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
                     <span className="mich-dist">{DISTINCTION[l.distinction]}</span>
                     <span className="strong">{l.name}</span>
                     <span className="tiny muted">{fmtDistance(l.km * 1000)} away</span>
+                    {why[l.google_place_id] && why[l.google_place_id].why && <span className="tiny clamp-2 ink">{why[l.google_place_id].why}</span>}
                   </button>
                 ))}
               </div>
@@ -348,7 +353,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
             )}
             <div className="place-list">
               {sorted.map((p) => (
-                <PlaceRow key={p.id} place={p} stat={stats[p.id]} michelin={matchMichelin(p.name, michelin)} onOpen={() => onOpen(p.id)} />
+                <PlaceRow key={p.id} place={p} stat={stats[p.id]} why={why[p.id]} michelin={matchMichelin(p.name, michelin)} onOpen={() => onOpen(p.id)} />
               ))}
             </div>
             {!loading && places.length > 0 && sorted.length === 0 && <p className="small muted">No places match those filters. Try removing one.</p>}
@@ -374,6 +379,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
                 </span>
                 <span className="mich-name">{l.name}</span>
                 <span className="muted small">{opening === l.id ? 'Opening…' : (l.city || 'Metro Manila & environs')}</span>
+                <WhyLine w={why[l.google_place_id]} />
               </button>
             ))}
           </div>
@@ -542,13 +548,27 @@ function TrendingRail({ data, loc, onOpen, onPlay, related = {} }) {
   );
 }
 
-function PlaceRow({ place: p, stat, michelin, onOpen }) {
+function WhyLine({ w, fallback }) {
+  if (w && w.why) {
+    return (
+      <span className="row-why">
+        <span className="clamp-2">{w.why}</span>
+        {w.order && w.order.length > 0 && <span className="tiny clamp-1"><strong>Order:</strong> {w.order.join(', ')}</span>}
+      </span>
+    );
+  }
+  if (fallback) return <span className="small muted clamp-2">{fallback}</span>;
+  return null;
+}
+
+function PlaceRow({ place: p, stat, michelin, why, onOpen }) {
   return (
     <button className="place-row" onClick={onOpen}>
       <PlacePhoto photo={p.photos[0]} width={300} className="place-thumb" alt="" />
       <span className="place-main">
         <span className="row-title">{p.name}</span>
         <span className="muted small">{[p.type, fmtDistance(p.dist), p.price].filter(Boolean).join(' · ')}</span>
+        <WhyLine w={why} fallback={p.blurb} />
         <span className="score-line">
           {stat ? (
             <><ScoreBadge score={stat.avg_score} /><span className="small strong">Ube Banana</span></>
