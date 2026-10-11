@@ -7,6 +7,7 @@ import { SaveSheet } from './Lists';
 import { MediaStrip, AddMediaSheet, loadMedia } from '../media';
 import { Icon, PlacePhoto, Spinner, Notice, Empty, Sheet, GoButtons } from '../ui';
 import CheckIn from './CheckIn';
+import { TakeMenu } from '../safety';
 
 export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpenUser, onNewPoll }) {
   const [place, setPlace] = useState(null);
@@ -320,6 +321,8 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
                     </span>
                   </button>
                   <span className={`score-chip ${r.score >= 8 ? 'score-hi' : r.score <= 4 ? 'score-lo' : ''}`}>{r.score}/10</span>
+                  <TakeMenu take={r} name={r.display_name}
+                    onHidden={(what) => setFeed((cur) => cur.filter((x) => (what === 'blocked' ? x.user_id !== r.user_id : x.id !== r.id)))} />
                 </div>
                 {r.dishes_good && r.dishes_good.length > 0 && (
                   <div className="row-wrap"><span className="tiny strong good-ink">👍 Order</span>{r.dishes_good.map((d) => <span key={d} className="dish-chip dish-good">{d}</span>)}</div>

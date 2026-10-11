@@ -3,6 +3,7 @@ import { api, supabase, currentUser, timeAgo, initials } from '../lib';
 import { Icon, Spinner, Empty, ScoreBadge } from '../ui';
 import { game, levelFor, badgeState } from '../game';
 import { pushStatus, enablePush } from '../push';
+import { BlockedList, DeleteAccount } from '../safety';
 
 export default function You({ onOpen, onOpenCreators, onOpenRanks, onOpenUser, onOpenLists, onOpenAdmin }) {
   const [user, setUser] = useState(undefined);
@@ -160,6 +161,15 @@ export default function You({ onOpen, onOpenCreators, onOpenRanks, onOpenUser, o
             <ScoreBadge score={v.score} />
           </button>
         ))}
+      </section>
+
+      <section className="section stack-12">
+        <h2 className="h2">Privacy & safety</h2>
+        <div className="stack-8">
+          <span className="field-label">People you’ve blocked</span>
+          <BlockedList />
+        </div>
+        <DeleteAccount />
       </section>
 
       <section className="section">

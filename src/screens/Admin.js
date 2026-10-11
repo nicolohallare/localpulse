@@ -92,6 +92,7 @@ export default function Admin({ loc, onBack, onOpenPlace }) {
           </section>
           <section className="section stack-12">
             <div className="seg" role="tablist" aria-label="Admin">
+              <button role="tab" aria-selected={tab === 'reports'} className={tab === 'reports' ? 'seg-on' : ''} onClick={() => setTab('reports')}>Reports</button>
               <button role="tab" aria-selected={tab === 'videos'} className={tab === 'videos' ? 'seg-on' : ''} onClick={() => setTab('videos')}>Videos · {q.videos.length}</button>
               <button role="tab" aria-selected={tab === 'apps'} className={tab === 'apps' ? 'seg-on' : ''} onClick={() => setTab('apps')}>Creators · {q.applications.length}</button>
               <button role="tab" aria-selected={tab === 'deals'} className={tab === 'deals' ? 'seg-on' : ''} onClick={() => setTab('deals')}>Deals · {q.deals.length}</button>
@@ -124,6 +125,7 @@ export default function Admin({ loc, onBack, onOpenPlace }) {
 
             {tab === 'deals' && <DealsAdmin q={q} loc={loc} reload={load} />}
             {tab === 'media' && <MediaAdmin onOpenPlace={onOpenPlace} />}
+            {tab === 'reports' && <ReportsAdmin onOpenPlace={onOpenPlace} />}
             {tab === 'import' && <BulkImport loc={loc} onOpenPlace={onOpenPlace} />}
           </section>
           <section className="section"><button className="btn btn-quiet" onClick={() => supabase.auth.signOut()}>Sign out of admin</button></section>
@@ -230,6 +232,37 @@ function DealsAdmin({ q, loc, reload }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// Reported takes and people: hide (removes it from the app) or dismiss (keeps it).
+const REASON_LABEL = { fake: 'Fake visit', spam: 'Spam', offensive: 'Offensive', harassment: 'Harassment', privacy: 'Privacy', other: 'Other' };
+function ReportsAdmin({ onOpenPlace }) {
+  const [rows, setRows] = useState(null);
+  const load = useCallback(() => { supabase.rpc('admin_reports').then(({ data }) => setRows(data || [])); }, []);
+  useEffect(() => { load(); }, [load]);
+  async function act(r, action) {
+    await supabase.rpc('admin_resolve_report', { p_visit: r.visit_id, p_target: r.target_user, p_action: action });
+    setRows((cur) => cur.filter((x) => !(x.visit_id === r.visit_id && x.target_user === r.target_user)));
+  }
+  if (!rows) return <Spinner />;
+  if (!rows.length) return <Empty icon="flag" title="No open reports">Reports from users show up here.</Empty>;
+  return (
+    <div className="stack-12">
+      {rows.map((r) => (
+        <div key={`${r.visit_id}-${r.target_user}`} className="card stack-8">
+          <span className="small strong">{r.visit_id ? `Take by ${r.author_name}` : `Person: ${r.author_name}`} · {r.reports} report{r.reports === 1 ? '' : 's'}{r.hidden ? ' · hidden now' : ''}</span>
+          <div className="row-wrap">{(r.reasons || []).map((x) => <span key={x} className="soft-chip">{REASON_LABEL[x] || x}</span>)}</div>
+          {r.review && <p className="small">“{r.review}”</p>}
+          {(r.notes || []).map((n, i) => <p key={i} className="tiny muted">Reporter: {n}</p>)}
+          <div className="row-6">
+            {r.google_place_id && <button className="soft-btn" onClick={() => onOpenPlace(r.google_place_id)}>Place</button>}
+            {r.visit_id && <button className="soft-btn" onClick={() => act(r, 'hide')}>Hide take</button>}
+            <button className="soft-btn" onClick={() => act(r, 'dismiss')}>{r.hidden ? 'Restore & dismiss' : 'Dismiss'}</button>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
