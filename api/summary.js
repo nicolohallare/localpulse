@@ -47,7 +47,9 @@ export default async function handler(req, res) {
           content:
             'You help people in the Philippines decide where to eat. Using ONLY the material below, write a short "why go" for this restaurant. ' +
             'Diner check-ins are verified visits. Creator captions are promotional claims: report what creators highlight, never present it as fact. ' +
-            'Do not invent dishes, prices or facts. Warm, plain English, a little playful, no hype words. Reply with JSON only, no code fences:\n' +
+            'Do not invent dishes, prices or facts. Do not quote prices from creator captions (they go out of date). ' +
+            '"order" and "skip" must be specific named dishes or drinks (e.g. "Triple chocolate champorado"), never categories like "desserts" or "beverages"; leave them empty if none are named. ' +
+            'Warm, plain English, a little playful, no hype words. Reply with JSON only, no code fences:\n' +
             '{"why": "<one inviting line, max 90 characters, why someone would go>", ' +
             '"summary": "<what people say: 1–2 short sentences; mention both good and bad if diners did>", ' +
             '"order": ["<up to 3 dishes recommended>"], "skip": ["<up to 2 dishes diners said to skip>"], ' +

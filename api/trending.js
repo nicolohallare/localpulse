@@ -74,7 +74,7 @@ async function extractPlaces(videos, area) {
           'Skip compilations ("top 10", "food trip" covering many places), recipes, and videos where no place is named. ' +
           'Never guess. For each, also write "why": one short, inviting line (max 90 characters) on why someone would go, ' +
           'based ONLY on what the title and description say (signature dish, price, vibe, a claim like "best in Manila"); ' +
-          'and "order": up to 3 dishes the video names (empty if none). No hype words like "must-try" or "amazing" unless the video uses them. ' +
+          'and "order": up to 3 specific dishes the video names (never categories like "desserts"; empty if none). No hype words like "must-try" or "amazing" unless the video uses them. ' +
           'Reply with JSON only, no code fences: [{"i": <number>, "place": "<name>", "branch": "<area or empty>", "why": "<line>", "order": ["<dish>"]}]\n\n' + list,
       }],
     }),
