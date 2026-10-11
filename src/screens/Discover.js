@@ -32,6 +32,7 @@ const MODES = [
 ];
 
 export default function Discover({ loc, locNote, onRetryLocation, michelin, onOpen, onOpenProfile, onAddVideo }) {
+  const [headline] = useState(() => mealLine());
   const [mode, setMode] = useState('near');
   const [places, setPlaces] = useState([]);
   const [stats, setStats] = useState({});
@@ -230,7 +231,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
             <p className="brand-tag">Everyone’s a food influencer</p>
           </div>
         </div>
-        <h1 className="display">{mealLine()}</h1>
+        <h1 className="display">{headline}</h1>
         <form className="search" onSubmit={runSearch} role="search">
           <Icon name="search" size={20} />
           <label className="sr-only" htmlFor="q">Search places</label>
@@ -425,14 +426,20 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
   );
 }
 
-// Headline that follows the Filipino meal clock.
+// Headline: a playful question that follows the Filipino meal clock, picked fresh on each visit.
+const ANYTIME = ['Hangry?!', 'Gutom na?', 'Kain na tayo!', 'Tummy rumbling?'];
+const MEAL_LINES = {
+  almusal: ['Tapsilog o pandesal?', 'Gising na, gutom na.', 'Almusal muna!', 'Kape and…?'],
+  lunch: ['Lunch break na!', 'Rice is life. Saan?', 'Unli-rice, saan?', 'Lunch, saan tayo?'],
+  merienda: ['Merienda o diet?', 'Sweet tooth calling?', 'Halo-halo weather?', 'Merienda time!'],
+  dinner: ['Hangry?!', 'Saan tayo, barkada?', 'Dinner na! Saan?', 'Treat yourself?'],
+  late: ['Midnight cravings?', 'Gutom pa rin?', 'Isang kain pa?', 'Silog o sisig?'],
+};
 function mealLine(d = new Date()) {
   const h = d.getHours() + d.getMinutes() / 60;
-  if (h >= 5 && h < 10.5) return 'Almusal, saan tayo?';
-  if (h >= 10.5 && h < 14) return 'Lunch, saan tayo?';
-  if (h >= 14 && h < 17) return 'Merienda, saan tayo?';
-  if (h >= 17 && h < 21.5) return 'Dinner, saan tayo?';
-  return 'Midnight cravings?';
+  const meal = h >= 5 && h < 10.5 ? 'almusal' : h < 14 && h >= 10.5 ? 'lunch' : h >= 14 && h < 17 ? 'merienda' : h >= 17 && h < 21.5 ? 'dinner' : 'late';
+  const pool = [...MEAL_LINES[meal], ...MEAL_LINES[meal], ...ANYTIME]; // meal lines twice as likely
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 // Most common city/area in the nearby results' addresses, e.g. "Taguig".
