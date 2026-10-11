@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { api, supabase, distanceM, fmtDistance, fmtCount, timeAgo, tiktokEmbed, matchMichelin, DISTINCTION } from '../lib';
+import { api, supabase, distanceM, fmtDistance, fmtCount, timeAgo, tiktokEmbed, matchMichelin, DISTINCTION, DISTINCTION_RANK } from '../lib';
 import { logPlay, game } from '../game';
 import { Banana, Icon, PlacePhoto, Spinner, Notice, Empty, ScoreBadge, Sheet, GoButtons } from '../ui';
 import MapView from '../MapView';
@@ -33,6 +33,7 @@ const MODES = [
 
 export default function Discover({ loc, locNote, onRetryLocation, michelin, onOpen, onOpenProfile, onAddVideo }) {
   const [headline] = useState(() => mealLine());
+  const [michSort, setMichSort] = useState('near');
   const [mode, setMode] = useState('near');
   const [places, setPlaces] = useState([]);
   const [stats, setStats] = useState({});
@@ -142,7 +143,8 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
       { kind: 'youtube', id: it.video.id, title: it.video.title, channel: it.video.channel, thumb: it.video.thumb, views: it.video.views, posted: it.video.published },
       ...tiks.map((t) => ({ kind: 'tiktok', id: t.videoId || null, url: t.url, title: t.title, channel: t.handle, thumb: t.thumb, posted: t.posted })),
     ];
-    setPlayer({ place: it.place, clips, idx: start });
+    setPlayer({ place: it.place, clips, idx: start, why: it.why, order: it.order, say: null });
+    api.summary(it.place.id).then((sm) => setPlayer((cur) => (cur && cur.place.id === it.place.id ? { ...cur, say: sm } : cur))).catch(() => {});
     playClip(it.place, clips[start]);
     // Fill in TikTok video ids / fresh thumbnails for clips that came from imports.
     const filled = await Promise.all(clips.map(async (c) => {
@@ -200,6 +202,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
   }
 
   async function openMichelin(l) {
+    if (l.google_place_id) { onOpen(l.google_place_id); return; }
     setOpening(l.id);
     try {
       const res = await api.search(`${l.name} restaurant ${l.city || 'Philippines'}`, loc.lat, loc.lng);
@@ -213,6 +216,15 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
   }
 
   const sorted = applyFilters(places.map((p) => ({ ...p, dist: distanceM(loc, p) })), filters);
+  const michWithKm = (michelin || []).map((l) => {
+    const d = l.lat != null && loc && !loc.isDefault ? distanceM(loc, { lat: l.lat, lng: l.lng }) : null;
+    return { ...l, km: d != null ? d / 1000 : null };
+  });
+  const byAward = (a, b) => (DISTINCTION_RANK[a.distinction] ?? 9) - (DISTINCTION_RANK[b.distinction] ?? 9) || a.name.localeCompare(b.name);
+  const michList = michWithKm.slice().sort(michSort === 'near'
+    ? (a, b) => (a.km ?? 1e9) - (b.km ?? 1e9) || byAward(a, b)
+    : byAward);
+  const michNear = michWithKm.filter((l) => l.km != null && l.km <= 6).sort((a, b) => a.km - b.km).slice(0, 6);
 
   return (
     <div className="screen">
@@ -297,6 +309,20 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
             </section>
           )}
           {!query && !craving && <TrendingRail data={trending} loc={loc} onOpen={onOpen} related={related} onPlay={openClips} />}
+          {!query && !craving && michNear.length > 0 && (
+            <section className="section">
+              <div className="row-between"><h2 className="h2">MICHELIN near you</h2><button className="link-btn" onClick={() => setMode('michelin')}>See all</button></div>
+              <div className="mich-rail">
+                {michNear.map((l) => (
+                  <button key={l.id} className="mich-chip" onClick={() => openMichelin(l)}>
+                    <span className="mich-dist">{DISTINCTION[l.distinction]}</span>
+                    <span className="strong">{l.name}</span>
+                    <span className="tiny muted">{fmtDistance(l.km * 1000)} away</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
           {!query && !craving && (
             <section className="section">
               <button className="creator-cta" onClick={onAddVideo}>
@@ -334,11 +360,18 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
       {mode === 'michelin' && (
         <section className="section">
           <h2 className="h2">MICHELIN Guide Philippines</h2>
-          <p className="muted small">Restaurants recognised in the 2026 selection. Tap one to see it on Ube Banana.</p>
+          <p className="muted small">Restaurants recognised in the 2026 selection{michSort === 'near' ? ', nearest to you first' : ''}. Tap one to see it on Ube Banana.</p>
+          <div className="seg" role="tablist" aria-label="Sort">
+            <button role="tab" aria-selected={michSort === 'near'} className={michSort === 'near' ? 'seg-on' : ''} onClick={() => setMichSort('near')}>Nearest</button>
+            <button role="tab" aria-selected={michSort === 'award'} className={michSort === 'award' ? 'seg-on' : ''} onClick={() => setMichSort('award')}>By award</button>
+          </div>
           <div className="place-list">
-            {(michelin || []).map((l) => (
-              <button key={l.id} className="mich-row" onClick={() => openMichelin(l)} disabled={opening === l.id}>
-                <span className="mich-dist">{DISTINCTION[l.distinction]}</span>
+            {michList.map((l) => (
+              <button key={l.id} className={`mich-row ${l.km != null && l.km <= 5 ? 'mich-near' : ''}`} onClick={() => openMichelin(l)} disabled={opening === l.id}>
+                <span className="row-between">
+                  <span className="mich-dist">{DISTINCTION[l.distinction]}</span>
+                  {l.km != null && <span className="mich-km">{l.km <= 5 ? 'Near you · ' : ''}{fmtDistance(l.km * 1000)}</span>}
+                </span>
                 <span className="mich-name">{l.name}</span>
                 <span className="muted small">{opening === l.id ? 'Opening…' : (l.city || 'Metro Manila & environs')}</span>
               </button>
@@ -392,6 +425,14 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
             ) : <Spinner label="Loading TikTok…" />}
             {c.kind === 'tiktok' && (
               <a className="btn btn-primary" href={c.url} target="_blank" rel="noreferrer">Not playing? Watch on TikTok <Icon name="external" size={14} /></a>
+            )}
+            {(player.why || (player.order && player.order.length > 0) || (player.say && player.say.summary)) && (
+              <div className="why-card">
+                {player.why && <p className="why-line">{player.why}</p>}
+                {player.order && player.order.length > 0 && <p className="small"><strong>What to order:</strong> {player.order.join(', ')}</p>}
+                {player.say && player.say.summary && <p className="small"><strong>What people say:</strong> {player.say.summary}</p>}
+                <span className="tiny muted">{player.say && player.say.sources ? player.say.sources : 'From the creator’s video'}</span>
+              </div>
             )}
             <div className="stack-4">
               <span className="tiny muted">{c.kind === 'youtube' ? 'YouTube' : 'TikTok'}{c.channel ? ` · ${c.channel}` : ''}{c.posted ? ` · ${timeAgo(c.posted)}` : ''}</span>
@@ -477,6 +518,8 @@ function TrendingRail({ data, loc, onOpen, onPlay, related = {} }) {
                 </button>
                 <button className="trend-body" onClick={() => onOpen(it.place.id)}>
                   <span className="row-title-sm clamp-1">{it.place.name}</span>
+                  {it.why && <span className="trend-why clamp-2">{it.why}</span>}
+                  {it.order && it.order.length > 0 && <span className="tiny clamp-1"><strong>Order:</strong> {it.order.join(', ')}</span>}
                   <span className="tiny muted clamp-1">{[it.minutes != null ? `🚗 ~${it.minutes} min` : (d != null ? fmtDistance(d) : null), it.place.type].filter(Boolean).join(' · ')}</span>
                   <span className="tiny muted clamp-1">▶ {it.video.channel} · {timeAgo(it.video.published)}</span>
                 </button>

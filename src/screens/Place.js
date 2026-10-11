@@ -44,7 +44,7 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
     loadMedia((f.data || []).map((r) => r.id)).then(setMedia).catch(() => {});
     setVideos(v.data || []);
     setDeals(d.data || []);
-    if (s.data && s.data.visit_count >= 3) api.summary(id).then(setSummary).catch(() => {});
+    api.summary(id).then(setSummary).catch(() => {});
     game.place(id).then(setPg).catch(() => {});
     game.dishes(id).then(setDishes).catch(() => {});
     api.discoverTiktok(id).then(setTiktoks).catch(() => setTiktoks({ videos: [] }));
@@ -227,16 +227,17 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
           </section>
         )}
 
-        {summary && summary.summary && (
-          <section className="summary-card">
-            <div className="row-between">
-              <h2 className="h3">What visitors say</h2>
-              <span className="tiny muted">AI summary · {summary.count} visits</span>
-            </div>
-            <p>{summary.summary}</p>
+        {summary && (summary.why || summary.summary) && (
+          <section className="why-card">
+            <h2 className="h3">Why go?</h2>
+            {summary.why && <p className="why-line">{summary.why}</p>}
+            {summary.order && summary.order.length > 0 && <p className="small"><strong>👍 Order:</strong> {summary.order.join(', ')}</p>}
+            {summary.skip && summary.skip.length > 0 && <p className="small"><strong>👎 Skip:</strong> {summary.skip.join(', ')}</p>}
+            {summary.summary && <p className="small"><strong>What people say:</strong> {summary.summary}</p>}
             {summary.highlights && summary.highlights.length > 0 && (
               <div className="row-wrap">{summary.highlights.map((h) => <span key={h} className="soft-chip">{h}</span>)}</div>
             )}
+            <span className="tiny muted">{summary.sources || 'AI summary'}</span>
           </section>
         )}
 

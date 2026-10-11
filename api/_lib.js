@@ -79,6 +79,7 @@ export function shapePlace(p, maxPhotos = 8) {
     id: p.id,
     name: (p.displayName && p.displayName.text) || 'Unnamed place',
     type: (p.primaryTypeDisplayName && p.primaryTypeDisplayName.text) || null,
+    primaryType: p.primaryType || null,
     address: p.shortFormattedAddress || p.formattedAddress || null,
     fullAddress: p.formattedAddress || null,
     lat: p.location ? p.location.latitude : null,
@@ -114,7 +115,29 @@ export const LIST_FIELDS = [
   'places.id', 'places.displayName', 'places.primaryTypeDisplayName', 'places.location',
   'places.rating', 'places.userRatingCount', 'places.priceLevel', 'places.photos',
   'places.shortFormattedAddress', 'places.currentOpeningHours.openNow', 'places.googleMapsUri',
+  'places.primaryType', 'places.types',
 ].join(',');
+
+// Ube Banana is for food. Hotels, malls and venues show up in Google's "restaurant" results because
+// they contain restaurants; we keep only places whose main business is food or drink.
+export const NON_FOOD_PRIMARY = [
+  'lodging', 'hotel', 'resort_hotel', 'motel', 'hostel', 'bed_and_breakfast', 'guest_house', 'inn',
+  'extended_stay_hotel', 'shopping_mall', 'casino', 'supermarket', 'grocery_store', 'convenience_store',
+  'gas_station', 'department_store',
+];
+const NON_FOOD_EXTRA = new Set([
+  ...NON_FOOD_PRIMARY, 'private_guest_room', 'cottage', 'campground', 'event_venue', 'wedding_venue', 'banquet_hall',
+  'convention_center', 'apartment_complex', 'apartment_building', 'condominium_complex', 'housing_complex',
+  'real_estate_agency', 'corporate_office', 'tourist_attraction', 'amusement_park', 'golf_course', 'sports_club',
+  'spa', 'gym', 'park', 'store', 'market',
+]);
+export function isFoodPlace(p) {
+  const prim = p.primaryType || '';
+  if (prim && NON_FOOD_EXTRA.has(prim)) return false;
+  const types = p.types || [];
+  if (!prim && types.includes('lodging')) return false;
+  return true;
+}
 
 export const PLACE_ID_RE = /^[A-Za-z0-9_-]{10,300}$/;
 
