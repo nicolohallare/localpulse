@@ -80,6 +80,7 @@ export function shapePlace(p, maxPhotos = 8) {
     name: (p.displayName && p.displayName.text) || 'Unnamed place',
     type: (p.primaryTypeDisplayName && p.primaryTypeDisplayName.text) || null,
     primaryType: p.primaryType || null,
+    blurb: (p.editorialSummary && p.editorialSummary.text) || null,
     address: p.shortFormattedAddress || p.formattedAddress || null,
     fullAddress: p.formattedAddress || null,
     lat: p.location ? p.location.latitude : null,
@@ -115,7 +116,7 @@ export const LIST_FIELDS = [
   'places.id', 'places.displayName', 'places.primaryTypeDisplayName', 'places.location',
   'places.rating', 'places.userRatingCount', 'places.priceLevel', 'places.photos',
   'places.shortFormattedAddress', 'places.currentOpeningHours.openNow', 'places.googleMapsUri',
-  'places.primaryType', 'places.types',
+  'places.primaryType', 'places.types', 'places.editorialSummary',
 ].join(',');
 
 // Ube Banana is for food. Hotels, malls and venues show up in Google's "restaurant" results because
