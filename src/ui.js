@@ -28,15 +28,27 @@ const paths = {
   locate: <><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" /><circle cx="12" cy="12" r="7" /></>,
 };
 
-// The Ube Banana mark: a banana sticker. Decorative unless given a title.
+// The Ube Banana mark: a smiling face whose mouth is a banana. Decorative unless given a title.
 export function Banana({ size = 40, className, title }) {
+  const ink = 'var(--ube-ink, #24123D)';
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" className={className} role={title ? 'img' : undefined} aria-hidden={title ? undefined : 'true'}>
       {title && <title>{title}</title>}
-      <path d="M17 31 C 19 74, 72 88, 89 27 C 76 55, 37 63, 25 30 Z" fill="var(--banana, #FFD23F)" stroke="var(--ube-ink, #24123D)" strokeWidth="5" strokeLinejoin="round" />
-      <path d="M27 44 C 38 62, 64 66, 79 46" fill="none" stroke="var(--banana-deep, #F2B705)" strokeWidth="5" strokeLinecap="round" />
-      <path d="M17 31 L 12 20 L 20 17 L 25 30" fill="#6B4A12" stroke="var(--ube-ink, #24123D)" strokeWidth="4" strokeLinejoin="round" />
-      <circle cx="89" cy="27" r="4" fill="var(--ube-ink, #24123D)" />
+      <g transform="translate(5 26) scale(0.9)">
+        <path d="M17 31 C 19 74, 72 88, 89 27 C 76 55, 37 63, 25 30 Z" fill="var(--banana, #FFD23F)" stroke={ink} strokeWidth="5" strokeLinejoin="round" />
+        <path d="M27 44 C 38 62, 64 66, 79 46" fill="none" stroke="var(--banana-deep, #F2B705)" strokeWidth="5" strokeLinecap="round" />
+        <path d="M17 31 L 12 20 L 20 17 L 25 30" fill="#6B4A12" stroke={ink} strokeWidth="4" strokeLinejoin="round" />
+        <circle cx="89" cy="27" r="4" fill={ink} />
+      </g>
+      {[35, 65].map((x) => (
+        <g key={x}>
+          <ellipse cx={x} cy="24" rx="9" ry="11" fill="#fff" stroke={ink} strokeWidth="3" />
+          <ellipse cx={x + 1.5} cy="26" rx="4.5" ry="6" fill={ink} />
+          <circle cx={x + 2.5} cy="23" r="1.6" fill="#fff" />
+        </g>
+      ))}
+      <ellipse cx="25" cy="41" rx="5" ry="3" fill="#D66EBE" />
+      <ellipse cx="75" cy="41" rx="5" ry="3" fill="#D66EBE" />
     </svg>
   );
 }

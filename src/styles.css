@@ -477,7 +477,7 @@ a.btn { text-decoration: none; }
 .disc-head .avatar-btn { background: var(--banana); color: var(--ube-ink); box-shadow: var(--sticker); border: 2px solid var(--ube-ink); }
 .disc-head .search { background: #fff; color: var(--soft); border: 2px solid var(--ube-ink); box-shadow: var(--sticker); }
 .brand-line { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
-.brand-banana { flex-shrink: 0; transform: rotate(-14deg); filter: drop-shadow(0 3px 0 rgba(0,0,0,0.25)); }
+.brand-banana { flex-shrink: 0; filter: drop-shadow(0 3px 0 rgba(0,0,0,0.25)); }
 .wordmark { font-family: var(--display); font-size: 26px; line-height: 1; color: #fff; }
 .brand-tag { font-weight: 700; font-size: 13px; color: var(--banana-cream); opacity: 0.9; margin-top: 3px; }
 
