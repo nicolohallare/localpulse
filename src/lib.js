@@ -27,6 +27,7 @@ const qs = (o) => new URLSearchParams(Object.entries(o).filter(([, v]) => v !== 
 export const api = {
   nearby: (lat, lng, radius = 1500, amenities) => getJSON(`/api/places/nearby?${qs({ lat, lng, radius, amenities: amenities ? 1 : null })}`).then((d) => d.places),
   search: (q, lat, lng, amenities) => getJSON(`/api/places/search?${qs({ q, lat, lng, amenities: amenities ? 1 : null })}`).then((d) => d.places),
+  michelin: () => getJSON('/api/places/michelin').then((d) => d.listings || []),
   details: (id) => getJSON(`/api/places/details?${qs({ id })}`).then((d) => d.place),
   names: (ids) => (ids.length ? getJSON(`/api/places/names?${qs({ ids: ids.join(',') })}`).then((d) => d.places) : Promise.resolve([])),
   youtube: (q) => getJSON(`/api/youtube?${qs({ q })}`),
@@ -116,6 +117,9 @@ export function matchMichelin(placeName, listings) {
     return n === m || n.startsWith(`${m} `);
   }) || null;
 }
+
+// Award order, highest first.
+export const DISTINCTION_RANK = { three_star: 0, two_star: 1, one_star: 2, bib_gourmand: 3, selected: 4 };
 
 export const DISTINCTION = {
   three_star: 'Three MICHELIN Stars',

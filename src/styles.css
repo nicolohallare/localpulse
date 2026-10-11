@@ -538,3 +538,15 @@ a.btn { text-decoration: none; }
 .btn-danger { background: var(--danger); color: #fff; border: 2px solid var(--ube-ink); box-shadow: var(--sticker); }
 .btn-danger:disabled { background: var(--tint); color: var(--soft); border-color: var(--line); box-shadow: none; }
 .field textarea { width: 100%; border: 2px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 16px; resize: vertical; }
+
+/* ── MICHELIN near you ─────────────────────────────── */
+.mich-km { font-size: 12px; font-weight: 800; color: var(--ube); white-space: nowrap; }
+.mich-near { border-color: var(--ube-ink); border-width: 2px; }
+.mich-rail { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; margin: 0 -20px; padding: 2px 20px 6px; }
+.mich-rail::-webkit-scrollbar { display: none; }
+.mich-chip { flex: 0 0 auto; max-width: 220px; display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: 16px; border: 2px solid var(--line); background: #fff; text-align: left; }
+
+/* ── Why go ────────────────────────────────────────── */
+.trend-why { font-size: 13px; font-weight: 600; color: var(--ink-2); line-height: 1.35; }
+.why-card { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border-radius: 18px; background: var(--banana-cream); border: 2px solid var(--ube-ink); box-shadow: var(--sticker); }
+.why-line { font-family: var(--display); font-weight: 700; font-size: 19px; line-height: 1.25; font-variation-settings: 'SOFT' 100, 'WONK' 1, 'opsz' 36; color: var(--ube); }

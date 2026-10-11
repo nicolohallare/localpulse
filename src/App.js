@@ -104,7 +104,8 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    supabase.from('michelin_listings').select('*').order('distinction').then(({ data }) => setMichelin(data || []));
+    api.michelin().then((rows) => { if (rows.length) setMichelin(rows); else throw new Error('empty'); })
+      .catch(() => supabase.from('michelin_listings').select('*').then(({ data }) => setMichelin(data || [])));
   }, []);
 
   const go = useCallback((path) => {

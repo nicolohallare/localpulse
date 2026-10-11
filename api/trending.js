@@ -1,4 +1,4 @@
-import { send, places, shapePlace, LIST_FIELDS, decodeEntities, num, SERVER_GOOGLE_KEY } from './_lib.js';
+import { send, places, shapePlace, LIST_FIELDS, isFoodPlace, decodeEntities, num, SERVER_GOOGLE_KEY } from './_lib.js';
 
 // GET /api/trending?lat=..&lng=..&area=Taguig
 // "Trending on YouTube": the most-viewed recent food videos for an area (YouTube's own
@@ -65,14 +65,17 @@ async function extractPlaces(videos, area) {
     headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({
       model: process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001',
-      max_tokens: 800,
+      max_tokens: 2000,
       messages: [{
         role: 'user',
         content:
           `These are YouTube food videos for ${area}, Philippines. For each video that is clearly about ONE specific, named ` +
           'restaurant, cafe, bar or food stall, give that place\'s name exactly as written and its branch/area if stated. ' +
           'Skip compilations ("top 10", "food trip" covering many places), recipes, and videos where no place is named. ' +
-          'Never guess. Reply with JSON only, no code fences: [{"i": <number>, "place": "<name>", "branch": "<area or empty>"}]\n\n' + list,
+          'Never guess. For each, also write "why": one short, inviting line (max 90 characters) on why someone would go, ' +
+          'based ONLY on what the title and description say (signature dish, price, vibe, a claim like "best in Manila"); ' +
+          'and "order": up to 3 dishes the video names (empty if none). No hype words like "must-try" or "amazing" unless the video uses them. ' +
+          'Reply with JSON only, no code fences: [{"i": <number>, "place": "<name>", "branch": "<area or empty>", "why": "<line>", "order": ["<dish>"]}]\n\n' + list,
       }],
     }),
   });
@@ -106,9 +109,11 @@ async function candidates(ytKey, area, lat, lng) {
         },
       });
       const hit = data.places && data.places[0];
-      if (!hit || !sameName(p.place, hit.displayName && hit.displayName.text)) return null;
+      if (!hit || !isFoodPlace(hit) || !sameName(p.place, hit.displayName && hit.displayName.text)) return null;
       const { description, ...v } = video;
-      return { place: shapePlace(hit, 1), video: v };
+      const why = String(p.why || '').trim().slice(0, 120) || null;
+      const order = Array.isArray(p.order) ? p.order.map((d) => String(d).trim().slice(0, 40)).filter(Boolean).slice(0, 3) : [];
+      return { place: shapePlace(hit, 1), video: v, why, order };
     } catch (e) {
       return null;
     }
@@ -184,7 +189,7 @@ export default async function handler(req, res) {
     let list = null;
     const host = String(req.headers['x-forwarded-host'] || req.headers.host || '');
     if (host) {
-      const qs = new URLSearchParams({ stage: 'candidates', area, lat: lat.toFixed(1), lng: lng.toFixed(1) });
+      const qs = new URLSearchParams({ stage: 'candidates', v: '2', area, lat: lat.toFixed(1), lng: lng.toFixed(1) });
       list = await fetch(`https://${host}/api/trending?${qs}`).then((r) => (r.ok ? r.json() : null)).then((d) => d && d.list).catch(() => null);
     }
     if (!Array.isArray(list)) list = await candidates(ytKey, area, Number(lat.toFixed(1)), Number(lng.toFixed(1)));
