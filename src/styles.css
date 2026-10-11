@@ -527,3 +527,14 @@ a.btn { text-decoration: none; }
 @media (prefers-reduced-motion: reduce) {
   .btn-primary, .tab-fab { transition: none; }
 }
+
+/* ── Safety: report, block, delete ─────────────────── */
+.take-top { display: flex; align-items: flex-start; gap: 2px; }
+.take-top .take-head { flex: 1; min-width: 0; }
+.take-more { width: 40px; height: 40px; flex-shrink: 0; color: var(--soft); margin-right: -8px; }
+.menu-row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 16px; border-radius: 14px; border: 2px solid var(--line); background: #fff; font-weight: 700; font-size: 15px; text-align: left; color: var(--ink); }
+.menu-on { border-color: var(--ube-ink); background: var(--banana-cream); }
+.menu-danger, .danger-ink { color: var(--danger); }
+.btn-danger { background: var(--danger); color: #fff; border: 2px solid var(--ube-ink); box-shadow: var(--sticker); }
+.btn-danger:disabled { background: var(--tint); color: var(--soft); border-color: var(--line); box-shadow: none; }
+.field textarea { width: 100%; border: 2px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 16px; resize: vertical; }

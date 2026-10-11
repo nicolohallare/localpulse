@@ -3,6 +3,7 @@ import { api, currentUser, timeAgo, initials } from '../lib';
 import { game, levelFor, follow, logTouch } from '../game';
 import { Icon, Spinner, Empty, Notice } from '../ui';
 import { MediaStrip, loadMedia } from '../media';
+import { TakeMenu } from '../safety';
 
 // Load live place names for a set of takes (Google data is never stored).
 export async function withPlaces(rows) {
@@ -15,12 +16,13 @@ export async function withPlaces(rows) {
   return (rows || []).map((r) => ({ ...r, place: byId[r.google_place_id] || {}, media: media[r.id] || [] }));
 }
 
-export function TakeCard({ t, author, onOpenPlace, onOpenUser, showPlace = true }) {
+export function TakeCard({ t, author, onOpenPlace, onOpenUser, showPlace = true, onHidden }) {
   const who = author || { id: t.user_id, name: t.display_name, points: t.author_points };
   const open = () => { if (who.id) logTouch(t.google_place_id, who.id); onOpenPlace(t.google_place_id); };
   return (
     <article className="take">
       {who.name && (
+        <div className="take-top">
         <button className="take-head" onClick={() => who.id && onOpenUser(who.id)}>
           <span className="avatar">{initials(who.name)}</span>
           <span className="grow">
@@ -29,6 +31,8 @@ export function TakeCard({ t, author, onOpenPlace, onOpenUser, showPlace = true 
           </span>
           <span className={`score-chip ${t.score >= 8 ? 'score-hi' : t.score <= 4 ? 'score-lo' : ''}`}>{t.score}/10</span>
         </button>
+        <TakeMenu take={{ id: t.id, user_id: who.id }} name={who.name} onHidden={(what) => onHidden && onHidden(t, what)} />
+        </div>
       )}
       {showPlace && (
         <button className="take-place" onClick={open}>
@@ -130,7 +134,8 @@ export default function Feed({ onOpenPlace, onOpenUser, onOpenCreators, onOpenRa
             : <Empty icon="check" title="No takes yet">Check in somewhere and tell people what to order — you’ll be the first influencer here.</Empty>
         )}
         <div className="stack-12">
-          {(rows || []).map((t) => <TakeCard key={t.id} t={t} onOpenPlace={onOpenPlace} onOpenUser={onOpenUser} />)}
+          {(rows || []).map((t) => <TakeCard key={t.id} t={t} onOpenPlace={onOpenPlace} onOpenUser={onOpenUser}
+            onHidden={(x, what) => setRows((cur) => cur.filter((r) => (what === 'blocked' ? r.user_id !== x.user_id : r.id !== x.id)))} />)}
         </div>
       </section>
 

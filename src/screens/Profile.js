@@ -3,9 +3,11 @@ import { supabase, initials } from '../lib';
 import { game, levelFor, follow, shareUrl, shareLink } from '../game';
 import { Icon, Spinner, Empty, Notice } from '../ui';
 import { TakeCard, withPlaces } from './Feed';
+import { SafetySheet } from '../safety';
 
 // Public influencer profile: #/u/<user id>
 export default function Profile({ id, onBack, onOpenPlace, onOpenUser, onOpenList }) {
+  const [safety, setSafety] = useState(false);
   const [p, setP] = useState(null);
   const [takes, setTakes] = useState(null);
   const [lists, setLists] = useState([]);
@@ -45,7 +47,10 @@ export default function Profile({ id, onBack, onOpenPlace, onOpenUser, onOpenLis
       <div className="you-hero">
         <div className="row-between">
           <button className="icon-btn ring light-ring" onClick={onBack} aria-label="Back"><Icon name="back" /></button>
-          <button className="icon-btn ring light-ring" onClick={share} aria-label="Share profile"><Icon name="share" size={20} /></button>
+          <div className="row-6">
+            {!p.is_me && <button className="icon-btn ring light-ring" onClick={() => setSafety(true)} aria-label={`Report or block ${p.name}`}><Icon name="more" size={20} /></button>}
+            <button className="icon-btn ring light-ring" onClick={share} aria-label="Share profile"><Icon name="share" size={20} /></button>
+          </div>
         </div>
         <span className="you-avatar">{initials(p.name)}</span>
         <div className="stack-4">
@@ -66,6 +71,9 @@ export default function Profile({ id, onBack, onOpenPlace, onOpenUser, onOpenLis
           </button>
         )}
       </div>
+
+      {safety && <SafetySheet userId={id} name={p.name} onClose={() => setSafety(false)}
+        onDone={(what) => { setSafety(false); if (what === 'blocked') onBack(); }} />}
 
       {lists.length > 0 && (
         <section className="section stack-8">
