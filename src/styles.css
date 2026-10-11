@@ -26,7 +26,7 @@
   --danger: #c0361f;
   --radius: 18px;
   --sticker: 0 3px 0 var(--ube-ink);
-  --display: 'Bagel Fat One', 'Figtree', system-ui, sans-serif;
+  --display: 'Fraunces Variable', Georgia, serif;
   --heading: 'Figtree', system-ui, sans-serif;
   --body: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --safe-b: env(safe-area-inset-bottom, 0px);
@@ -458,13 +458,14 @@ a.btn { text-decoration: none; }
    calm: white surfaces, purple ink, banana yellow only for actions and wins.
    "Sticker" edges (2px ink outline + hard 3px drop) mark things you can press. */
 
-/* Type: Bagel Fat One for the big moments only; Figtree 800 for headings. */
-.display, .display-sm, .display-xs { font-family: var(--display); font-weight: 400; letter-spacing: 0; }
+/* Type: Fraunces at its softest and chubbiest for the big moments; Figtree 800 for headings. */
+.display, .display-sm, .display-xs, .wordmark, .tile-big, .reward-pts, .level-pts, .top-rank { font-family: var(--display); font-weight: 800; letter-spacing: -0.02em; font-variation-settings: 'SOFT' 100, 'WONK' 1, 'opsz' 72; }
+.display, .display-sm, .display-xs { font-weight: 800; }
 .display { font-size: 36px; line-height: 1.02; }
 .display-sm { font-size: 30px; line-height: 1.05; }
 .display-xs { font-size: 24px; line-height: 1.1; }
 .h2, .h3, .row-title, .mich-name, .mich-card-title { font-family: var(--heading); font-weight: 800; letter-spacing: -0.01em; }
-.tile-big, .reward-pts, .level-pts, .top-rank { font-family: var(--display); font-weight: 400; letter-spacing: 0; }
+
 .eyebrow, .mich-tag, .mich-dist { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 800; }
 
 /* Header band on Discover. */
@@ -478,7 +479,7 @@ a.btn { text-decoration: none; }
 .disc-head .search { background: #fff; color: var(--soft); border: 2px solid var(--ube-ink); box-shadow: var(--sticker); }
 .brand-line { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
 .brand-banana { flex-shrink: 0; filter: drop-shadow(0 3px 0 rgba(0,0,0,0.25)); }
-.wordmark { font-family: var(--display); font-size: 26px; line-height: 1; color: #fff; }
+.wordmark { font-size: 27px; line-height: 1; color: #fff; }
 .brand-tag { font-weight: 700; font-size: 13px; color: var(--banana-cream); opacity: 0.9; margin-top: 3px; }
 
 /* Buttons: banana stickers you can press. */

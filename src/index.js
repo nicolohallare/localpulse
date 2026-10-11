@@ -1,4 +1,4 @@
-import '@fontsource/bagel-fat-one/400.css';
+import '@fontsource-variable/fraunces/full.css';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
