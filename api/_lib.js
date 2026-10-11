@@ -136,6 +136,10 @@ export function isFoodPlace(p) {
   if (prim && NON_FOOD_EXTRA.has(prim)) return false;
   const types = p.types || [];
   if (!prim && types.includes('lodging')) return false;
+  // Malls and hotels sometimes carry a food type; drop them by name unless the name says it's a place to eat.
+  const name = (p.displayName && p.displayName.text) || p.name || '';
+  if (/\b(malls?|hotel|resort|residences|condominium)\b/i.test(name)
+    && !/(restaurant|resto|caf[eé]|kitchen|bar\b|grill|buffet|dining|bistro|eatery|coffee|bakery)/i.test(name)) return false;
   return true;
 }
 
