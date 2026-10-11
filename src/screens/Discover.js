@@ -230,7 +230,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
             <p className="brand-tag">Everyone’s a food influencer</p>
           </div>
         </div>
-        <h1 className="display">Where to eat<br />tonight?</h1>
+        <h1 className="display">{mealLine()}</h1>
         <form className="search" onSubmit={runSearch} role="search">
           <Icon name="search" size={20} />
           <label className="sr-only" htmlFor="q">Search places</label>
@@ -423,6 +423,16 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
       })()}
     </div>
   );
+}
+
+// Headline that follows the Filipino meal clock.
+function mealLine(d = new Date()) {
+  const h = d.getHours() + d.getMinutes() / 60;
+  if (h >= 5 && h < 10.5) return 'Almusal, saan tayo?';
+  if (h >= 10.5 && h < 14) return 'Lunch, saan tayo?';
+  if (h >= 14 && h < 17) return 'Merienda, saan tayo?';
+  if (h >= 17 && h < 21.5) return 'Dinner, saan tayo?';
+  return 'Midnight cravings?';
 }
 
 // Most common city/area in the nearby results' addresses, e.g. "Taguig".
