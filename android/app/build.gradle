@@ -1,5 +1,8 @@
 apply plugin: 'com.android.application'
 
+// Cloud builds pass -PversionCode=<run number> so every upload to the stores is newer than the last.
+def ubVersionCode = project.hasProperty('versionCode') ? project.property('versionCode').toString().toInteger() : 1
+
 android {
     namespace = "com.ubebanana.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,7 +10,7 @@ android {
         applicationId "com.ubebanana.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode (project.findProperty('versionCode') ?: '1').toInteger()
+        versionCode ubVersionCode
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
