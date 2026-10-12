@@ -41,7 +41,10 @@ jobs:
         run: |
           set -o pipefail
           ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee build.log || {
-            grep -E "What went wrong|error:|Error|Could not|> " build.log | head -40 | while IFS= read -r line; do echo "::error::$line"; done
+            msg=$(grep -A12 "What went wrong" build.log | head -14 | tr '\n' ' ' | cut -c1-900)
+            echo "::error::$msg"
+            msg2=$(grep -B2 -A3 -m3 -E "Caused by|e: |error:" build.log | tr '\n' ' ' | cut -c1-900)
+            echo "::error::$msg2"
             exit 1
           }
 
