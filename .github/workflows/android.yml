@@ -9,6 +9,9 @@ on:
     paths: ['android/**', 'capacitor.config.json', 'package.json', '.github/workflows/android.yml']
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -53,6 +56,15 @@ jobs:
         with:
           name: ube-banana-test-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Publish test APK as a phone-friendly download
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk ube-banana-test.apk
+          gh release delete android-test --yes --cleanup-tag 2>/dev/null || true
+          gh release create android-test ube-banana-test.apk --prerelease --title "Ube Banana — Android test app" \
+            --notes "Test build ${{ github.run_number }}. On an Android phone, open this page, tap ube-banana-test.apk, and allow installing from your browser when asked."
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Build signed Play Store bundle
         if: ${{ env.KEYSTORE_B64 != '' }}
