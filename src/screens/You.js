@@ -120,6 +120,7 @@ export default function You({ onOpen, onOpenCreators, onOpenRanks, onOpenUser, o
               {push === 'on' ? 'On — crown alerts, people you follow, weekly rank'
                 : push === 'denied' ? 'Blocked in your browser settings'
                   : push === 'needs-install' ? 'On iPhone: Share → Add to Home Screen first, then open Ube Banana from there'
+                    : push === 'app-soon' ? 'Coming soon to the app'
                     : push === 'unsupported' ? 'Not available in this browser'
                       : 'Crown alerts, people you follow, weekly rank'}
             </span>

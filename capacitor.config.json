@@ -1,0 +1,29 @@
+{
+  "appId": "com.ubebanana.app",
+  "appName": "Ube Banana",
+  "webDir": "build",
+  "server": {
+    "url": "https://localpulse-two.vercel.app",
+    "cleartext": false,
+    "allowNavigation": ["localpulse-two.vercel.app", "*.supabase.co"]
+  },
+  "android": {
+    "backgroundColor": "#4B1F7A"
+  },
+  "ios": {
+    "backgroundColor": "#4B1F7A",
+    "contentInset": "never"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 800,
+      "backgroundColor": "#4B1F7A",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "backgroundColor": "#4B1F7A",
+      "style": "DARK",
+      "overlaysWebView": false
+    }
+  }
+}
