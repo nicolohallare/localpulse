@@ -1,0 +1,65 @@
+name: Android app
+
+# Builds the Ube Banana Android app in the cloud.
+# Every run produces "ube-banana-test.apk" (install it on any Android phone to test).
+# When the Play Store signing secrets are added, it also produces "ube-banana-release.aab" for Google Play.
+on:
+  push:
+    branches: [main]
+    paths: ['android/**', 'capacitor.config.json', 'package.json', '.github/workflows/android.yml']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Install
+        run: npm ci
+
+      - name: Build web fallback and sync native project
+        run: |
+          CI=false npm run build
+          npx cap sync android
+
+      - name: Build test APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Upload test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ube-banana-test-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Build signed Play Store bundle
+        if: ${{ env.KEYSTORE_B64 != '' }}
+        env:
+          UB_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          UB_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          UB_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        working-directory: android
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > app/upload.jks
+          ./gradlew bundleRelease --no-daemon -PversionCode=${{ github.run_number }}
+
+      - name: Upload Play Store bundle
+        if: ${{ env.KEYSTORE_B64 != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ube-banana-release-aab
+          path: android/app/build/outputs/bundle/release/app-release.aab

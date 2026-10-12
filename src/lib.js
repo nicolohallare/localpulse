@@ -13,6 +13,11 @@ export const CHECKIN_RADIUS_M = 200;
 // ── Server API ──────────────────────────────────────────────────────────────
 const whyCache = {};
 
+// True inside the Ube Banana app from the App Store / Google Play (not the website).
+export function isNativeApp() {
+  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+
 async function getJSON(url) {
   const r = await fetch(url);
   const data = await r.json().catch(() => ({}));

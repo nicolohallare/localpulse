@@ -1,4 +1,4 @@
-import { supabase, ensureUser } from './lib';
+import { supabase, ensureUser, isNativeApp } from './lib';
 
 // Public half of the web-push key pair (safe to ship to browsers).
 const VAPID_PUBLIC = 'BKDDG-nBQa2HM7D5hUwIRmx4bAfSwePcuEyMySd4Jc3nlTrLUCD20qI5B1mpUTEsItirkp1toQVaHWjUa9Zjlq4';
@@ -15,6 +15,7 @@ export function pushSupported() {
 
 // 'unsupported' | 'needs-install' | 'denied' | 'on' | 'off'
 export async function pushStatus() {
+  if (isNativeApp()) return 'app-soon'; // native notifications arrive in a later app update
   if (!pushSupported()) {
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
     const standalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
