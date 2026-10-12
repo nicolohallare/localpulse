@@ -77,9 +77,12 @@ jobs:
           echo "$KEYSTORE_B64" | base64 -d > app/upload.jks
           ./gradlew bundleRelease --no-daemon -PversionCode=${{ github.run_number }}
 
-      - name: Upload Play Store bundle
+      - name: Publish Play Store bundle as a download
         if: ${{ env.KEYSTORE_B64 != '' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ube-banana-release-aab
-          path: android/app/build/outputs/bundle/release/app-release.aab
+        run: |
+          cp android/app/build/outputs/bundle/release/app-release.aab ube-banana-${{ github.run_number }}.aab
+          gh release delete android-play --yes --cleanup-tag 2>/dev/null || true
+          gh release create android-play ube-banana-${{ github.run_number }}.aab --prerelease --title "Ube Banana — Google Play upload" \
+            --notes "Version code ${{ github.run_number }}. Download the .aab and upload it in Play Console → Test and release."
+        env:
+          GH_TOKEN: ${{ github.token }}
