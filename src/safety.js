@@ -42,7 +42,8 @@ async function report({ visitId, userId, reason, note }) {
 export function TakeMenu({ take, name, onHidden }) {
   const me = useMe();
   const [open, setOpen] = useState(false);
-  if (!take || (me && take.user_id === me.id)) return null;
+  if (!take) return null;
+  if (me && take.user_id === me.id) return <OwnTakeMenu take={take} onDeleted={() => onHidden && onHidden('deleted')} />;
   return (
     <>
       <button className="icon-btn take-more" aria-label="More options for this take" onClick={() => setOpen(true)}>
@@ -50,6 +51,45 @@ export function TakeMenu({ take, name, onHidden }) {
       </button>
       {open && <SafetySheet visitId={take.id} userId={take.user_id} name={name || take.display_name || 'this person'}
         onClose={() => setOpen(false)} onDone={(what) => { setOpen(false); if (onHidden) onHidden(what); }} />}
+    </>
+  );
+}
+
+// "⋯" on your own take: delete it (and its photos/videos).
+function OwnTakeMenu({ take, onDeleted }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+  async function remove() {
+    setBusy(true); setErr(null);
+    try {
+      const { data: media } = await supabase.from('visit_media').select('path').eq('visit_id', take.id);
+      const paths = (media || []).map((m) => m.path).filter(Boolean);
+      if (paths.length) await supabase.storage.from('take-media').remove(paths);
+      const { error } = await supabase.from('visits').delete().eq('id', take.id);
+      if (error) throw error;
+      setOpen(false);
+      onDeleted();
+    } catch (e) {
+      setErr('Couldn’t delete it. Check your connection and try again.');
+      setBusy(false);
+    }
+  }
+  return (
+    <>
+      <button className="icon-btn take-more" aria-label="Options for your take" onClick={() => setOpen(true)}>
+        <Icon name="more" size={20} />
+      </button>
+      {open && (
+        <Sheet title="Delete this take?" onClose={() => setOpen(false)}>
+          <div className="stack-12">
+            <p>This removes your check-in, rating, take and any photos or videos from Ube Banana. Points from it are removed too. It can’t be undone.</p>
+            <button className="btn btn-danger" disabled={busy} onClick={remove}>{busy ? 'Deleting…' : 'Delete this take'}</button>
+            <button className="btn btn-quiet" onClick={() => setOpen(false)}>Keep it</button>
+            {err && <Notice tone="warn">{err}</Notice>}
+          </div>
+        </Sheet>
+      )}
     </>
   );
 }
