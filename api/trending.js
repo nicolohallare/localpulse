@@ -83,7 +83,7 @@ async function extractPlaces(videos, area, cc) {
         content:
           `These are YouTube food videos for ${area}, ${countryInfo(cc).name} (titles may be in any language). For each video that is clearly about ONE specific, named ` +
           'restaurant, cafe, bar or food stall, give that place\'s name exactly as written and its branch/area if stated. ' +
-          'Skip compilations ("top 10", "food trip" covering many places), recipes, and videos where no place is named. ' +
+          'Skip compilations and round-ups (e.g. "top 10", "food trip", "合集", "懶人包", several places in one title, a list of award winners), recipes, and videos where no place is named. ' +
           'Never guess. For each, also write "why": one short, inviting line (max 90 characters) on why someone would go, ' +
           'based ONLY on what the title and description say (signature dish, price, vibe, a claim like "best in town"); ' +
           'and "order": up to 3 specific dishes the video names (never categories like "desserts"; empty if none). No hype words like "must-try" or "amazing" unless the video uses them. ' +
