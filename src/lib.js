@@ -13,6 +13,20 @@ export const CHECKIN_RADIUS_M = 200;
 // ── Server API ──────────────────────────────────────────────────────────────
 const whyCache = {};
 
+// ── Country (from the visitor's network, via /api/config) ──────────────────
+let COUNTRY = 'PH';
+export function setCountry(cc) { if (cc && /^[A-Z]{2}$/.test(cc)) COUNTRY = cc; }
+export function getCountry() { return COUNTRY; }
+const CURRENCY = { PH: '₱', JP: '¥', CN: '¥', KR: '₩', TH: '฿', VN: '₫', IN: '₹', GB: '£', EU: '€', FR: '€', DE: '€', IT: '€', ES: '€', NL: '€', IE: '€', PT: '€' };
+export const currencySymbol = () => CURRENCY[COUNTRY] || '$';
+// Google's price level (1–4) in the local symbol: ₱₱ in Manila, $$ in Taipei.
+export function priceLabel(p) {
+  const n = p && p.priceLevel;
+  if (!n) return null;
+  return currencySymbol().repeat(n);
+}
+export const COUNTRY_NAME = { PH: 'Philippines', TW: 'Taiwan', HK: 'Hong Kong', JP: 'Japan', KR: 'South Korea', TH: 'Thailand', VN: 'Vietnam', ID: 'Indonesia', MY: 'Malaysia', SG: 'Singapore', US: 'United States' };
+
 // True inside the Ube Banana app from the App Store / Google Play (not the website).
 export function isNativeApp() {
   return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
@@ -34,7 +48,7 @@ const qs = (o) => new URLSearchParams(Object.entries(o).filter(([, v]) => v !== 
 export const api = {
   nearby: (lat, lng, radius = 1500, amenities) => getJSON(`/api/places/nearby?${qs({ lat, lng, radius, amenities: amenities ? 1 : null })}`).then((d) => d.places),
   search: (q, lat, lng, amenities) => getJSON(`/api/places/search?${qs({ q, lat, lng, amenities: amenities ? 1 : null })}`).then((d) => d.places),
-  michelin: () => getJSON('/api/places/michelin').then((d) => d.listings || []),
+  michelin: () => getJSON('/api/places/michelin?v=2').then((d) => d.listings || []),
   details: (id) => getJSON(`/api/places/details?${qs({ id })}`).then((d) => d.place),
   names: (ids) => (ids.length ? getJSON(`/api/places/names?${qs({ ids: ids.join(',') })}`).then((d) => d.places) : Promise.resolve([])),
   youtube: (q) => getJSON(`/api/youtube?${qs({ q })}`),
@@ -56,9 +70,9 @@ export const api = {
     await Promise.all([worker(), worker(), worker(), worker()]);
   },
   config: () => getJSON('/api/config'),
-  discoverTiktok: (placeId) => getJSON(`/api/video/discover?${qs({ place: placeId })}`),
+  discoverTiktok: (placeId) => getJSON(`/api/video/discover?${qs({ place: placeId, cc: COUNTRY })}`),
   matchVideo: (url, lat, lng) => getJSON(`/api/video/match?${qs({ url, lat: lat.toFixed(2), lng: lng.toFixed(2) })}`),
-  trending: (lat, lng, area) => getJSON(`/api/trending?${qs({ lat: lat.toFixed(2), lng: lng.toFixed(2), area })}`),
+  trending: (lat, lng, area) => getJSON(`/api/trending?${qs({ lat: lat.toFixed(2), lng: lng.toFixed(2), area, cc: COUNTRY })}`),
 };
 
 // Opens Google Maps (app on phones) with directions to the place.

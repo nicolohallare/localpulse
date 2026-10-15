@@ -1,4 +1,4 @@
-import { places, send } from '../_lib.js';
+import { places, send, countryInfo } from '../_lib.js';
 import { SECRET, rpc, select } from '../_server.js';
 
 // GET /api/places/michelin
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
           const data = await places('places:searchText', {
             method: 'POST',
             fieldMask: 'places.id,places.displayName,places.location',
-            body: { textQuery: `${r.name} restaurant ${r.city || 'Metro Manila'} Philippines`, pageSize: 1, regionCode: 'PH' },
+            body: { textQuery: `${r.name} restaurant ${r.city || ''} ${countryInfo(r.country || 'PH').name}`, pageSize: 1, regionCode: r.country || 'PH' },
           });
           const p = data.places && data.places[0];
           if (p && p.location && sameName(r.name, p.displayName && p.displayName.text)) hit = p;

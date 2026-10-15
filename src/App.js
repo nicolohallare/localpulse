@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './styles.css';
-import { api, supabase, getLocation, DEFAULT_LOCATION, findVideoUrl } from './lib';
+import { api, supabase, getLocation, DEFAULT_LOCATION, findVideoUrl, setCountry } from './lib';
 import { Sheet, Spinner } from './ui';
 
 import { Icon } from './ui';
@@ -102,6 +102,9 @@ export default function App() {
       setRoute(parseHash());
     });
   }, []);
+
+  const [, setCc] = useState('PH');
+  useEffect(() => { api.config().then((c) => { setCountry(c.country); setCc(c.country); }).catch(() => {}); }, []);
 
   useEffect(() => {
     api.michelin().then((rows) => { if (rows.length) setMichelin(rows); else throw new Error('empty'); })

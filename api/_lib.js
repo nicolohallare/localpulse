@@ -74,6 +74,31 @@ const PRICE = {
   PRICE_LEVEL_VERY_EXPENSIVE: '₱₱₱₱',
 };
 
+const PRICE_LEVEL = {
+  PRICE_LEVEL_FREE: 0, PRICE_LEVEL_INEXPENSIVE: 1, PRICE_LEVEL_MODERATE: 2, PRICE_LEVEL_EXPENSIVE: 3, PRICE_LEVEL_VERY_EXPENSIVE: 4,
+};
+
+// Countries we tune for: how to search food videos there and what to call the country.
+export const COUNTRIES = {
+  PH: { name: 'Philippines', lang: 'en', q: (a) => `${a} food review restaurant` },
+  TW: { name: 'Taiwan', lang: 'zh-Hant', q: (a) => `${a} 美食 餐廳 推薦` },
+  HK: { name: 'Hong Kong', lang: 'zh-Hant', q: (a) => `${a} 美食 餐廳` },
+  JP: { name: 'Japan', lang: 'ja', q: (a) => `${a} グルメ 店` },
+  KR: { name: 'South Korea', lang: 'ko', q: (a) => `${a} 맛집` },
+  TH: { name: 'Thailand', lang: 'th', q: (a) => `${a} ร้านอาหาร รีวิว` },
+  VN: { name: 'Vietnam', lang: 'vi', q: (a) => `${a} quán ăn ngon review` },
+  ID: { name: 'Indonesia', lang: 'id', q: (a) => `${a} kuliner review restoran` },
+  MY: { name: 'Malaysia', lang: 'en', q: (a) => `${a} food review restaurant` },
+  SG: { name: 'Singapore', lang: 'en', q: (a) => `${a} food review restaurant` },
+};
+export function countryOf(req) {
+  const cc = String((req.query && req.query.cc) || req.headers['x-vercel-ip-country'] || 'PH').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2);
+  return cc || 'PH';
+}
+export function countryInfo(cc) {
+  return COUNTRIES[cc] || { name: cc, lang: 'en', q: (a) => `${a} food review restaurant` };
+}
+
 export function shapePlace(p, maxPhotos = 8) {
   return {
     id: p.id,
@@ -88,6 +113,7 @@ export function shapePlace(p, maxPhotos = 8) {
     rating: typeof p.rating === 'number' ? p.rating : null,
     ratingCount: p.userRatingCount || 0,
     price: PRICE[p.priceLevel] || null,
+    priceLevel: PRICE_LEVEL[p.priceLevel] ?? null,
     openNow: p.currentOpeningHours && typeof p.currentOpeningHours.openNow === 'boolean'
       ? p.currentOpeningHours.openNow : null,
     hours: (p.regularOpeningHours && p.regularOpeningHours.weekdayDescriptions) || [],
