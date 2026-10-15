@@ -1,15 +1,20 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { api, supabase, distanceM, fmtDistance, fmtCount, timeAgo, tiktokEmbed, matchMichelin, DISTINCTION, DISTINCTION_RANK } from '../lib';
+import { api, supabase, distanceM, fmtDistance, fmtCount, timeAgo, tiktokEmbed, matchMichelin, DISTINCTION, DISTINCTION_RANK, currencySymbol, priceLabel, getCountry, COUNTRY_NAME } from '../lib';
 import { logPlay, game } from '../game';
 import { Banana, Icon, PlacePhoto, Spinner, Notice, Empty, ScoreBadge, Sheet, GoButtons } from '../ui';
 import MapView from '../MapView';
 
-const CRAVINGS = ['Sisig', 'Lechon', 'Ramen', 'Samgyup', 'Kare-kare', 'Chicken wings', 'Pizza', 'Burger', 'Milk tea', 'Coffee', 'Halo-halo', 'Bulalo'];
+const CRAVINGS_BY_COUNTRY = {
+  PH: ['Sisig', 'Lechon', 'Ramen', 'Samgyup', 'Kare-kare', 'Chicken wings', 'Pizza', 'Burger', 'Milk tea', 'Coffee', 'Halo-halo', 'Bulalo'],
+  TW: ['Beef noodles', 'Xiao long bao', 'Braised pork rice', 'Hot pot', 'Bubble tea', 'Dumplings', 'Fried chicken', 'Shaved ice', 'Breakfast', 'Ramen', 'Coffee', 'Night market'],
+};
+const DEFAULT_CRAVINGS = ['Noodles', 'Dumplings', 'Ramen', 'Pizza', 'Burger', 'Fried chicken', 'Sushi', 'Coffee', 'Dessert', 'Bubble tea', 'Breakfast', 'Street food'];
+const cravingsFor = (cc) => CRAVINGS_BY_COUNTRY[cc] || DEFAULT_CRAVINGS;
 const FILTERS = [
   { k: 'open', label: 'Open now', test: (p) => p.openNow === true },
-  { k: 'p1', label: '₱', test: (p) => p.price === '₱' },
-  { k: 'p2', label: '₱₱', test: (p) => p.price === '₱₱' },
-  { k: 'p3', label: '₱₱₱+', test: (p) => p.price === '₱₱₱' || p.price === '₱₱₱₱' },
+  { k: 'p1', label: () => currencySymbol(), test: (p) => p.priceLevel === 1 },
+  { k: 'p2', label: () => currencySymbol().repeat(2), test: (p) => p.priceLevel === 2 },
+  { k: 'p3', label: () => `${currencySymbol().repeat(3)}+`, test: (p) => p.priceLevel >= 3 },
   { k: 'groups', label: 'Groups', amen: true, test: (p) => p.amenities && p.amenities.groups },
   { k: 'kids', label: 'Kid-friendly', amen: true, test: (p) => p.amenities && p.amenities.kids },
   { k: 'pets', label: 'Pet-friendly', amen: true, test: (p) => p.amenities && p.amenities.pets },
@@ -218,7 +223,11 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
   }
 
   const sorted = applyFilters(places.map((p) => ({ ...p, dist: distanceM(loc, p) })), filters);
-  const michWithKm = (michelin || []).map((l) => {
+  const cc = getCountry();
+  const michHere = (michelin || []).filter((l) => (l.country || 'PH') === cc);
+  const michSource = michHere.length ? michHere : (michelin || []);
+  const michCountry = michHere.length ? cc : 'PH';
+  const michWithKm = michSource.map((l) => {
     const d = l.lat != null && loc && !loc.isDefault ? distanceM(loc, { lat: l.lat, lng: l.lng }) : null;
     return { ...l, km: d != null ? d / 1000 : null };
   });
@@ -270,14 +279,14 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
           <MapView center={loc} places={sorted} stats={stats} onPick={(p) => onOpen(p.id)} />
           <div className="chips filter-chips" aria-label="Filters">
             {FILTERS.map((f) => (
-              <button key={f.k} className={`chip chip-sm ${filters.includes(f.k) ? 'chip-soft-on' : ''}`} aria-pressed={filters.includes(f.k)} onClick={() => toggleFilter(f.k)}>{f.label}</button>
+              <button key={f.k} className={`chip chip-sm ${filters.includes(f.k) ? 'chip-soft-on' : ''}`} aria-pressed={filters.includes(f.k)} onClick={() => toggleFilter(f.k)}>{typeof f.label === 'function' ? f.label() : f.label}</button>
             ))}
           </div>
           {!query && (
             <section className="section crave">
               <h2 className="h3">What are you craving?</h2>
               <div className="crave-rail">
-                {CRAVINGS.map((c) => (
+                {cravingsFor(getCountry()).map((c) => (
                   <button key={c} className={`crave-chip ${craving === c ? 'crave-on' : ''}`} aria-pressed={craving === c} onClick={() => setCraving(craving === c ? null : c)}>{c}</button>
                 ))}
               </div>
@@ -364,8 +373,8 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
 
       {mode === 'michelin' && (
         <section className="section">
-          <h2 className="h2">MICHELIN Guide Philippines</h2>
-          <p className="muted small">Restaurants recognised in the 2026 selection{michSort === 'near' ? ', nearest to you first' : ''}. Tap one to see it on Ube Banana.</p>
+          <h2 className="h2">MICHELIN Guide {COUNTRY_NAME[michCountry] || michCountry}</h2>
+          <p className="muted small">{michCountry === 'TW' ? 'Starred restaurants' : 'Restaurants'} recognised in the 2026 selection{michSort === 'near' ? ', nearest to you first' : ''}. Tap one to see it on Ube Banana.</p>
           <div className="seg" role="tablist" aria-label="Sort">
             <button role="tab" aria-selected={michSort === 'near'} className={michSort === 'near' ? 'seg-on' : ''} onClick={() => setMichSort('near')}>Nearest</button>
             <button role="tab" aria-selected={michSort === 'award'} className={michSort === 'award' ? 'seg-on' : ''} onClick={() => setMichSort('award')}>By award</button>
@@ -383,7 +392,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
               </button>
             ))}
           </div>
-          <a className="link-out" href="https://guide.michelin.com/en/article/michelin-guide-ceremony/philippines-full-selection-2026" target="_blank" rel="noreferrer">
+          <a className="link-out" href={michCountry === 'TW' ? 'https://guide.michelin.com/tw/en/selection/taiwan/restaurants' : 'https://guide.michelin.com/en/article/michelin-guide-ceremony/philippines-full-selection-2026'} target="_blank" rel="noreferrer">
             Full selection on guide.michelin.com <Icon name="external" size={14} />
           </a>
         </section>
@@ -567,7 +576,7 @@ function PlaceRow({ place: p, stat, michelin, why, onOpen }) {
       <PlacePhoto photo={p.photos[0]} width={300} className="place-thumb" alt="" />
       <span className="place-main">
         <span className="row-title">{p.name}</span>
-        <span className="muted small">{[p.type, fmtDistance(p.dist), p.price].filter(Boolean).join(' · ')}</span>
+        <span className="muted small">{[p.type, fmtDistance(p.dist), priceLabel(p)].filter(Boolean).join(' · ')}</span>
         <WhyLine w={why} fallback={p.blurb} />
         <span className="score-line">
           {stat ? (

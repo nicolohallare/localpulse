@@ -1,4 +1,4 @@
-import { send, places, shapePlace, LIST_FIELDS, isFoodPlace, decodeEntities, num, SERVER_GOOGLE_KEY } from './_lib.js';
+import { send, places, shapePlace, LIST_FIELDS, isFoodPlace, decodeEntities, num, SERVER_GOOGLE_KEY, countryOf, countryInfo } from './_lib.js';
 
 // GET /api/trending?lat=..&lng=..&area=Taguig
 // "Trending on YouTube": the most-viewed recent food videos for an area (YouTube's own
@@ -12,23 +12,35 @@ function norm(s) {
 }
 
 // Loose check that Google's match is really the place named in the video.
+const NON_LATIN = /[^\u0000-\u024f\s\d\p{P}\p{S}]/u;
 function sameName(wanted, found) {
+  const w = String(wanted || '');
+  const fRaw = String(found || '');
+  // Chinese, Japanese, Korean, Thai…: match on any two characters in a row.
+  if (NON_LATIN.test(w)) {
+    const a = w.replace(/\s+/g, '');
+    for (let i = 0; i + 2 <= a.length; i += 1) if (fRaw.includes(a.slice(i, i + 2))) return true;
+    return false;
+  }
+  // Latin name from the video but Google only has a local-script name: can't compare, trust the nearby match.
+  if (NON_LATIN.test(fRaw) && !/[a-z]{3}/i.test(fRaw)) return true;
   const stop = new Set(['the', 'restaurant', 'cafe', 'and', 'by', 'at', 'of', 'ni', 'ng', 'sa', 'bgc', 'manila']);
-  const words = norm(wanted).split(' ').filter((w) => w.length > 2 && !stop.has(w));
-  const f = norm(found);
-  return words.length > 0 && words.some((w) => f.includes(w));
+  const words = norm(w).split(' ').filter((x) => x.length > 2 && !stop.has(x));
+  const f = norm(fRaw);
+  return words.length > 0 && words.some((x) => f.includes(x));
 }
 
-async function youtubeSearch(key, area) {
+async function youtubeSearch(key, area, cc) {
+  const ci = countryInfo(cc);
   const params = new URLSearchParams({
     part: 'snippet',
     type: 'video',
     maxResults: '25',
-    q: `${area} food review restaurant`,
+    q: ci.q(area),
     order: 'viewCount',
     publishedAfter: new Date(Date.now() - DAYS * 864e5).toISOString(),
-    regionCode: 'PH',
-    relevanceLanguage: 'en',
+    regionCode: cc,
+    relevanceLanguage: ci.lang,
     safeSearch: 'moderate',
     videoEmbeddable: 'true',
     key,
@@ -56,7 +68,7 @@ async function youtubeSearch(key, area) {
 }
 
 // Ask Claude which single restaurant (if any) each video is about.
-async function extractPlaces(videos, area) {
+async function extractPlaces(videos, area, cc) {
   const key = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
   if (!key) return [];
   const list = videos.map((v, i) => `${i}. TITLE: ${v.title} | CHANNEL: ${v.channel} | DESC: ${v.description.replace(/\s+/g, ' ')}`).join('\n');
@@ -69,12 +81,13 @@ async function extractPlaces(videos, area) {
       messages: [{
         role: 'user',
         content:
-          `These are YouTube food videos for ${area}, Philippines. For each video that is clearly about ONE specific, named ` +
+          `These are YouTube food videos for ${area}, ${countryInfo(cc).name} (titles may be in any language). For each video that is clearly about ONE specific, named ` +
           'restaurant, cafe, bar or food stall, give that place\'s name exactly as written and its branch/area if stated. ' +
           'Skip compilations ("top 10", "food trip" covering many places), recipes, and videos where no place is named. ' +
           'Never guess. For each, also write "why": one short, inviting line (max 90 characters) on why someone would go, ' +
-          'based ONLY on what the title and description say (signature dish, price, vibe, a claim like "best in Manila"); ' +
+          'based ONLY on what the title and description say (signature dish, price, vibe, a claim like "best in town"); ' +
           'and "order": up to 3 specific dishes the video names (never categories like "desserts"; empty if none). No hype words like "must-try" or "amazing" unless the video uses them. ' +
+          'Keep "place" in its original script; write "why" and "order" in English. ' +
           'Reply with JSON only, no code fences: [{"i": <number>, "place": "<name>", "branch": "<area or empty>", "why": "<line>", "order": ["<dish>"]}]\n\n' + list,
       }],
     }),
@@ -90,9 +103,9 @@ async function extractPlaces(videos, area) {
 }
 
 // Step 1 (cached per general area for 6 h): YouTube search → Claude picks the restaurant → Google Places match.
-async function candidates(ytKey, area, lat, lng) {
-  const videos = await youtubeSearch(ytKey, area);
-  const picks = await extractPlaces(videos, area);
+async function candidates(ytKey, area, lat, lng, cc) {
+  const videos = await youtubeSearch(ytKey, area, cc);
+  const picks = await extractPlaces(videos, area, cc);
   const seen = new Set();
   const resolved = await Promise.all(picks.slice(0, 15).map(async (p) => {
     const video = videos[p.i];
@@ -104,7 +117,7 @@ async function candidates(ytKey, area, lat, lng) {
         body: {
           textQuery: `${p.place} ${p.branch || area}`,
           pageSize: 1,
-          regionCode: 'PH',
+          regionCode: cc,
           locationBias: { circle: { center: { latitude: lat, longitude: lng }, radius: 30000 } },
         },
       });
@@ -139,7 +152,6 @@ async function driveMinutes(lat, lng, list) {
       destinations: list.map((x) => ({ waypoint: { location: { latLng: { latitude: x.place.lat, longitude: x.place.lng } } } })),
       travelMode: 'DRIVE',
       routingPreference: 'TRAFFIC_AWARE',
-      regionCode: 'PH',
     }),
   });
   if (!r.ok) {
@@ -170,14 +182,15 @@ const WIDER_MIN = 35; // only if fewer than 3 places are within 20 minutes
 export default async function handler(req, res) {
   const lat = num(req.query.lat, -90, 90, 14.5509);
   const lng = num(req.query.lng, -180, 180, 121.0509);
-  const area = String(req.query.area || 'Metro Manila').replace(/[^\p{L}\p{N} .,'-]/gu, '').trim().slice(0, 40) || 'Metro Manila';
+  const cc = countryOf(req);
+  const area = String(req.query.area || (cc === 'PH' ? 'Metro Manila' : countryInfo(cc).name)).replace(/[^\p{L}\p{N} .,'-]/gu, '').trim().slice(0, 40) || countryInfo(cc).name;
   const ytKey = process.env.YOUTUBE_API_KEY || SERVER_GOOGLE_KEY;
   if (!ytKey) return send(res, 200, { items: [], error: 'YouTube key not set' }, 'public, s-maxage=300');
 
   // Internal step: candidate list for a ~10 km grid cell, cached at the edge.
   if (req.query.stage === 'candidates') {
     try {
-      const list = await candidates(ytKey, area, lat, lng);
+      const list = await candidates(ytKey, area, lat, lng, cc);
       return send(res, 200, { list }, 'public, s-maxage=21600, stale-while-revalidate=3600');
     } catch (e) {
       return send(res, 200, { list: [] }, 'public, s-maxage=600');
@@ -189,10 +202,10 @@ export default async function handler(req, res) {
     let list = null;
     const host = String(req.headers['x-forwarded-host'] || req.headers.host || '');
     if (host) {
-      const qs = new URLSearchParams({ stage: 'candidates', v: '2', area, lat: lat.toFixed(1), lng: lng.toFixed(1) });
+      const qs = new URLSearchParams({ stage: 'candidates', v: '3', cc, area, lat: lat.toFixed(1), lng: lng.toFixed(1) });
       list = await fetch(`https://${host}/api/trending?${qs}`).then((r) => (r.ok ? r.json() : null)).then((d) => d && d.list).catch(() => null);
     }
-    if (!Array.isArray(list)) list = await candidates(ytKey, area, Number(lat.toFixed(1)), Number(lng.toFixed(1)));
+    if (!Array.isArray(list)) list = await candidates(ytKey, area, Number(lat.toFixed(1)), Number(lng.toFixed(1)), cc);
 
     let routesError = null;
     const mins = await driveMinutes(lat, lng, list).catch((e) => { routesError = `${e.status || ''} ${e.message}`.trim().slice(0, 200); return null; });
@@ -215,7 +228,7 @@ export default async function handler(req, res) {
       items = items.map(({ km: _k, ...x }) => x);
     }
     items = items.slice(0, 8);
-    send(res, 200, { area, days: DAYS, basis, limit, items, ...(routesError ? { routesError } : {}) }, 'public, s-maxage=1800, stale-while-revalidate=600');
+    send(res, 200, { area, cc, days: DAYS, basis, limit, items, ...(routesError ? { routesError } : {}) }, 'public, s-maxage=1800, stale-while-revalidate=600');
   } catch (e) {
     send(res, 200, { items: [], error: 'Trending unavailable right now' }, 'public, s-maxage=600');
   }

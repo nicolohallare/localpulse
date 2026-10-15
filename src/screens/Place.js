@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   api, supabase, distanceM, fmtDistance, fmtCount, timeAgo, initials, matchMichelin, DISTINCTION,
-  PLATFORM_LABEL, detectPlatform, youtubeId, ensureUser, tiktokEmbed } from '../lib';
+  PLATFORM_LABEL, detectPlatform, youtubeId, ensureUser, tiktokEmbed, priceLabel } from '../lib';
 import { game, logPlay, shareUrl, shareLink } from '../game';
 import { SaveSheet } from './Lists';
 import { MediaStrip, AddMediaSheet, loadMedia } from '../media';
@@ -137,7 +137,7 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
       <div className="place-body">
         <div className="stack-6">
           <h1 className="display-sm">{place.name}</h1>
-          <p className="muted">{[place.type, place.address, place.price].filter(Boolean).join(' · ')}</p>
+          <p className="muted">{[place.type, place.address, priceLabel(place)].filter(Boolean).join(' · ')}</p>
           <p className="small strong row-6">
             {place.openNow != null && (
               <span className={place.openNow ? 'open' : 'closed'}><Icon name="clock" size={14} /> {place.openNow ? 'Open now' : 'Closed now'}</span>

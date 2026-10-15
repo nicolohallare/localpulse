@@ -1,4 +1,4 @@
-import { send, places, PLACE_ID_RE } from '../_lib.js';
+import { send, places, PLACE_ID_RE, countryOf } from '../_lib.js';
 import { shapeOembed } from './_oembed.js';
 
 // GET /api/video/discover?place=<google place id>
@@ -33,8 +33,8 @@ function keyWords(name) {
   return norm(base).split(' ').filter((w) => w.length > 2 && !stop.has(w));
 }
 
-async function braveSearch(q, key) {
-  const params = new URLSearchParams({ q, count: '20', country: 'PH', safesearch: 'moderate' });
+async function braveSearch(q, key, cc) {
+  const params = new URLSearchParams({ q, count: '20', country: cc || 'PH', safesearch: 'moderate' });
   const r = await fetch(`https://api.search.brave.com/res/v1/web/search?${params}`, {
     headers: { Accept: 'application/json', 'X-Subscription-Token': key },
   });
@@ -53,15 +53,17 @@ async function oembed(url) {
 }
 
 // Step 1 (paid, cached 7 days): search the web for TikTok links about the place.
-async function searchStage(id, key) {
+async function searchStage(id, key, cc) {
   const p = await places(`places/${id}`, { fieldMask: 'id,displayName,shortFormattedAddress' });
   const name = (p.displayName && p.displayName.text) || '';
   const addr = String(p.shortFormattedAddress || '');
   const city = addr.split(',').map((x) => x.trim()).filter(Boolean).pop() || '';
-  const words = keyWords(name);
-  if (!words.length) return { urls: [], words };
+  const cjk = /[^\u0000-\u024f\s\d\p{P}\p{S}]/u.test(name);
+  // Non-Latin names (e.g. Chinese): match captions on the name's own characters instead of words.
+  const words = cjk ? [name.split(/[-–|,(（]/)[0].replace(/\s+/g, '').slice(0, 12)] : keyWords(name);
+  if (!words.length || !words[0]) return { urls: [], words: [] };
   const brand = name.split(/[-–|,(]/)[0].trim();
-  const urls = await braveSearch(`site:tiktok.com "${brand}" ${city}`, key);
+  const urls = await braveSearch(`site:tiktok.com "${brand}" ${city}`, key, cc);
   const videoUrls = [...new Set(urls
     .map((u) => (u.match(/^https:\/\/(?:www\.)?tiktok\.com\/@[^/?#]+\/video\/\d+/) || [])[0])
     .filter(Boolean))].slice(0, 10);
@@ -76,7 +78,7 @@ export default async function handler(req, res) {
 
   if (req.query.stage === 'search') {
     try {
-      return send(res, 200, await searchStage(id, key), WEEK);
+      return send(res, 200, await searchStage(id, key, countryOf(req)), WEEK);
     } catch (e) {
       return send(res, 200, { urls: [], words: [] }, 'public, s-maxage=3600');
     }
@@ -87,10 +89,10 @@ export default async function handler(req, res) {
     let found = null;
     const host = String(req.headers['x-forwarded-host'] || req.headers.host || '');
     if (host) {
-      found = await fetch(`https://${host}/api/video/discover?${new URLSearchParams({ place: id, stage: 'search' })}`)
+      found = await fetch(`https://${host}/api/video/discover?${new URLSearchParams({ place: id, stage: 'search', cc: countryOf(req) })}`)
         .then((r) => (r.ok ? r.json() : null)).catch(() => null);
     }
-    if (!found || !Array.isArray(found.urls)) found = await searchStage(id, key);
+    if (!found || !Array.isArray(found.urls)) found = await searchStage(id, key, countryOf(req));
     const { urls, words } = found;
     if (!urls.length || !words.length) return send(res, 200, { videos: [] }, HALF_DAY);
 
@@ -99,7 +101,13 @@ export default async function handler(req, res) {
       .filter(({ meta }) => meta && meta.videoId)
       // Keep only videos whose caption (or creator) clearly names this place.
       .filter(({ meta }) => {
-        const text = norm(`${meta.title || ''} ${meta.author || ''} ${meta.handle || ''}`);
+        const raw = `${meta.title || ''} ${meta.author || ''} ${meta.handle || ''}`;
+        if (/[^\u0000-\u024f\s\d\p{P}\p{S}]/u.test(words[0] || '')) {
+          const a = words[0];
+          for (let i = 0; i + 2 <= a.length; i += 1) if (raw.includes(a.slice(i, i + 2))) return true;
+          return false;
+        }
+        const text = norm(raw);
         const hits = words.filter((w) => text.includes(w)).length;
         return words.length === 1 ? hits === 1 : hits >= Math.min(2, words.length);
       })

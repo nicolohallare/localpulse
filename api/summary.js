@@ -45,7 +45,7 @@ export default async function handler(req, res) {
         messages: [{
           role: 'user',
           content:
-            'You help people in the Philippines decide where to eat. Using ONLY the material below, write a short "why go" for this restaurant. ' +
+            'You help people decide where to eat (the app started in the Philippines and works anywhere). Using ONLY the material below, write a short "why go" for this restaurant. ' +
             'Diner check-ins are verified visits. Creator captions are promotional claims: report what creators highlight, never present it as fact. ' +
             'Do not invent dishes, prices or facts. Do not quote prices from creator captions (they go out of date). ' +
             '"order" and "skip" must be specific named dishes or drinks (e.g. "Triple chocolate champorado"), never categories like "desserts" or "beverages"; leave them empty if none are named. ' +

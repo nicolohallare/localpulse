@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { api, supabase, ensureUser, currentUser, distanceM, fmtDistance } from '../lib';
+import { api, supabase, ensureUser, currentUser, distanceM, fmtDistance, priceLabel } from '../lib';
 import { shareUrl, shareLink } from '../game';
 import { Icon, PlacePhoto, Spinner, Notice, GoButtons } from '../ui';
 
@@ -86,7 +86,7 @@ export function PollNew({ loc, withPlace, onBack, onCreated }) {
               <PlacePhoto photo={p.photos[0]} width={160} className="pick-thumb" alt="" />
               <span className="grow">
                 <span className="row-title-sm block">{p.name}</span>
-                <span className="tiny muted">{[p.type, d != null ? fmtDistance(d) : null, p.price].filter(Boolean).join(' · ')}</span>
+                <span className="tiny muted">{[p.type, d != null ? fmtDistance(d) : null, priceLabel(p)].filter(Boolean).join(' · ')}</span>
               </span>
               <span className="pick-dot" aria-hidden="true">{on && <Icon name="check" size={16} stroke={3} />}</span>
             </button>
