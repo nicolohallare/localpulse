@@ -40,6 +40,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
   const [headline] = useState(() => mealLine());
   const [michSort, setMichSort] = useState('near');
   const [pickSort, setPickSort] = useState('best');
+  const [showMap, setShowMap] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [why, setWhy] = useState({});
   const gotWhy = useCallback((id, w) => setWhy((cur) => (cur[id] === w ? cur : { ...cur, [id]: w })), []);
@@ -303,7 +304,6 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
 
       {mode === 'near' && (
         <>
-          <MapView center={loc} places={sorted} stats={stats} onPick={(p) => onOpen(p.id)} />
           <div className="chips filter-chips" aria-label="Filters">
             {FILTERS.map((f) => (
               <button key={f.k} className={`chip chip-sm ${filters.includes(f.k) ? 'chip-soft-on' : ''}`} aria-pressed={filters.includes(f.k)} onClick={() => toggleFilter(f.k)}>{typeof f.label === 'function' ? f.label() : f.label}</button>
@@ -349,7 +349,11 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
             </section>
           )}
           {!craving && <section className="section">
-            <h2 className="h2">{query && !searching ? `Results for “${query}”` : 'Top picks near you'}</h2>
+            <div className="row-between">
+              <h2 className="h2">{query && !searching ? `Results for “${query}”` : 'Top picks near you'}</h2>
+              <button className="soft-btn map-toggle" onClick={() => setShowMap((v) => !v)} aria-pressed={showMap}><Icon name="pin" size={16} /> {showMap ? 'Hide map' : 'Map'}</button>
+            </div>
+            {showMap && <div className="map-inline"><MapView center={loc} places={shownPicks.map((x) => x.p)} stats={stats} onPick={(p) => onOpen(p.id)} /></div>}
             {!query && (
               <div className="chips chips-inline" role="tablist" aria-label="Sort picks">
                 {PICK_SORTS.map((o) => (
@@ -375,7 +379,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
             {!query && picks.length > 10 && (
               <button className="soft-btn" onClick={() => setShowAll((v) => !v)}>{showAll ? 'Show top 10' : `Show all ${picks.length} places`}</button>
             )}
-            {!query && picks.length > 0 && <p className="tiny muted">Ranked on Google rating (and how many rated it), Ube Banana check-ins, how many creators are talking about it, MICHELIN, distance, and whether it's open now.</p>}
+            {!query && picks.length > 0 && <p className="tiny muted">Ranked by rating, check-ins, creator buzz, MICHELIN, distance and open now.</p>}
             {!loading && places.length > 0 && sorted.length === 0 && <p className="small muted">No places match those filters. Try removing one.</p>}
             {sorted.length > 0 && <p className="attribution">Places, ratings and photos from Google Maps</p>}
           </section>}
@@ -564,7 +568,7 @@ function TrendingRail({ data, loc, onOpen, onPlay, related = {} }) {
   if (data && (!data.items || data.items.length === 0)) return null;
   return (
     <section className="section trend">
-      <div className="row-between">
+      <div className="sec-head">
         <h2 className="h2">Trending near you</h2>
         {data && data.area && <span className="tiny muted">{data.basis === 'drive' ? `Within ${data.limit} min drive` : `Within ${data.limit} km`} · last {data.days} days</span>}
       </div>
@@ -586,14 +590,14 @@ function TrendingRail({ data, loc, onOpen, onPlay, related = {} }) {
                   {it.why && <span className="trend-why clamp-2">{it.why}</span>}
                   {it.order && it.order.length > 0 && <span className="tiny clamp-1"><strong>Order:</strong> {it.order.join(', ')}</span>}
                   <span className="tiny muted clamp-1">{[it.minutes != null ? `🚗 ~${it.minutes} min` : (d != null ? fmtDistance(d) : null), it.place.type].filter(Boolean).join(' · ')}</span>
-                  <span className="trend-buzz">{buzzLine(it, related[it.place.id])}</span>
+                  <span className="trend-buzz clamp-1">{buzzLine(it, related[it.place.id])}</span>
                 </button>
                 {(related[it.place.id] || []).length > 0 && (
                   <button className="trend-tt" onClick={() => onPlay(it, (it.videos && it.videos.length) || 1)}>
                     <span className="tt-stack">
                       {(related[it.place.id] || []).slice(0, 3).map((t) => <span key={t.url} className="tt-dot">{t.thumb ? <img src={t.thumb} alt="" /> : '♪'}</span>)}
                     </span>
-                    🎵 {related[it.place.id].length} TikTok{related[it.place.id].length === 1 ? '' : 's'} about it
+                    <span className="clamp-1">🎵 {related[it.place.id].length} TikTok{related[it.place.id].length === 1 ? '' : 's'}</span>
                   </button>
                 )}
                 <div className="trend-go"><GoButtons place={it.place} size="sm" /></div>
@@ -602,7 +606,7 @@ function TrendingRail({ data, loc, onOpen, onPlay, related = {} }) {
           })}
         </div>
       )}
-      {data && <p className="tiny muted">Ranked by how many different food creators talked about a place in the last 30 days, plus recent Ube Banana check-ins — not just one big video.</p>}
+      {data && <p className="tiny muted">Ranked by how many different creators talked about it lately — not one big video.</p>}
     </section>
   );
 }

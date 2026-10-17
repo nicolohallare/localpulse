@@ -29,7 +29,8 @@
   --display: 'Fraunces Variable', Georgia, serif;
   --heading: 'Figtree', system-ui, sans-serif;
   --body: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-b: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --safe-t: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -567,3 +568,29 @@ a.btn { text-decoration: none; }
 .reason-mich { background: #fde8e8; color: #9b1c1c; }
 .reason-open { background: var(--green-tint); color: var(--green); }
 .chips-inline { padding: 0 0 10px; margin: 0; }
+
+/* ── Small screens and big system fonts (e.g. Galaxy Z Fold cover screen) ── */
+.disc-head { padding-top: calc(14px + var(--safe-t)); }
+.screen > .pad-top:first-child, .you-hero { padding-top: calc(20px + var(--safe-t)); }
+.sec-head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 12px; }
+.sec-head .h2 { margin-bottom: 0; }
+.map-toggle { min-height: 36px; padding: 0 12px; flex-shrink: 0; }
+.map-inline .map-shell { margin: 0 0 12px; }
+.go-btn { white-space: nowrap; min-width: 0; overflow: hidden; }
+.trend-tt { white-space: nowrap; overflow: hidden; }
+.trend-body { min-width: 0; }
+.place-main { min-width: 0; }
+.row-title { overflow-wrap: anywhere; }
+.reason { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 380px) {
+  .px, .section, .disc-head { padding-left: 16px; padding-right: 16px; }
+  .display { font-size: 32px; }
+  .disc-head .display { font-size: 34px; }
+  .wordmark { font-size: 23px; }
+  .place-thumb { width: 76px; height: 76px; }
+  .trend-card { flex-basis: 220px; }
+  .chip { padding: 0 12px; }
+  .mich-rail, .trend-rail { margin-left: -16px; margin-right: -16px; padding-left: 16px; padding-right: 16px; }
+}
+html, body { overflow-x: hidden; }
+.icon-btn.float { top: calc(16px + var(--safe-t)); }
