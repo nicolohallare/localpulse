@@ -556,3 +556,14 @@ a.btn { text-decoration: none; }
 .mich-chip { max-width: 240px; white-space: normal; }
 
 .trend-buzz { font-size: 12px; font-weight: 800; color: var(--ube); }
+
+/* ── Top picks ─────────────────────────────────────── */
+.thumb-wrap { position: relative; flex-shrink: 0; }
+.pick-rank { position: absolute; left: -6px; top: -6px; min-width: 28px; height: 28px; padding: 0 6px; border-radius: 999px; background: var(--banana); color: var(--ube-ink); border: 2px solid var(--ube-ink); font-family: var(--display); font-weight: 800; font-size: 15px; display: flex; align-items: center; justify-content: center; font-variation-settings: 'SOFT' 100, 'WONK' 1; }
+.reason-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.reason { font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--tint); color: var(--ink-2); white-space: nowrap; }
+.reason-buzz { background: var(--banana-cream); color: var(--mango-ink); }
+.reason-ube { background: var(--ube-tint); color: var(--ube); }
+.reason-mich { background: #fde8e8; color: #9b1c1c; }
+.reason-open { background: var(--green-tint); color: var(--green); }
+.chips-inline { padding: 0 0 10px; margin: 0; }

@@ -39,6 +39,8 @@ const MODES = [
 export default function Discover({ loc, locNote, onRetryLocation, michelin, onOpen, onOpenProfile, onAddVideo }) {
   const [headline] = useState(() => mealLine());
   const [michSort, setMichSort] = useState('near');
+  const [pickSort, setPickSort] = useState('best');
+  const [showAll, setShowAll] = useState(false);
   const [why, setWhy] = useState({});
   const gotWhy = useCallback((id, w) => setWhy((cur) => (cur[id] === w ? cur : { ...cur, [id]: w })), []);
   const [mode, setMode] = useState('near');
@@ -81,7 +83,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
         trendKey.current = key;
         setTrending(null);
         api.trending(loc.lat, loc.lng, areaOf(list))
-          .then((d) => { if (trendKey.current === key) setTrending(d); })
+          .then((d) => { if (trendKey.current === key) { setTrending(d); loadStats(((d && d.items) || []).map((it) => it.place)); } })
           .catch(() => setTrending({ items: [] }));
       }
     } catch (e) {
@@ -239,7 +241,29 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
     ? (a, b) => (a.km ?? 1e9) - (b.km ?? 1e9) || byAward(a, b)
     : byAward);
   const michNear = michWithKm.filter((l) => l.km != null && l.km <= 6).sort((a, b) => a.km - b.km).slice(0, 6);
-  const whyIds = [...sorted.slice(0, 12).map((p) => p.id), ...(mode === 'michelin' ? michList : michNear).map((l) => l.google_place_id).filter(Boolean).slice(0, 15)].join(',');
+  // Top picks: nearby places + trending places, scored on rating, check-ins, buzz, MICHELIN, distance and open-now.
+  const trendById = Object.fromEntries(((trending && trending.items) || []).map((it) => [it.place.id, it]));
+  const pool = (() => {
+    if (query) return sorted;
+    const seen = new Set(sorted.map((p) => p.id));
+    const extra = ((trending && trending.items) || []).map((it) => ({ ...it.place, dist: distanceM(loc, it.place) })).filter((p) => !seen.has(p.id));
+    return [...sorted, ...applyFilters(extra, filters)];
+  })();
+  const hour = new Date().getHours();
+  const ranked = pool.map((p) => {
+    const m = matchMichelin(p.name, michelin);
+    const { score, reasons } = rankPlace(p, { stat: stats[p.id], buzz: trendById[p.id], mich: m, hour });
+    return { p, m, score, reasons };
+  });
+  const sortFns = {
+    best: (a, b) => b.score - a.score,
+    near: (a, b) => (a.p.dist ?? 1e9) - (b.p.dist ?? 1e9),
+    rated: (a, b) => ((b.p.rating || 0) * Math.min(1, (b.p.ratingCount || 0) / 100)) - ((a.p.rating || 0) * Math.min(1, (a.p.ratingCount || 0) / 100)),
+    buzz: (a, b) => (((trendById[b.p.id] || {}).creators || 0) * 10 + ((stats[b.p.id] || {}).visit_count || 0)) - (((trendById[a.p.id] || {}).creators || 0) * 10 + ((stats[a.p.id] || {}).visit_count || 0)) || b.score - a.score,
+  };
+  const picks = query ? ranked : ranked.slice().sort(sortFns[pickSort] || sortFns.best);
+  const shownPicks = query || showAll ? picks : picks.slice(0, 10);
+  const whyIds = [...shownPicks.slice(0, 12).map((x) => x.p.id), ...(mode === 'michelin' ? michList : michNear).map((l) => l.google_place_id).filter(Boolean).slice(0, 15)].join(',');
   useEffect(() => { if (whyIds) api.whyMany(whyIds.split(','), gotWhy); }, [whyIds, gotWhy]);
 
   return (
@@ -324,6 +348,37 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
               )}
             </section>
           )}
+          {!craving && <section className="section">
+            <h2 className="h2">{query && !searching ? `Results for “${query}”` : 'Top picks near you'}</h2>
+            {!query && (
+              <div className="chips chips-inline" role="tablist" aria-label="Sort picks">
+                {PICK_SORTS.map((o) => (
+                  <button key={o.k} role="tab" aria-selected={pickSort === o.k} className={`chip chip-sm ${pickSort === o.k ? 'chip-on' : ''}`} onClick={() => setPickSort(o.k)}>{o.label}</button>
+                ))}
+              </div>
+            )}
+            {(loading || searching) && <Spinner label={searching ? 'Searching…' : 'Finding places near you…'} />}
+            {error && !loading && (
+              <Notice tone="warn" title="Couldn’t load places" action={<button className="btn btn-quiet" onClick={loadNearby}>Try again</button>}>
+                {error.message}{error.hint ? ` — ${error.hint}` : ''}
+              </Notice>
+            )}
+            {!loading && !searching && !error && sorted.length === 0 && (
+              <Empty title="Nothing found here">Try a different search or area.</Empty>
+            )}
+            <div className="place-list">
+              {shownPicks.map(({ p, m, reasons }, i) => (
+                <PlaceRow key={p.id} place={p} stat={stats[p.id]} why={why[p.id]} michelin={m} reasons={reasons}
+                  rank={query ? null : i + 1} onOpen={() => onOpen(p.id)} />
+              ))}
+            </div>
+            {!query && picks.length > 10 && (
+              <button className="soft-btn" onClick={() => setShowAll((v) => !v)}>{showAll ? 'Show top 10' : `Show all ${picks.length} places`}</button>
+            )}
+            {!query && picks.length > 0 && <p className="tiny muted">Ranked on Google rating (and how many rated it), Ube Banana check-ins, how many creators are talking about it, MICHELIN, distance, and whether it's open now.</p>}
+            {!loading && places.length > 0 && sorted.length === 0 && <p className="small muted">No places match those filters. Try removing one.</p>}
+            {sorted.length > 0 && <p className="attribution">Places, ratings and photos from Google Maps</p>}
+          </section>}
           {!query && !craving && <TrendingRail data={trending} loc={loc} onOpen={onOpen} related={related} onPlay={openClips} />}
           {!query && !craving && michNear.length > 0 && (
             <section className="section">
@@ -352,25 +407,6 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
               </button>
             </section>
           )}
-          {!craving && <section className="section">
-            <h2 className="h2">{query && !searching ? `Results for “${query}”` : 'Popular near you'}</h2>
-            {(loading || searching) && <Spinner label={searching ? 'Searching…' : 'Finding places near you…'} />}
-            {error && !loading && (
-              <Notice tone="warn" title="Couldn’t load places" action={<button className="btn btn-quiet" onClick={loadNearby}>Try again</button>}>
-                {error.message}{error.hint ? ` — ${error.hint}` : ''}
-              </Notice>
-            )}
-            {!loading && !searching && !error && sorted.length === 0 && (
-              <Empty title="Nothing found here">Try a different search or area.</Empty>
-            )}
-            <div className="place-list">
-              {sorted.map((p) => (
-                <PlaceRow key={p.id} place={p} stat={stats[p.id]} why={why[p.id]} michelin={matchMichelin(p.name, michelin)} onOpen={() => onOpen(p.id)} />
-              ))}
-            </div>
-            {!loading && places.length > 0 && sorted.length === 0 && <p className="small muted">No places match those filters. Try removing one.</p>}
-            {sorted.length > 0 && <p className="attribution">Places, ratings and photos from Google Maps</p>}
-          </section>}
         </>
       )}
 
@@ -584,23 +620,81 @@ function WhyLine({ w, fallback }) {
   return null;
 }
 
-function PlaceRow({ place: p, stat, michelin, why, onOpen }) {
+// ── Top picks: one score from the signals that matter when deciding where to eat ──
+const MICH_BONUS = { three_star: 18, two_star: 16, one_star: 14, bib_gourmand: 10, selected: 6 };
+const MORNING = new Set(['breakfast_restaurant', 'brunch_restaurant', 'cafe', 'coffee_shop', 'bakery', 'diner']);
+const NIGHT = new Set(['bar', 'pub', 'wine_bar', 'lounge_bar', 'night_club', 'bar_and_grill', 'cocktail_bar']);
+export function rankPlace(p, { stat, buzz, mich, hour }) {
+  const reasons = [];
+  let score = 0;
+  // Quality: Google rating weighted by how many people rated it (a 4.9 from 12 people counts less than a 4.6 from 3,000).
+  if (p.rating != null) {
+    const v = p.ratingCount || 0;
+    const adj = (v / (v + 150)) * p.rating + (150 / (v + 150)) * 4.2;
+    score += Math.max(0, Math.min(1, (adj - 3.9) / 0.8)) * 35;
+    reasons.push({ k: 'rating', t: `★ ${p.rating.toFixed(1)}${v ? ` (${v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v})` : ''}` });
+  }
+  // Ube Banana verified check-ins.
+  if (stat && stat.visit_count) {
+    const conf = stat.visit_count / (stat.visit_count + 3);
+    score += (Number(stat.avg_score) / 10) * 25 * conf + Math.min(stat.visit_count, 10);
+    reasons.push({ k: 'ube', t: `🍌 ${Number(stat.avg_score).toFixed(1)} · ${stat.visit_count} check-in${stat.visit_count === 1 ? '' : 's'}` });
+  }
+  // Buzz: different creators talking about it lately.
+  if (buzz && buzz.creators) {
+    score += Math.min(buzz.creators, 4) * 5 + (buzz.checkins ? 3 : 0);
+    if (buzz.creators > 1) reasons.push({ k: 'buzz', t: `🔥 ${buzz.creators} creators` });
+    else reasons.push({ k: 'buzz', t: '▶ In a recent video' });
+  }
+  if (mich) {
+    score += MICH_BONUS[mich.distinction] || 6;
+    reasons.push({ k: 'mich', t: DISTINCTION[mich.distinction] });
+  }
+  // Nearness: walking distance or drive time.
+  const mins = buzz && buzz.minutes != null ? buzz.minutes : null;
+  if (p.dist != null) {
+    score += Math.max(0, 1 - p.dist / 3000) * 20;
+    reasons.push({ k: 'near', t: p.dist <= 1200 ? `🚶 ${Math.max(1, Math.round(p.dist / 80))} min walk` : (mins != null ? `🚗 ${mins} min` : fmtDistance(p.dist)) });
+  }
+  // Open now, and right for this time of day.
+  if (p.openNow === true) { score += 6; reasons.push({ k: 'open', t: 'Open now' }); }
+  if (p.openNow === false) score -= 40;
+  const t = p.primaryType || '';
+  if (hour >= 5 && hour < 11) { if (MORNING.has(t)) score += 6; if (NIGHT.has(t)) score -= 12; }
+  if (hour >= 18 || hour < 2) { if (NIGHT.has(t)) score += 3; }
+  return { score, reasons };
+}
+
+const PICK_SORTS = [
+  { k: 'best', label: 'Best for you' },
+  { k: 'near', label: 'Nearest' },
+  { k: 'rated', label: 'Top rated' },
+  { k: 'buzz', label: 'Buzzing' },
+];
+
+function PlaceRow({ place: p, stat, michelin, why, onOpen, rank, reasons }) {
   return (
     <button className="place-row" onClick={onOpen}>
-      <PlacePhoto photo={p.photos[0]} width={300} className="place-thumb" alt="" />
+      <span className="thumb-wrap">
+        <PlacePhoto photo={p.photos[0]} width={300} className="place-thumb" alt="" />
+        {rank && <span className="pick-rank">{rank}</span>}
+      </span>
       <span className="place-main">
         <span className="row-title">{p.name}</span>
         <span className="muted small">{[p.type, fmtDistance(p.dist), priceLabel(p)].filter(Boolean).join(' · ')}</span>
         <WhyLine w={why} fallback={p.blurb} />
-        <span className="score-line">
+        {reasons && reasons.length > 0 && (
+          <span className="reason-row">{reasons.map((x) => <span key={x.k} className={`reason reason-${x.k}`}>{x.t}</span>)}</span>
+        )}
+        {!reasons && <span className="score-line">
           {stat ? (
             <><ScoreBadge score={stat.avg_score} /><span className="small strong">Ube Banana</span></>
           ) : (
             <span className="small muted">No check-ins yet</span>
           )}
           {p.rating != null && <span className="small muted">★ {p.rating.toFixed(1)} Google</span>}
-        </span>
-        {michelin && <span className="mich-tag">{DISTINCTION[michelin.distinction]} {michelin.year}</span>}
+        </span>}
+        {michelin && !reasons && <span className="mich-tag">{DISTINCTION[michelin.distinction]} {michelin.year}</span>}
         {p.openNow === false && <span className="tiny closed">Closed now</span>}
       </span>
     </button>
