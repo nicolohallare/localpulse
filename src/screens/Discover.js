@@ -61,6 +61,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
   const [crave, setCrave] = useState(null);
   const amen = filters.some((k) => FILTERS.find((f) => f.k === k).amen);
   const trendKey = useRef('');
+  const nearbyReq = useRef(0);
 
   const loadStats = useCallback(async (list) => {
     const ids = list.map((p) => p.id);
@@ -72,10 +73,14 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
   }, []);
 
   const loadNearby = useCallback(async () => {
+    // Wait for the phone's location — don't load the fallback area first.
+    if (loc.label === 'Finding you…') { setLoading(true); return; }
+    const req = ++nearbyReq.current;
     setLoading(true);
     setError(null);
     try {
       const list = await api.nearby(loc.lat, loc.lng, 1500, amen);
+      if (req !== nearbyReq.current) return; // a newer location answered already
       setPlaces(list);
       loadStats(list);
       // Refresh trending whenever you're somewhere new (about 1 km), but not while still finding you.
@@ -88,9 +93,9 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
           .catch(() => setTrending({ items: [] }));
       }
     } catch (e) {
-      setError(e);
+      if (req === nearbyReq.current) setError(e);
     } finally {
-      setLoading(false);
+      if (req === nearbyReq.current) setLoading(false);
     }
   }, [loc.lat, loc.lng, loc.label, loadStats, amen]);
 
@@ -194,6 +199,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
   }
 
   async function doSearch(q) {
+    nearbyReq.current++; // a slow nearby answer must not replace search results
     setSearching(true);
     setError(null);
     setMode('near');
