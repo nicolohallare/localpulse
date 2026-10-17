@@ -554,3 +554,5 @@ a.btn { text-decoration: none; }
 .row-why { display: flex; flex-direction: column; gap: 2px; font-size: 13px; font-weight: 600; color: var(--ube); line-height: 1.35; }
 .row-why .tiny { color: var(--ink-2); font-weight: 500; }
 .mich-chip { max-width: 240px; white-space: normal; }
+
+.trend-buzz { font-size: 12px; font-weight: 800; color: var(--ube); }

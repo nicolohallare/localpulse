@@ -1,10 +1,10 @@
-import { send, places, shapePlace, LIST_FIELDS, isFoodPlace, decodeEntities, num, SERVER_GOOGLE_KEY, countryOf, countryInfo } from './_lib.js';
+import { send, places, shapePlace, LIST_FIELDS, isFoodPlace, decodeEntities, num, SERVER_GOOGLE_KEY, countryOf, countryInfo, SUPABASE_URL, SUPABASE_KEY } from './_lib.js';
 
 // GET /api/trending?lat=..&lng=..&area=Taguig
 // "Trending on YouTube": the most-viewed recent food videos for an area (YouTube's own
 // view-count ordering), each matched to the restaurant it features via Google Places.
 // Nothing is stored; the response is cached at the edge for 6 hours per area.
-const DAYS = 60;
+const DAYS = 30;
 
 function norm(s) {
   return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -30,15 +30,15 @@ function sameName(wanted, found) {
   return words.length > 0 && words.some((x) => f.includes(x));
 }
 
-async function youtubeSearch(key, area, cc) {
+async function youtubeSearch(key, area, cc, order = 'viewCount', days = DAYS) {
   const ci = countryInfo(cc);
   const params = new URLSearchParams({
     part: 'snippet',
     type: 'video',
-    maxResults: '25',
+    maxResults: '40',
     q: ci.q(area),
-    order: 'viewCount',
-    publishedAfter: new Date(Date.now() - DAYS * 864e5).toISOString(),
+    order,
+    publishedAfter: new Date(Date.now() - days * 864e5).toISOString(),
     regionCode: cc,
     relevanceLanguage: ci.lang,
     safeSearch: 'moderate',
@@ -67,7 +67,7 @@ async function youtubeSearch(key, area, cc) {
   }));
 }
 
-// Ask Claude which single restaurant (if any) each video is about.
+// Ask Claude which restaurants each video features (round-ups can name several).
 async function extractPlaces(videos, area, cc) {
   const key = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
   if (!key) return [];
@@ -77,18 +77,17 @@ async function extractPlaces(videos, area, cc) {
     headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({
       model: process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001',
-      max_tokens: 2000,
+      max_tokens: 4000,
       messages: [{
         role: 'user',
         content:
-          `These are YouTube food videos for ${area}, ${countryInfo(cc).name} (titles may be in any language). For each video that is clearly about ONE specific, named ` +
-          'restaurant, cafe, bar or food stall, give that place\'s name exactly as written and its branch/area if stated. ' +
-          'Skip compilations and round-ups (e.g. "top 10", "food trip", "合集", "懶人包", several places in one title, a list of award winners), recipes, and videos where no place is named. ' +
-          'Never guess. For each, also write "why": one short, inviting line (max 90 characters) on why someone would go, ' +
-          'based ONLY on what the title and description say (signature dish, price, vibe, a claim like "best in town"); ' +
-          'and "order": up to 3 specific dishes the video names (never categories like "desserts"; empty if none). No hype words like "must-try" or "amazing" unless the video uses them. ' +
-          'Keep "place" in its original script; write "why" and "order" in English. ' +
-          'Reply with JSON only, no code fences: [{"i": <number>, "place": "<name>", "branch": "<area or empty>", "why": "<line>", "order": ["<dish>"]}]\n\n' + list,
+          `These are recent YouTube food videos for ${area}, ${countryInfo(cc).name} (titles may be in any language). ` +
+          'For each video, list the specific, named restaurants, cafes, bars or food stalls it features (up to 3 per video; round-ups may name several). ' +
+          'Use only names written in the title or description. Never guess. Skip recipes and videos where no place is named. ' +
+          'Keep "place" in its original script, add the branch/area if stated. For each place also write, in English, ' +
+          '"why": one short inviting line (max 90 characters) based ONLY on what the video says (signature dish, price, vibe, a claim), and ' +
+          '"order": up to 3 specific dishes the video names for that place (never categories; empty if none). No hype words unless the video uses them. ' +
+          'Reply with JSON only, no code fences: [{"i": <video number>, "place": "<name>", "branch": "<area or empty>", "why": "<line>", "order": ["<dish>"]}]\n\n' + list,
       }],
     }),
   });
@@ -102,14 +101,24 @@ async function extractPlaces(videos, area, cc) {
   }
 }
 
-// Step 1 (cached per general area for 6 h): YouTube search → Claude picks the restaurant → Google Places match.
+// Step 1 (cached per general area for 6 h): two YouTube searches (newest and most-watched, last 30 days)
+// → Claude names the places each video features → Google Places match → group by place.
+// A place counts as trending when several different creators talk about it, not when one famous vlogger does.
 async function candidates(ytKey, area, lat, lng, cc) {
-  const videos = await youtubeSearch(ytKey, area, cc);
+  const [recent, popular] = await Promise.all([
+    youtubeSearch(ytKey, area, cc, 'date', 30).catch(() => []),
+    youtubeSearch(ytKey, area, cc, 'viewCount', 30).catch(() => []),
+  ]);
+  const byId = new Map();
+  [...recent, ...popular].forEach((v) => { if (!byId.has(v.id)) byId.set(v.id, v); });
+  const videos = [...byId.values()].slice(0, 70);
   const picks = await extractPlaces(videos, area, cc);
-  const seen = new Set();
-  const resolved = await Promise.all(picks.slice(0, 15).map(async (p) => {
-    const video = videos[p.i];
-    if (!video) return null;
+
+  // One Places lookup per distinct place name.
+  const nameKey = (p) => `${norm(p.place) || p.place}|${norm(p.branch || '')}`;
+  const names = new Map();
+  picks.forEach((p) => { if (videos[p.i]) { const k = nameKey(p); if (!names.has(k)) names.set(k, p); } });
+  const lookups = await Promise.all([...names.entries()].slice(0, 30).map(async ([k, p]) => {
     try {
       const data = await places('places:searchText', {
         method: 'POST',
@@ -122,18 +131,52 @@ async function candidates(ytKey, area, lat, lng, cc) {
         },
       });
       const hit = data.places && data.places[0];
-      if (!hit || !isFoodPlace(hit) || !sameName(p.place, hit.displayName && hit.displayName.text)) return null;
-      const { description, ...v } = video;
-      const why = String(p.why || '').trim().slice(0, 120) || null;
-      const order = Array.isArray(p.order) ? p.order.map((d) => String(d).trim().slice(0, 40)).filter(Boolean).slice(0, 3) : [];
-      return { place: shapePlace(hit, 1), video: v, why, order };
+      if (!hit || !isFoodPlace(hit) || !sameName(p.place, hit.displayName && hit.displayName.text)) return [k, null];
+      return [k, hit];
     } catch (e) {
-      return null;
+      return [k, null];
     }
   }));
-  return resolved
-    .filter((x) => x && x.place.lat != null)
-    .filter((x) => !seen.has(x.place.id) && seen.add(x.place.id));
+  const hitFor = new Map(lookups);
+
+  // Group every mention under its Google place.
+  const groups = new Map();
+  picks.forEach((p) => {
+    const video = videos[p.i];
+    const hit = video && hitFor.get(nameKey(p));
+    if (!hit) return;
+    let g = groups.get(hit.id);
+    if (!g) { g = { place: shapePlace(hit, 1), videos: [], whys: [], order: new Set() }; groups.set(hit.id, g); }
+    if (!g.videos.some((x) => x.id === video.id)) {
+      const { description, ...v } = video;
+      g.videos.push(v);
+    }
+    if (p.why) g.whys.push({ why: String(p.why).trim().slice(0, 120), views: video.views || 0 });
+    (Array.isArray(p.order) ? p.order : []).forEach((d) => { const t = String(d).trim().slice(0, 40); if (t && g.order.size < 3) g.order.add(t); });
+  });
+
+  return [...groups.values()]
+    .filter((g) => g.place.lat != null)
+    .map((g) => {
+      const creators = new Set(g.videos.map((v) => v.channel)).size;
+      const views = g.videos.reduce((n, v) => n + (v.views || 0), 0);
+      const newest = Math.max(...g.videos.map((v) => new Date(v.published).getTime() || 0));
+      const vids = g.videos.slice().sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 6);
+      const best = g.whys.sort((a, b) => b.views - a.views)[0];
+      return {
+        place: g.place,
+        video: vids[0],
+        videos: vids,
+        creators,
+        views,
+        newest: new Date(newest).toISOString(),
+        why: best ? best.why : null,
+        order: [...g.order],
+        // Several creators matter most; views and freshness break ties. One huge vlogger can't top the list alone.
+        score: creators * 10 + Math.log10(1 + views) + (Date.now() - newest < 7 * 864e5 ? 2 : 0),
+      };
+    })
+    .sort((a, b) => b.score - a.score);
 }
 
 // Step 2 (per person): real driving time with current traffic (Google Routes API).
@@ -202,7 +245,7 @@ export default async function handler(req, res) {
     let list = null;
     const host = String(req.headers['x-forwarded-host'] || req.headers.host || '');
     if (host) {
-      const qs = new URLSearchParams({ stage: 'candidates', v: '3', cc, area, lat: lat.toFixed(1), lng: lng.toFixed(1) });
+      const qs = new URLSearchParams({ stage: 'candidates', v: '4', cc, area, lat: lat.toFixed(1), lng: lng.toFixed(1) });
       list = await fetch(`https://${host}/api/trending?${qs}`).then((r) => (r.ok ? r.json() : null)).then((d) => d && d.list).catch(() => null);
     }
     if (!Array.isArray(list)) list = await candidates(ytKey, area, Number(lat.toFixed(1)), Number(lng.toFixed(1)), cc);
@@ -227,7 +270,20 @@ export default async function handler(req, res) {
       if (items.length < 3) { limit = 8; items = withKm.filter((x) => x.km <= limit); }
       items = items.map(({ km: _k, ...x }) => x);
     }
-    items = items.slice(0, 8);
+    // Our own signal: verified Ube Banana check-ins in the last 14 days push a place up.
+    try {
+      const ids = items.map((x) => x.place.id);
+      if (ids.length) {
+        const since = new Date(Date.now() - 14 * 864e5).toISOString();
+        const rows = await fetch(`${SUPABASE_URL}/rest/v1/visit_feed?select=google_place_id&created_at=gte.${since}&google_place_id=in.(${ids.map((i) => `"${i}"`).join(',')})`,
+          { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }).then((x) => (x.ok ? x.json() : []));
+        const n = {};
+        (rows || []).forEach((v) => { n[v.google_place_id] = (n[v.google_place_id] || 0) + 1; });
+        items = items.map((x) => ({ ...x, checkins: n[x.place.id] || 0, score: (x.score || 0) + Math.min(n[x.place.id] || 0, 10) * 2 }))
+          .sort((a, b) => b.score - a.score);
+      }
+    } catch (e) { /* keep video-only ranking */ }
+    items = items.slice(0, 8).map(({ score, ...x }) => x);
     send(res, 200, { area, cc, days: DAYS, basis, limit, items, ...(routesError ? { routesError } : {}) }, 'public, s-maxage=1800, stale-while-revalidate=600');
   } catch (e) {
     send(res, 200, { items: [], error: 'Trending unavailable right now' }, 'public, s-maxage=600');
