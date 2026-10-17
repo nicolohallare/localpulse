@@ -57,7 +57,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
   const [craving, setCraving] = useState(null);
   const [crave, setCrave] = useState(null);
   const amen = filters.some((k) => FILTERS.find((f) => f.k === k).amen);
-  const trendAsked = useRef(false);
+  const trendKey = useRef('');
 
   const loadStats = useCallback(async (list) => {
     const ids = list.map((p) => p.id);
@@ -75,10 +75,13 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
       const list = await api.nearby(loc.lat, loc.lng, 1500, amen);
       setPlaces(list);
       loadStats(list);
-      if (!trendAsked.current) {
-        trendAsked.current = true;
+      // Refresh trending whenever you're somewhere new (about 1 km), but not while still finding you.
+      const key = `${loc.lat.toFixed(2)},${loc.lng.toFixed(2)}`;
+      if (key !== trendKey.current && loc.label !== 'Finding you…') {
+        trendKey.current = key;
+        setTrending(null);
         api.trending(loc.lat, loc.lng, areaOf(list))
-          .then((d) => setTrending(d))
+          .then((d) => { if (trendKey.current === key) setTrending(d); })
           .catch(() => setTrending({ items: [] }));
       }
     } catch (e) {
@@ -86,7 +89,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
     } finally {
       setLoading(false);
     }
-  }, [loc.lat, loc.lng, loadStats, amen]);
+  }, [loc.lat, loc.lng, loc.label, loadStats, amen]);
 
   useEffect(() => {
     if (query.trim()) doSearch(query.trim()); else loadNearby();
@@ -147,7 +150,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
   async function openClips(it, start = 0) {
     const tiks = related[it.place.id] || [];
     const clips = [
-      { kind: 'youtube', id: it.video.id, title: it.video.title, channel: it.video.channel, thumb: it.video.thumb, views: it.video.views, posted: it.video.published },
+      ...(it.videos && it.videos.length ? it.videos : [it.video]).map((v) => ({ kind: 'youtube', id: v.id, title: v.title, channel: v.channel, thumb: v.thumb, views: v.views, posted: v.published })),
       ...tiks.map((t) => ({ kind: 'tiktok', id: t.videoId || null, url: t.url, title: t.title, channel: t.handle, thumb: t.thumb, posted: t.posted })),
     ];
     setPlayer({ place: it.place, clips, idx: start, why: it.why, order: it.order, say: null });
@@ -510,6 +513,17 @@ function areaOf(list) {
   return best ? best[0] : 'Metro Manila';
 }
 
+// "🔥 4 creators · 2 check-ins" — how many different people are talking about a place.
+function buzzLine(it, tiks = []) {
+  const ytCreators = new Set((it.videos && it.videos.length ? it.videos : [it.video]).map((v) => v.channel));
+  const ttCreators = new Set((tiks || []).map((t) => t.handle).filter(Boolean));
+  const creators = ytCreators.size + [...ttCreators].filter((h) => !ytCreators.has(h)).length;
+  const bits = [creators > 1 ? `🔥 ${creators} creators` : `▶ ${it.video.channel}`];
+  if (it.checkins) bits.push(`${it.checkins} check-in${it.checkins === 1 ? '' : 's'}`);
+  if (creators <= 1) bits.push(timeAgo(it.video.published));
+  return bits.join(' · ');
+}
+
 function TrendingRail({ data, loc, onOpen, onPlay, related = {} }) {
   if (data && (!data.items || data.items.length === 0)) return null;
   return (
@@ -536,10 +550,10 @@ function TrendingRail({ data, loc, onOpen, onPlay, related = {} }) {
                   {it.why && <span className="trend-why clamp-2">{it.why}</span>}
                   {it.order && it.order.length > 0 && <span className="tiny clamp-1"><strong>Order:</strong> {it.order.join(', ')}</span>}
                   <span className="tiny muted clamp-1">{[it.minutes != null ? `🚗 ~${it.minutes} min` : (d != null ? fmtDistance(d) : null), it.place.type].filter(Boolean).join(' · ')}</span>
-                  <span className="tiny muted clamp-1">▶ {it.video.channel} · {timeAgo(it.video.published)}</span>
+                  <span className="trend-buzz">{buzzLine(it, related[it.place.id])}</span>
                 </button>
                 {(related[it.place.id] || []).length > 0 && (
-                  <button className="trend-tt" onClick={() => onPlay(it, 1)}>
+                  <button className="trend-tt" onClick={() => onPlay(it, (it.videos && it.videos.length) || 1)}>
                     <span className="tt-stack">
                       {(related[it.place.id] || []).slice(0, 3).map((t) => <span key={t.url} className="tt-dot">{t.thumb ? <img src={t.thumb} alt="" /> : '♪'}</span>)}
                     </span>
@@ -552,7 +566,7 @@ function TrendingRail({ data, loc, onOpen, onPlay, related = {} }) {
           })}
         </div>
       )}
-      {data && <p className="tiny muted">Most-viewed food videos from YouTube, plus TikToks about the same places, matched on Google Maps.</p>}
+      {data && <p className="tiny muted">Ranked by how many different food creators talked about a place in the last 30 days, plus recent Ube Banana check-ins — not just one big video.</p>}
     </section>
   );
 }
