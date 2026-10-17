@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   const width = Math.round(num(req.query.w, 100, 1600, 800));
   try {
     const uri = await placePhotoUri(name, width);
-    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=3600');
     res.statusCode = 302;
     res.setHeader('Location', uri);
     res.end();

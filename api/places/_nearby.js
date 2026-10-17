@@ -27,7 +27,7 @@ export default async function handler(req, res) {
       delete body.excludedPrimaryTypes;
       data = await places('places:searchNearby', { method: 'POST', fieldMask, body });
     }
-    send(res, 200, { places: (data.places || []).filter(isFoodPlace).map((p) => shapePlace(p, 1)) }, 'public, s-maxage=300');
+    send(res, 200, { places: (data.places || []).filter(isFoodPlace).map((p) => shapePlace(p, 1)) }, 'public, s-maxage=3600, stale-while-revalidate=86400');
   } catch (e) {
     fail(res, e);
   }

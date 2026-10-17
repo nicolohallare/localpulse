@@ -12,7 +12,7 @@ export default async function handler(req, res) {
       body.locationBias = { circle: { center: { latitude: lat, longitude: lng }, radius: 15000 } };
     }
     const data = await places('places:searchText', { method: 'POST', fieldMask: LIST_FIELDS + (req.query.amenities ? AMENITY_FIELDS : ''), body });
-    send(res, 200, { places: (data.places || []).filter(isFoodPlace).slice(0, 15).map((p) => shapePlace(p, 1)) }, 'public, s-maxage=300');
+    send(res, 200, { places: (data.places || []).filter(isFoodPlace).slice(0, 15).map((p) => shapePlace(p, 1)) }, 'public, s-maxage=3600, stale-while-revalidate=86400');
   } catch (e) {
     fail(res, e);
   }

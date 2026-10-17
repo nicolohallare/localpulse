@@ -135,6 +135,7 @@ export function shapePlace(p, maxPhotos = 8) {
   };
 }
 
+// Note: editorialSummary is left out on purpose: it moves every search into Google's priciest tier.
 // Extra fields only requested when someone filters by them (they cost more per call).
 export const AMENITY_FIELDS = ',places.goodForGroups,places.goodForChildren,places.allowsDogs,places.parkingOptions';
 
@@ -142,7 +143,7 @@ export const LIST_FIELDS = [
   'places.id', 'places.displayName', 'places.primaryTypeDisplayName', 'places.location',
   'places.rating', 'places.userRatingCount', 'places.priceLevel', 'places.photos',
   'places.shortFormattedAddress', 'places.currentOpeningHours.openNow', 'places.googleMapsUri',
-  'places.primaryType', 'places.types', 'places.editorialSummary',
+  'places.primaryType', 'places.types',
 ].join(',');
 
 // Ube Banana is for food. Hotels, malls and venues show up in Google's "restaurant" results because
