@@ -107,7 +107,7 @@ export function GoButtons({ place, size = 'md' }) {
   return (
     <div className={`go-row go-${size}`}>
       <a className="go-btn go-gmaps" href={directionsUrl(place)} target="_blank" rel="noreferrer" aria-label={`Directions to ${place.name} in Google Maps`}>
-        <Icon name="nav" size={size === 'sm' ? 15 : 18} /> Google Maps
+        <Icon name="nav" size={size === 'sm' ? 15 : 18} /> {size === 'sm' ? 'Maps' : 'Google Maps'}
       </a>
       <a className="go-btn go-waze" href={wazeUrl(place)} target="_blank" rel="noreferrer" aria-label={`Drive to ${place.name} with Waze`}>
         <Icon name="nav" size={size === 'sm' ? 15 : 18} /> Waze
