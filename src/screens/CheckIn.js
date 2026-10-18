@@ -4,6 +4,7 @@ import { Icon, Sheet, Spinner, Notice } from '../ui';
 import { game, levelFor, badgeState } from '../game';
 import { pushStatus, enablePush } from '../push';
 import { MediaPicker, uploadMedia } from '../media';
+import { ShareTake } from '../sharetake';
 
 const TAGS = ['Must try', 'Worth the wait', 'Good value', 'Date night', 'Slow service', 'Good for groups', 'Kid-friendly', 'Pet-friendly', 'Aircon', 'Parking'];
 const LABEL = ['', 'Skip it', 'Poor', 'Meh', 'Below average', 'Okay', 'Decent', 'Good', 'Great', 'Excellent', 'Unforgettable'];
@@ -18,6 +19,7 @@ export default function CheckIn({ place, onClose, onDone }) {
   const [user, setUser] = useState(null);
   const [name, setName] = useState('');
   const [score, setScore] = useState(0);
+  const [visitId, setVisitId] = useState(null);
   const [tags, setTags] = useState([]);
   const [review, setReview] = useState('');
   const [good, setGood] = useState([]);
@@ -96,6 +98,7 @@ export default function CheckIn({ place, onClose, onDone }) {
       if (!r.ok) throw Object.assign(new Error(data.error || 'Could not save your check-in.'), { hint: data.hint });
       if (data.distance != null) setDistance(data.distance);
       setCrown(!!data.crown);
+      if (data.id) setVisitId(data.id);
       if (media.length && data.id) {
         setStep('uploading');
         const ok = await uploadMedia(data.id, media, (a, b) => setUploadNote(`Uploading ${a} of ${b}…`));
@@ -192,6 +195,7 @@ export default function CheckIn({ place, onClose, onDone }) {
           <h3 className="display-xs">Your take is live</h3>
           <p className="muted">Your {score}/10 now counts toward {place.name}’s Ube Banana score. If someone goes because of your take, you earn influence points.</p>
           {uploadNote && <p className="small muted">{uploadNote}</p>}
+          <ShareTake visitId={visitId} placeName={place.name} />
           <Reward before={before} after={after} placeGame={placeGame} crown={crown} />
           <NotifyOffer />
           <button className="btn btn-primary" onClick={onClose}>Done</button>

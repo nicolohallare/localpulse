@@ -14,6 +14,7 @@ const TYPES = {
   v: { re: SHORT_ID_RE, route: 'poll' },
   l: { re: SHORT_ID_RE, route: 'list' },
   u: { re: UUID_RE, route: 'u' },
+  c: { re: UUID_RE, route: 'place' },
 };
 
 export function escapeHtml(s) {
@@ -142,7 +143,28 @@ async function userMeta(id) {
   };
 }
 
-const LOADERS = { p: placeMeta, v: pollMeta, l: listMeta, u: userMeta };
+const LABEL = ['', 'Skip it', 'Poor', 'Meh', 'Below average', 'Okay', 'Decent', 'Good', 'Great', 'Excellent', 'Unforgettable'];
+
+// A shared check-in: "Nico rated Mendokoro 9/10". Opens the place in the app.
+async function checkinMeta(id) {
+  const rows = await rest(`visit_feed?id=eq.${encodeURIComponent(id)}&select=google_place_id,score,review,display_name,dishes_good`);
+  const v = rows && rows[0];
+  if (!v) throw new Error('Check-in not found');
+  const name = await placeName(v.google_place_id);
+  const who = v.display_name || 'Someone';
+  const parts = [];
+  if (v.review) parts.push(`“${truncate(v.review, 160)}”`);
+  const good = (v.dishes_good || []).slice(0, 3);
+  if (good.length) parts.push(`Order: ${good.join(', ')}`);
+  parts.push('Verified check-in on Ube Banana');
+  return {
+    title: `${who} rated ${name || 'this place'} ${v.score}/10${LABEL[v.score] ? ` — ${LABEL[v.score]}` : ''}`,
+    description: parts.join(' · '),
+    appPath: `/#/place/${v.google_place_id}`,
+  };
+}
+
+const LOADERS = { p: placeMeta, v: pollMeta, l: listMeta, u: userMeta, c: checkinMeta };
 
 const GENERIC = {
   title: 'Ube Banana — Everyone’s a food influencer',
@@ -164,7 +186,7 @@ function page({ title, description, url, image, appPath }) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${t}</title>
 <meta name="description" content="${d}">
-<meta name="theme-color" content="#5B2A86">
+<meta name="theme-color" content="#4B1F7A">
 <link rel="canonical" href="${u}">
 <meta property="og:site_name" content="Ube Banana">
 <meta property="og:type" content="website">
@@ -182,14 +204,14 @@ function page({ title, description, url, image, appPath }) {
 <style>
   :root { color-scheme: light dark; }
   body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
-    background: #5B2A86; color: #fff; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    background: #4B1F7A; color: #fff; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   main { max-width: 480px; padding: 32px 24px; text-align: center; }
   .brand { font-weight: 700; letter-spacing: .02em; opacity: .9; }
   .brand::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%;
-    background: #FFC23D; margin-right: 8px; vertical-align: middle; }
+    background: #FFD23F; margin-right: 8px; vertical-align: middle; }
   h1 { font-size: 24px; line-height: 1.25; margin: 16px 0 8px; }
   p { margin: 0 0 24px; opacity: .85; }
-  a.btn { display: inline-block; background: #FFC23D; color: #2a1340; font-weight: 700; text-decoration: none;
+  a.btn { display: inline-block; background: #FFD23F; color: #24123D; font-weight: 700; text-decoration: none;
     padding: 12px 22px; border-radius: 999px; }
 </style>
 </head>
@@ -228,6 +250,7 @@ export default async function handler(req, res) {
       url: `${SITE}/${t}/${enc}`,
       image: `${SITE}/api/og?t=${t}&id=${enc}`,
       appPath: `/#/${type.route}/${id}`,
+      ...(meta.appPath ? { appPath: meta.appPath } : {}),
     });
   } else {
     html = page({ ...GENERIC, url: `${SITE}/`, image: `${SITE}/api/og`, appPath: '/' });

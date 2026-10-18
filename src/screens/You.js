@@ -4,6 +4,7 @@ import { Icon, Spinner, Empty, ScoreBadge } from '../ui';
 import { game, levelFor, badgeState } from '../game';
 import { pushStatus, enablePush } from '../push';
 import { BlockedList, DeleteAccount } from '../safety';
+import { AppearancePicker } from '../theme';
 
 export default function You({ onOpen, onOpenCreators, onOpenRanks, onOpenUser, onOpenLists, onOpenAdmin }) {
   const [user, setUser] = useState(undefined);
@@ -162,6 +163,12 @@ export default function You({ onOpen, onOpenCreators, onOpenRanks, onOpenUser, o
             <ScoreBadge score={v.score} />
           </button>
         ))}
+      </section>
+
+      <section className="section stack-8">
+        <h2 className="h2">Appearance</h2>
+        <AppearancePicker />
+        <p className="tiny muted">Auto follows your phone’s dark mode setting.</p>
       </section>
 
       <section className="section stack-12">

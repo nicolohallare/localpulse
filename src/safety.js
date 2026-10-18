@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase, currentUser, ensureUser } from './lib';
 import { Icon, Sheet, Notice } from './ui';
+import { ShareTake } from './sharetake';
 
 export const REPORT_REASONS = [
   ['fake', 'Fake or not a real visit'],
@@ -58,6 +59,7 @@ export function TakeMenu({ take, name, onHidden }) {
 // "⋯" on your own take: delete it (and its photos/videos).
 function OwnTakeMenu({ take, onDeleted }) {
   const [open, setOpen] = useState(false);
+  const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   async function remove() {
@@ -81,13 +83,20 @@ function OwnTakeMenu({ take, onDeleted }) {
         <Icon name="more" size={20} />
       </button>
       {open && (
-        <Sheet title="Delete this take?" onClose={() => setOpen(false)}>
+        <Sheet title={confirm ? 'Delete this take?' : 'Your take'} onClose={() => { setOpen(false); setConfirm(false); }}>
+          {!confirm ? (
+            <div className="stack-12">
+              <ShareTake visitId={take.id} placeName={take.place_name || take.placeName} compact />
+              <button className="menu-row" onClick={() => setConfirm(true)}><Icon name="trash" size={20} /> Delete this take</button>
+            </div>
+          ) : (
           <div className="stack-12">
             <p>This removes your check-in, rating, take and any photos or videos from Ube Banana. Points from it are removed too. It can’t be undone.</p>
             <button className="btn btn-danger" disabled={busy} onClick={remove}>{busy ? 'Deleting…' : 'Delete this take'}</button>
-            <button className="btn btn-quiet" onClick={() => setOpen(false)}>Keep it</button>
+            <button className="btn btn-quiet" onClick={() => setConfirm(false)}>Keep it</button>
             {err && <Notice tone="warn">{err}</Notice>}
           </div>
+          )}
         </Sheet>
       )}
     </>

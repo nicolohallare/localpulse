@@ -11,11 +11,11 @@ const SUPABASE_KEY = 'sb_publishable_NG52mLt7Zqvb57SyLim0QA_h8Fb5YcL';
 const PLACE_ID_RE = /^[A-Za-z0-9_-]{10,300}$/;
 const SHORT_ID_RE = /^[a-z0-9]{6,12}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const VALID = { p: PLACE_ID_RE, v: SHORT_ID_RE, l: SHORT_ID_RE, u: UUID_RE };
+const VALID = { p: PLACE_ID_RE, v: SHORT_ID_RE, l: SHORT_ID_RE, u: UUID_RE, c: UUID_RE };
 
-const UBE = '#5B2A86';
-const UBE_DARK = '#2A1340';
-const MANGO = '#FFC23D';
+const UBE = '#4B1F7A';
+const UBE_DARK = '#24123D';
+const MANGO = '#FFD23F';
 const WHITE = '#FFFFFF';
 const SOFT = 'rgba(255,255,255,0.78)';
 
@@ -179,7 +179,7 @@ async function placeCard(id) {
     pills.push(pill(`Suki: ${clip(game.suki.name, 22)}`, { icon: crown(30, MANGO) }));
   }
   if (!pills.length) pills.push(pill('Be the first to check in', { accent: true }));
-  return card({ kicker: 'ON LOCALPULSE', title: name || 'A place worth checking out', body: [pillRow(pills)], google: true });
+  return card({ kicker: 'ON UBE BANANA', title: name || 'A place worth checking out', body: [pillRow(pills)], google: true });
 }
 
 async function pollCard(id) {
@@ -239,14 +239,14 @@ async function listCard(id) {
   if (list.description) {
     body.unshift(div({ fontSize: 30, color: SOFT, marginBottom: 28, maxWidth: 1000 }, clip(list.description, 110)));
   }
-  return card({ kicker: 'A LOCALPULSE LIST', title: list.title || 'Untitled list', body });
+  return card({ kicker: 'AN UBE BANANA LIST', title: list.title || 'Untitled list', body });
 }
 
 async function userCard(id) {
   const p = await rpc('get_profile', { p_user: id });
   if (!p || !p.name) throw new Error('Profile not found');
   return card({
-    kicker: 'ON LOCALPULSE',
+    kicker: 'ON UBE BANANA',
     title: p.name,
     body: [pillRow([
       pill(`${num(p.points)} pts`, { accent: true }),
@@ -264,7 +264,48 @@ function genericCard() {
   });
 }
 
-const BUILDERS = { p: placeCard, v: pollCard, l: listCard, u: userCard };
+const LABEL = ['', 'Skip it', 'Poor', 'Meh', 'Below average', 'Okay', 'Decent', 'Good', 'Great', 'Excellent', 'Unforgettable'];
+
+// A shared check-in: their photo on the left (if any), the score and their take on the right.
+async function checkinCard(id) {
+  const eid = encodeURIComponent(id);
+  const [rows, media] = await Promise.all([
+    rest(`visit_feed?id=eq.${eid}&select=google_place_id,score,review,display_name,dishes_good`),
+    safe(rest(`visit_media?visit_id=eq.${eid}&kind=eq.photo&select=path&order=created_at&limit=1`), []),
+  ]);
+  const v = rows && rows[0];
+  if (!v) throw new Error('Check-in not found');
+  const name = (await placeName(v.google_place_id)) || 'A place worth checking out';
+  const photo = media && media[0] ? `${SUPABASE_URL}/storage/v1/object/public/take-media/${media[0].path}` : null;
+  const w = photo ? 640 : 1056;
+  const good = (v.dishes_good || []).slice(0, 3);
+
+  const text = div({ flexDirection: 'column', width: w, flexGrow: 1, justifyContent: 'center' }, [
+    div({ fontSize: 26, color: MANGO, letterSpacing: 1, marginBottom: 10 }, `${clip(v.display_name || 'Someone', 26).toUpperCase()} CHECKED IN AT`),
+    div({ fontSize: titleSize(name, photo ? 58 : 76), lineHeight: 1.1, fontWeight: 700, marginBottom: 22 }, clip(name, 60)),
+    div({ alignItems: 'center', marginBottom: 20 }, [
+      div({ background: MANGO, color: UBE_DARK, fontSize: 52, fontWeight: 800, padding: '6px 24px', borderRadius: 20,
+        marginRight: 18, border: `4px solid ${UBE_DARK}` }, `${v.score}/10`),
+      div({ fontSize: 36, fontWeight: 700 }, LABEL[v.score] || ''),
+    ]),
+    v.review ? div({ fontSize: 30, color: SOFT, lineHeight: 1.3, marginBottom: 14 }, `“${clip(v.review, photo ? 90 : 140)}”`) : null,
+    good.length ? div({ fontSize: 26, color: WHITE }, `Order: ${clip(good.join(', '), 60)}`) : null,
+  ].filter(Boolean));
+
+  return div({ width: 1200, height: 630, background: UBE, color: WHITE, fontFamily: 'sans-serif', overflow: 'hidden', position: 'relative' }, [
+    photo ? { type: 'img', props: { src: photo, width: 480, height: 630, style: { width: 480, height: 630, objectFit: 'cover' } } } : null,
+    div({ flexDirection: 'column', flexGrow: 1, padding: '48px 56px' }, [
+      div({ alignItems: 'center', fontSize: 30 }, [
+        div({ width: 18, height: 18, borderRadius: 18, background: MANGO, marginRight: 12 }, []),
+        'Ube Banana',
+      ]),
+      text,
+      div({ fontSize: 22, color: SOFT }, 'Verified check-in · Everyone’s a food influencer'),
+    ]),
+  ].filter(Boolean));
+}
+
+const BUILDERS = { p: placeCard, v: pollCard, l: listCard, u: userCard, c: checkinCard };
 
 function render(element, cache) {
   return new ImageResponse(element, {
