@@ -36,7 +36,7 @@ const MODES = [
   { k: 'top', label: 'Most checked-in' },
 ];
 
-export default function Discover({ loc, locNote, onRetryLocation, michelin, onOpen, onOpenProfile, onAddVideo }) {
+export default function Discover({ loc, locNote, onRetryLocation, michelin, onOpen, onOpenProfile, onAddVideo, active = true }) {
   const [headline] = useState(() => mealLine());
   const [michSort, setMichSort] = useState('near');
   const [pickSort, setPickSort] = useState('best');
@@ -55,6 +55,8 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
   const [opening, setOpening] = useState(null);
   const [trending, setTrending] = useState(null);
   const [player, setPlayer] = useState(null);
+  // Stop the video when you leave Discover (the screen stays open in the background for Back).
+  useEffect(() => { if (!active) setPlayer(null); }, [active]);
   const [related, setRelated] = useState({});
   const [filters, setFilters] = useState([]);
   const [craving, setCraving] = useState(null);

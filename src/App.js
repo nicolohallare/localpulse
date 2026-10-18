@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import './styles.css';
 import { api, supabase, getLocation, DEFAULT_LOCATION, findVideoUrl, setCountry } from './lib';
 import { Sheet, Spinner } from './ui';
@@ -42,6 +42,11 @@ function parseHash() {
   return { name: 'discover' };
 }
 
+if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
+
+const KEEP = new Set(['discover', 'feed', 'deals', 'you', 'user', 'poll', 'lists', 'list', 'creators', 'ranks']);
+const routeKey = (r) => `${r.name}:${r.id || ''}`;
+
 export default function App() {
   const [route, setRoute] = useState(parseHash);
   const [loc, setLoc] = useState({ ...DEFAULT_LOCATION, label: 'Finding you…' });
@@ -50,15 +55,24 @@ export default function App() {
   const lastTab = useRef('discover');
   const navigatedInApp = useRef(false);
 
+  // Screens you can go Back to stay open in the background, so Back returns to the same list,
+  // filters and scroll position instead of reloading. Place pages aren't kept (their videos would keep playing).
+  const scrollPos = useRef({});
+  const forward = useRef(false);
+  const [kept, setKept] = useState([]); // [{ key, route, n }], most recent first
+  const keyRef = useRef('');
+
   useEffect(() => {
-    const onHash = () => setRoute(parseHash());
+    const onHash = () => {
+      scrollPos.current[keyRef.current] = window.scrollY;
+      setRoute(parseHash());
+    };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
   useEffect(() => {
     if (route.name !== 'place' && route.name !== 'checkin') lastTab.current = route.name;
-    window.scrollTo(0, 0);
   }, [route]);
 
   const [picking, setPicking] = useState(false);
@@ -113,6 +127,7 @@ export default function App() {
 
   const go = useCallback((path) => {
     navigatedInApp.current = true;
+    forward.current = true;
     window.location.hash = path;
   }, []);
   const openPlace = useCallback((id) => go(`/place/${encodeURIComponent(id)}`), [go]);
@@ -122,30 +137,60 @@ export default function App() {
   }, [go]);
 
   const tab = route.name === 'checkin' ? lastTab.current : route.name;
+  const keepable = KEEP.has(route.name);
+  const curKey = route.name === 'checkin' ? keyRef.current : routeKey(route);
+
+  useLayoutEffect(() => {
+    if (route.name === 'checkin') return; // the check-in sheet opens over the current screen
+    const key = routeKey(route);
+    const wasForward = forward.current;
+    forward.current = false;
+    keyRef.current = key;
+    if (keepable) {
+      setKept((list) => {
+        const old = list.find((k) => k.key === key);
+        // Going forward to a screen (except Discover) shows it fresh; Back shows it as you left it.
+        const fresh = !old || (wasForward && route.name !== 'discover');
+        const entry = fresh ? { key, route, n: (old ? old.n + 1 : 0) } : old;
+        return [entry, ...list.filter((k) => k.key !== key)].slice(0, 6);
+      });
+    }
+    const y = !wasForward ? scrollPos.current[key] : 0;
+    window.scrollTo(0, y || 0);
+    requestAnimationFrame(() => window.scrollTo(0, y || 0));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route]);
   const openUser = (uid) => go(`/u/${uid}`);
   const openList = (lid) => go(`/list/${lid}`);
   const TABS = ['discover', 'feed', 'deals', 'you'];
   const showTabs = TABS.includes(tab) || tab === 'creators' || tab === 'ranks';
 
+  function keptScreen(r, active) {
+    switch (r.name) {
+      case 'discover': return <Discover loc={loc} locNote={locNote} onRetryLocation={() => setPicking(true)} michelin={michelin}
+        onOpen={openPlace} onOpenProfile={() => go('/you')} onAddVideo={() => go('/add')} active={active} />;
+      case 'deals': return <Deals onOpen={openPlace} />;
+      case 'you': return <You onOpen={openPlace} onOpenCreators={() => go('/creators')} onOpenRanks={() => go('/ranks')}
+        onOpenUser={openUser} onOpenLists={() => go('/lists')} onOpenAdmin={() => go('/admin')} />;
+      case 'feed': return <Feed onOpenPlace={openPlace} onOpenUser={openUser} onOpenCreators={() => go('/creators')} onOpenRanks={() => go('/ranks/influencers')} />;
+      case 'user': return <Profile id={r.id} onBack={back} onOpenPlace={openPlace} onOpenUser={openUser} onOpenList={openList} />;
+      case 'poll': return <PollView id={r.id} fresh={r.fresh} onBack={back} onOpenPlace={openPlace} />;
+      case 'lists': return <MyLists onBack={back} onOpenList={openList} />;
+      case 'list': return <ListView id={r.id} loc={loc} onBack={back} onOpenPlace={openPlace} onOpenUser={openUser} />;
+      case 'creators': return <Creators onBack={back} onOpenRanks={() => go('/ranks/creators')} onAddVideo={() => go('/add')} />;
+      case 'ranks': return <Ranks initial={r.id} onBack={back} onOpenUser={openUser} />;
+      default: return null;
+    }
+  }
+
   return (
     <div className="app">
       <main className="app-main">
-        {(tab === 'discover') && route.name !== 'place' && (
-          <Discover loc={loc} locNote={locNote} onRetryLocation={() => setPicking(true)} michelin={michelin}
-            onOpen={openPlace} onOpenProfile={() => go('/you')} onAddVideo={() => go('/add')} />
-        )}
-        {tab === 'deals' && <Deals onOpen={openPlace} />}
-        {tab === 'you' && <You onOpen={openPlace} onOpenCreators={() => go('/creators')} onOpenRanks={() => go('/ranks')}
-          onOpenUser={openUser} onOpenLists={() => go('/lists')} onOpenAdmin={() => go('/admin')} />}
-        {tab === 'feed' && <Feed onOpenPlace={openPlace} onOpenUser={openUser} onOpenCreators={() => go('/creators')} onOpenRanks={() => go('/ranks/influencers')} />}
-        {tab === 'user' && <Profile key={route.id} id={route.id} onBack={back} onOpenPlace={openPlace} onOpenUser={openUser} onOpenList={openList} />}
+        {kept.map((k) => (
+          <div key={`${k.key}#${k.n}`} hidden={k.key !== curKey}>{keptScreen(k.route, k.key === curKey)}</div>
+        ))}
         {tab === 'pollnew' && <PollNew key={route.with} loc={loc} withPlace={route.with} onBack={back} onCreated={(pid) => window.location.replace(`#/poll/${pid}?new=1`)} />}
-        {tab === 'poll' && <PollView key={route.id} id={route.id} fresh={route.fresh} onBack={back} onOpenPlace={openPlace} />}
-        {tab === 'lists' && <MyLists onBack={back} onOpenList={openList} />}
-        {tab === 'list' && <ListView key={route.id} id={route.id} loc={loc} onBack={back} onOpenPlace={openPlace} onOpenUser={openUser} />}
         {tab === 'admin' && <Admin loc={loc} onBack={back} onOpenPlace={openPlace} />}
-        {tab === 'creators' && <Creators onBack={back} onOpenRanks={() => go('/ranks/creators')} onAddVideo={() => go('/add')} />}
-        {tab === 'ranks' && <Ranks key={route.id} initial={route.id} onBack={back} onOpenUser={openUser} />}
         {tab === 'add' && <ShareVideo key={route.url} initialUrl={route.url} loc={loc} onBack={back} onOpen={openPlace} />}
         {route.name === 'place' && (
           <Place key={route.id} id={route.id} loc={loc} michelin={michelin} onBack={back} onOpenCreators={() => go('/creators')}
