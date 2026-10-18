@@ -3,7 +3,8 @@
     { "source": "/p/:id", "destination": "/api/share?t=p&id=:id" },
     { "source": "/v/:id", "destination": "/api/share?t=v&id=:id" },
     { "source": "/l/:id", "destination": "/api/share?t=l&id=:id" },
-    { "source": "/u/:id", "destination": "/api/share?t=u&id=:id" }
+    { "source": "/u/:id", "destination": "/api/share?t=u&id=:id" },
+    { "source": "/c/:id", "destination": "/api/share?t=c&id=:id" }
   ],
   "crons": [
     { "path": "/api/cron/weekly", "schedule": "0 1 * * 1" }
