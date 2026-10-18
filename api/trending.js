@@ -1,4 +1,15 @@
+import { SECRET, rpc } from './_server.js';
 import { send, places, shapePlace, LIST_FIELDS, isFoodPlace, decodeEntities, num, SERVER_GOOGLE_KEY, countryOf, countryInfo, SUPABASE_URL, SUPABASE_KEY } from './_lib.js';
+
+// Results we pay Google for are kept in the database, so app updates (which clear Vercel's cache) don't redo them.
+async function cacheGet(key) {
+  if (!SECRET) return null;
+  try { return await rpc('cache_get', { p_secret: SECRET, p_key: key }); } catch (e) { return null; }
+}
+function cachePut(key, value, ttlSec) {
+  if (!SECRET) return Promise.resolve();
+  return rpc('cache_put', { p_secret: SECRET, p_key: key, p_value: value, p_ttl: ttlSec }).catch(() => {});
+}
 
 // GET /api/trending?lat=..&lng=..&area=Taguig
 // "Trending on YouTube": the most-viewed recent food videos for an area (YouTube's own
@@ -118,7 +129,16 @@ async function candidates(ytKey, area, lat, lng, cc) {
   const nameKey = (p) => `${norm(p.place) || p.place}|${norm(p.branch || '')}`;
   const names = new Map();
   picks.forEach((p) => { if (videos[p.i]) { const k = nameKey(p); if (!names.has(k)) names.set(k, p); } });
-  const lookups = await Promise.all([...names.entries()].slice(0, 30).map(async ([k, p]) => {
+  const lookups = await Promise.all([...names.entries()].slice(0, 20).map(async ([k, p]) => {
+    const ck = `tplace:${cc}:${Number(lat).toFixed(1)}:${Number(lng).toFixed(1)}:${k}`.slice(0, 300);
+    const cached = await cacheGet(ck);
+    if (cached) return [k, cached.none ? null : cached];
+    const found = await lookupPlace(k, p);
+    // Remember the match for a week (a miss for a day) so the same restaurant isn't searched again.
+    await cachePut(ck, found[1] || { none: true }, found[1] ? 7 * 86400 : 86400);
+    return found;
+  }));
+  async function lookupPlace(k, p) {
     try {
       const data = await places('places:searchText', {
         method: 'POST',
@@ -136,7 +156,7 @@ async function candidates(ytKey, area, lat, lng, cc) {
     } catch (e) {
       return [k, null];
     }
-  }));
+  }
   const hitFor = new Map(lookups);
 
   // Group every mention under its Google place.
@@ -242,15 +262,17 @@ export default async function handler(req, res) {
 
   try {
     // Reuse the cached candidates for this general area (rounded to ~10 km), falling back to computing them here.
-    let list = null;
-    const host = String(req.headers['x-forwarded-host'] || req.headers.host || '');
-    if (host) {
-      const qs = new URLSearchParams({ stage: 'candidates', v: '4', cc, area, lat: lat.toFixed(1), lng: lng.toFixed(1) });
-      list = await fetch(`https://${host}/api/trending?${qs}`).then((r) => (r.ok ? r.json() : null)).then((d) => d && d.list).catch(() => null);
+    // One candidate list per ~10 km cell, kept 12 hours in the database.
+    const cell = `trend:v5:${cc}:${lat.toFixed(1)}:${lng.toFixed(1)}`;
+    let list = await cacheGet(cell);
+    if (!Array.isArray(list)) {
+      list = await candidates(ytKey, area, Number(lat.toFixed(1)), Number(lng.toFixed(1)), cc);
+      if (list.length) await cachePut(cell, list, 12 * 3600);
     }
-    if (!Array.isArray(list)) list = await candidates(ytKey, area, Number(lat.toFixed(1)), Number(lng.toFixed(1)), cc);
 
     let routesError = null;
+    // Ask for drive times only for places that could be near (Google charges per place asked).
+    list = list.filter((x) => straightKm(lat, lng, x.place) <= 15).slice(0, 25);
     const mins = await driveMinutes(lat, lng, list).catch((e) => { routesError = `${e.status || ''} ${e.message}`.trim().slice(0, 200); return null; });
     let items;
     let limit;
