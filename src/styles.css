@@ -155,7 +155,7 @@ h1, h2, h3 { margin: 0; }
 .hero-dots { position: absolute; left: 0; right: 0; bottom: 38px; display: flex; justify-content: center; gap: 6px; }
 .dot { width: 8px; height: 8px; padding: 0; border-radius: 999px; border: 0; background: rgba(255, 255, 255, 0.55); }
 .dot-on { background: #fff; width: 20px; }
-.hero-credit { position: absolute; left: 12px; bottom: 10px; padding: 3px 9px; border-radius: 999px; background: rgba(255, 255, 255, 0.92); font-size: 11px; font-weight: 600; color: var(--ink); max-width: calc(100% - 24px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hero-credit { position: absolute; left: 12px; bottom: 10px; padding: 3px 9px; border-radius: 999px; background: rgba(255, 255, 255, 0.92); font-size: 11px; font-weight: 600; color: #24123d; max-width: calc(100% - 24px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .place-body { padding: 20px; display: flex; flex-direction: column; gap: 18px; }
 .mich-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 10px 10px 14px; border: 1px solid var(--line); border-radius: 14px; }
 .mich-card > div { display: flex; flex-direction: column; gap: 2px; }
@@ -363,7 +363,7 @@ h1, h2, h3 { margin: 0; }
 .dish-bad { background: #fbe9df; color: #8a4417; }
 .chip.dish-suggest { min-height: 34px; font-size: 13px; text-transform: capitalize; border-style: dashed; }
 .dish-add { display: flex; gap: 8px; }
-.dish-add input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); font-size: 16px; }
+.dish-add input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 16px; }
 .notify-card { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--mango-tint); text-align: left; }
 
 .take { display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
