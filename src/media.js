@@ -10,7 +10,7 @@ const MAX_VIDEO_SEC = 90;
 export const mediaUrl = (path) => `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`;
 
 // Shrink photos on the phone before upload (max 1600px, JPEG) so they load fast and save data.
-function compressImage(file, maxSide = 1600, quality = 0.82) {
+export function compressImage(file, maxSide = 1600, quality = 0.82) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);

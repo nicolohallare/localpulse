@@ -8,6 +8,7 @@ import { MediaStrip, AddMediaSheet, loadMedia } from '../media';
 import { Icon, PlacePhoto, Spinner, Notice, Empty, Sheet, GoButtons } from '../ui';
 import CheckIn from './CheckIn';
 import { TakeMenu } from '../safety';
+import { MenuTab } from '../menu';
 
 export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpenUser, onNewPoll }) {
   const [place, setPlace] = useState(null);
@@ -245,6 +246,9 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
           <button role="tab" aria-selected={tab === 'videos'} className={tab === 'videos' ? 'seg-on' : ''} onClick={() => setTab('videos')}>
             Videos{videoCount ? ` · ${videoCount}` : ''}
           </button>
+          <button role="tab" aria-selected={tab === 'menu'} className={tab === 'menu' ? 'seg-on' : ''} onClick={() => setTab('menu')}>
+            Menu
+          </button>
           <button role="tab" aria-selected={tab === 'visits'} className={tab === 'visits' ? 'seg-on' : ''} onClick={() => setTab('visits')}>
             Visits{feed.length ? ` · ${feed.length}` : ''}
           </button>
@@ -357,6 +361,8 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
             )}
           </div>
         )}
+
+        {tab === 'menu' && <MenuTab place={place} />}
 
         {tab === 'deals' && (
           <div className="stack-12">

@@ -651,3 +651,17 @@ html, body { overflow-x: hidden; }
 .share-row .btn { flex: 1; gap: 6px; }
 .share-fb { background: #1877f2; color: #fff; border: 2px solid var(--ube-ink); box-shadow: var(--sticker); }
 .share-fb:active { transform: translateY(3px); box-shadow: 0 0 0 var(--ube-ink); }
+
+/* Menu tab */
+.place-seg button, .seg button { padding: 0 6px; }
+.menu-search { display: flex; align-items: center; gap: 8px; min-height: 46px; padding: 0 14px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface); color: var(--soft); }
+.menu-search input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--ink); font-size: 16px; outline: none; }
+.menu-section { display: flex; flex-direction: column; }
+.menu-section .eyebrow { margin: 6px 0 4px; }
+.menu-item { display: flex; align-items: baseline; gap: 12px; padding: 9px 0; border-bottom: 1px dashed var(--line); }
+.menu-price { font-family: var(--display); font-weight: 800; font-size: 16px; color: var(--ube-text); white-space: nowrap; }
+.menu-empty { padding: 16px; border-radius: 16px; background: var(--tint); display: flex; flex-direction: column; gap: 4px; }
+.menu-photos { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.menu-thumb { position: relative; flex: 0 0 auto; width: 96px; height: 128px; border-radius: 12px; overflow: hidden; border: 1.5px solid var(--line); padding: 0; background: var(--tint); }
+.menu-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.menu-full img { width: 100%; border-radius: 12px; }
