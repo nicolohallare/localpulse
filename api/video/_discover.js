@@ -1,5 +1,6 @@
 import { send, places, PLACE_ID_RE, countryOf } from '../_lib.js';
 import { shapeOembed } from './_oembed.js';
+import { SECRET, rpc } from '../_server.js';
 
 // GET /api/video/discover?place=<google place id>
 // Finds public TikToks about a place: a web search (Brave Search API) for tiktok.com links,
@@ -86,13 +87,20 @@ export default async function handler(req, res) {
 
   try {
     // Reuse the cached search for this place; fall back to searching here.
-    let found = null;
-    const host = String(req.headers['x-forwarded-host'] || req.headers.host || '');
-    if (host) {
-      found = await fetch(`https://${host}/api/video/discover?${new URLSearchParams({ place: id, stage: 'search', cc: countryOf(req) })}`)
-        .then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    // The paid web search is kept in the database for 14 days per place, so app updates don't repeat it.
+    const cc = countryOf(req);
+    const ck = `tiktok:${cc}:${id}`;
+    let found = SECRET ? await rpc('cache_get', { p_secret: SECRET, p_key: ck }).catch(() => null) : null;
+    if (!found || !Array.isArray(found.urls)) {
+      try {
+        found = await searchStage(id, key, cc);
+        if (SECRET) await rpc('cache_put', { p_secret: SECRET, p_key: ck, p_value: found, p_ttl: 14 * 86400 }).catch(() => {});
+      } catch (e) {
+        // Search unavailable (e.g. out of credit): don't retry this place for 6 hours.
+        if (SECRET) await rpc('cache_put', { p_secret: SECRET, p_key: ck, p_value: { urls: [], words: [], error: true }, p_ttl: 6 * 3600 }).catch(() => {});
+        return send(res, 200, { videos: [], error: 'TikTok search unavailable' }, 'public, s-maxage=600');
+      }
     }
-    if (!found || !Array.isArray(found.urls)) found = await searchStage(id, key, countryOf(req));
     const { urls, words } = found;
     if (!urls.length || !words.length) return send(res, 200, { videos: [] }, HALF_DAY);
 
