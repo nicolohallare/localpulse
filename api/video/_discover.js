@@ -38,7 +38,7 @@ async function braveSearch(q, key, cc) {
   const r = await fetch(`https://api.search.brave.com/res/v1/web/search?${params}`, {
     headers: { Accept: 'application/json', 'X-Subscription-Token': key },
   });
-  if (!r.ok) throw new Error(`Search failed (${r.status})`);
+  if (!r.ok) throw new Error(`Brave search failed (${r.status}): ${(await r.text()).slice(0, 150)}`);
   const d = await r.json();
   return ((d.web && d.web.results) || []).map((x) => x.url);
 }
@@ -80,7 +80,7 @@ export default async function handler(req, res) {
     try {
       return send(res, 200, await searchStage(id, key, countryOf(req)), WEEK);
     } catch (e) {
-      return send(res, 200, { urls: [], words: [] }, 'public, s-maxage=3600');
+      return send(res, 200, { urls: [], words: [], error: String(e.message || e).slice(0, 200) }, 'public, s-maxage=600');
     }
   }
 
