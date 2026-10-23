@@ -58,16 +58,23 @@ async function discover(queue) {
   return { urls: found, discoveredAt: Date.now() };
 }
 
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
+
 function pageText(html) {
-  return String(html)
+  let h = String(html);
+  // Read the page's main content; menus, headers and footers drown out the promo on bank sites.
+  const main = h.match(/<main[\s\S]*?<\/main>/i) || h.match(/<article[\s\S]*?<\/article>/i);
+  if (main && main[0].length > 500) h = main[0];
+  return h
     .replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<(nav|header|footer|noscript|svg|form)[\s\S]*?<\/\1>/gi, ' ')
     .replace(/<(br|\/p|\/li|\/h\d|\/tr|\/div)[^>]*>/gi, '\n').replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&#39;|&rsquo;/g, "'").replace(/&[a-z]+;/g, ' ')
     .replace(/[ \t]+/g, ' ').replace(/\n\s*\n+/g, '\n').trim().slice(0, 16000);
 }
 
 async function readPage(url, bank) {
-  const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; UbeBananaBot/1.0; +https://localpulse-two.vercel.app)', Accept: 'text/html' }, signal: AbortSignal.timeout(10000) });
+  const r = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml', 'Accept-Language': 'en-PH,en;q=0.9' }, signal: AbortSignal.timeout(15000) });
   if (!r.ok) return { url, error: `fetch ${r.status}` };
   const text = pageText(await r.text());
   if (text.length < 200) return { url, error: 'empty page' };
@@ -113,7 +120,7 @@ export default async function handler(req, res) {
   if (req.query.peek) {
     const url = String(req.query.peek);
     if (!BANKS.some((b) => b.re.test(url))) return send(res, 400, { error: 'Not a bank promo page' });
-    const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; UbeBananaBot/1.0)', Accept: 'text/html' }, signal: AbortSignal.timeout(10000) }).catch((e) => ({ ok: false, status: String(e.message) }));
+    const r = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml', 'Accept-Language': 'en-PH,en;q=0.9' }, signal: AbortSignal.timeout(20000) }).catch((e) => ({ ok: false, status: String(e.message) }));
     if (!r.ok) return send(res, 200, { status: r.status });
     const html = await r.text();
     return send(res, 200, { status: r.status, htmlLength: html.length, text: pageText(html).slice(0, 2500) });
