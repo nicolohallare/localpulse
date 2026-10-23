@@ -9,6 +9,7 @@ import { Icon, PlacePhoto, Spinner, Notice, Empty, Sheet, GoButtons } from '../u
 import CheckIn from './CheckIn';
 import { TakeMenu } from '../safety';
 import { MenuTab } from '../menu';
+import { CardPromosHere } from '../promos';
 
 export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpenUser, onNewPoll }) {
   const [place, setPlace] = useState(null);
@@ -241,6 +242,8 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
             <span className="tiny muted">{summary.sources || 'AI summary'}</span>
           </section>
         )}
+
+        <CardPromosHere place={place} />
 
         <div className="seg" role="tablist" aria-label="Sections">
           <button role="tab" aria-selected={tab === 'videos'} className={tab === 'videos' ? 'seg-on' : ''} onClick={() => setTab('videos')}>

@@ -3,6 +3,7 @@ import { api, supabase, distanceM, fmtDistance, fmtCount, timeAgo, tiktokEmbed, 
 import { logPlay, game } from '../game';
 import { Banana, Icon, PlacePhoto, Spinner, Notice, Empty, ScoreBadge, Sheet, GoButtons } from '../ui';
 import MapView from '../MapView';
+import { usePromos, useMyCards, promosFor } from '../promos';
 
 const CRAVINGS_BY_COUNTRY = {
   PH: ['Sisig', 'Lechon', 'Ramen', 'Samgyup', 'Kare-kare', 'Chicken wings', 'Pizza', 'Burger', 'Milk tea', 'Coffee', 'Halo-halo', 'Bulalo'],
@@ -12,6 +13,7 @@ const DEFAULT_CRAVINGS = ['Noodles', 'Dumplings', 'Ramen', 'Pizza', 'Burger', 'F
 const cravingsFor = (cc) => CRAVINGS_BY_COUNTRY[cc] || DEFAULT_CRAVINGS;
 const FILTERS = [
   { k: 'open', label: 'Open now', test: (p) => p.openNow === true },
+  { k: 'promo', label: '💳 Card promo', test: (p) => !!p.promo },
   { k: 'p1', label: () => currencySymbol(), test: (p) => p.priceLevel === 1 },
   { k: 'p2', label: () => currencySymbol().repeat(2), test: (p) => p.priceLevel === 2 },
   { k: 'p3', label: () => `${currencySymbol().repeat(3)}+`, test: (p) => p.priceLevel >= 3 },
@@ -38,6 +40,8 @@ const MODES = [
 
 export default function Discover({ loc, locNote, onRetryLocation, michelin, onOpen, onOpenProfile, onAddVideo, active = true }) {
   const [headline] = useState(() => mealLine());
+  const promos = usePromos();
+  const myCards = useMyCards();
   const [michSort, setMichSort] = useState('near');
   const [pickSort, setPickSort] = useState('best');
   const [showMap, setShowMap] = useState(false);
@@ -236,7 +240,8 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
     }
   }
 
-  const sorted = applyFilters(places.map((p) => ({ ...p, dist: distanceM(loc, p) })), filters);
+  const withPromo = (p) => ({ ...p, promo: promosFor(p, promos, myCards.length ? myCards : null)[0] || null });
+  const sorted = applyFilters(places.map((p) => withPromo({ ...p, dist: distanceM(loc, p) })), filters);
   const cc = getCountry();
   const michHere = (michelin || []).filter((l) => (l.country || 'PH') === cc);
   const michSource = michHere.length ? michHere : (michelin || []);
@@ -255,13 +260,13 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
   const pool = (() => {
     if (query) return sorted;
     const seen = new Set(sorted.map((p) => p.id));
-    const extra = ((trending && trending.items) || []).map((it) => ({ ...it.place, dist: distanceM(loc, it.place) })).filter((p) => !seen.has(p.id));
+    const extra = ((trending && trending.items) || []).map((it) => withPromo({ ...it.place, dist: distanceM(loc, it.place) })).filter((p) => !seen.has(p.id));
     return [...sorted, ...applyFilters(extra, filters)];
   })();
   const hour = new Date().getHours();
   const ranked = pool.map((p) => {
     const m = matchMichelin(p.name, michelin);
-    const { score, reasons } = rankPlace(p, { stat: stats[p.id], buzz: trendById[p.id], mich: m, hour });
+    const { score, reasons } = rankPlace(p, { stat: stats[p.id], buzz: trendById[p.id], mich: m, hour, mine: myCards.length > 0 });
     return { p, m, score, reasons };
   });
   const sortFns = {
@@ -624,7 +629,7 @@ function WhyLine({ w, fallback }) {
 const MICH_BONUS = { three_star: 18, two_star: 16, one_star: 14, bib_gourmand: 10, selected: 6 };
 const MORNING = new Set(['breakfast_restaurant', 'brunch_restaurant', 'cafe', 'coffee_shop', 'bakery', 'diner']);
 const NIGHT = new Set(['bar', 'pub', 'wine_bar', 'lounge_bar', 'night_club', 'bar_and_grill', 'cocktail_bar']);
-export function rankPlace(p, { stat, buzz, mich, hour }) {
+export function rankPlace(p, { stat, buzz, mich, hour, mine }) {
   const reasons = [];
   let score = 0;
   // Quality: Google rating weighted by how many people rated it (a 4.9 from 12 people counts less than a 4.6 from 3,000).
@@ -649,6 +654,12 @@ export function rankPlace(p, { stat, buzz, mich, hour }) {
   if (mich) {
     score += MICH_BONUS[mich.distinction] || 6;
     reasons.push({ k: 'mich', t: DISTINCTION[mich.distinction] });
+  }
+  // A card promo: a real reason to pick a place, more so when it's for one of your cards.
+  if (p.promo) {
+    score += mine ? 6 : 2;
+    const d = String(p.promo.discount);
+    reasons.push({ k: 'promo', t: `💳 ${d.length > 22 ? `${d.slice(0, 21)}…` : d} · ${p.promo.bank}` });
   }
   // Nearness: walking distance or drive time.
   const mins = buzz && buzz.minutes != null ? buzz.minutes : null;

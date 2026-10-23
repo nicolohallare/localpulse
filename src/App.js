@@ -17,6 +17,7 @@ import Profile from './screens/Profile';
 import Admin from './screens/Admin';
 import { PollNew, PollView } from './screens/Poll';
 import { MyLists, ListView } from './screens/Lists';
+import { syncMyCards } from './promos';
 
 // Shared from another app (TikTok → Share → Ube Banana): /?url=…&text=…
 (function takeShare() {
@@ -107,6 +108,7 @@ export default function App() {
   }, []);
 
   useEffect(() => { locate(); }, [locate]);
+  useEffect(() => { syncMyCards(); }, []);
 
   // Back from the admin sign-in email: /?admin=1#access_token=… → wait for the session, then open admin.
   useEffect(() => {
@@ -169,7 +171,7 @@ export default function App() {
     switch (r.name) {
       case 'discover': return <Discover loc={loc} locNote={locNote} onRetryLocation={() => setPicking(true)} michelin={michelin}
         onOpen={openPlace} onOpenProfile={() => go('/you')} onAddVideo={() => go('/add')} active={active} />;
-      case 'deals': return <Deals onOpen={openPlace} />;
+      case 'deals': return <Deals onOpen={openPlace} loc={loc} />;
       case 'you': return <You onOpen={openPlace} onOpenCreators={() => go('/creators')} onOpenRanks={() => go('/ranks')}
         onOpenUser={openUser} onOpenLists={() => go('/lists')} onOpenAdmin={() => go('/admin')} />;
       case 'feed': return <Feed onOpenPlace={openPlace} onOpenUser={openUser} onOpenCreators={() => go('/creators')} onOpenRanks={() => go('/ranks/influencers')} />;

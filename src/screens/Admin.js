@@ -1,3 +1,4 @@
+import { PromosAdmin } from '../promos';
 import React, { useCallback, useEffect, useState } from 'react';
 import { api, supabase, PLATFORM_LABEL, findVideoUrl } from '../lib';
 import { Icon, Spinner, Notice, Empty } from '../ui';
@@ -97,6 +98,7 @@ export default function Admin({ loc, onBack, onOpenPlace }) {
               <button role="tab" aria-selected={tab === 'apps'} className={tab === 'apps' ? 'seg-on' : ''} onClick={() => setTab('apps')}>Creators · {q.applications.length}</button>
               <button role="tab" aria-selected={tab === 'deals'} className={tab === 'deals' ? 'seg-on' : ''} onClick={() => setTab('deals')}>Deals · {q.deals.length}</button>
               <button role="tab" aria-selected={tab === 'media'} className={tab === 'media' ? 'seg-on' : ''} onClick={() => setTab('media')}>Media</button>
+              <button role="tab" aria-selected={tab === 'promos'} className={tab === 'promos' ? 'seg-on' : ''} onClick={() => setTab('promos')}>Promos</button>
               <button role="tab" aria-selected={tab === 'import'} className={tab === 'import' ? 'seg-on' : ''} onClick={() => setTab('import')}>Import</button>
             </div>
 
@@ -125,6 +127,7 @@ export default function Admin({ loc, onBack, onOpenPlace }) {
 
             {tab === 'deals' && <DealsAdmin q={q} loc={loc} reload={load} />}
             {tab === 'media' && <MediaAdmin onOpenPlace={onOpenPlace} />}
+            {tab === 'promos' && <PromosAdmin />}
             {tab === 'reports' && <ReportsAdmin onOpenPlace={onOpenPlace} />}
             {tab === 'import' && <BulkImport loc={loc} onOpenPlace={onOpenPlace} />}
           </section>

@@ -20,7 +20,7 @@ const BANKS = [
   { bank: 'AUB', site: 'aub.com.ph', q: 'credit card promo dining', re: /^https:\/\/(www\.)?aub\.com\.ph\/[^?#]*promo[^?#]*/i },
 ];
 const QUEUE = 'promos:queue';
-const PER_RUN = 6;
+const PER_RUN = 8;
 const today = () => new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10); // Manila date
 
 const cacheGet = (key) => rpc('cache_get', { p_secret: SECRET, p_key: key }).catch(() => null);
@@ -80,7 +80,7 @@ async function readPage(url, bank) {
       max_tokens: 3000,
       messages: [{ role: 'user', content:
         `Today is ${today()}. Below is the text of a ${bank} bank promo page (${url}). ` +
-        'List ONLY promos at restaurants, cafés, bars, bakeries or food places (skip hotels rooms, travel, shopping, gadgets, installment plans unless it is a food place). ' +
+        'List ONLY promos at restaurants, cafés, bars, bakeries or food places you can go to (skip hotel rooms, travel, shopping, gadgets, installment plans, and food delivery or ride apps such as Foodpanda, GrabFood or Grab). ' +
         'One entry per restaurant brand. Use only what the page says; do not guess. Skip promos that already ended. Reply with JSON only, no code fences:\n' +
         '{"promos": [{"merchant": "<restaurant name as written>", "branches": "<which branches/locations, or empty if all>", ' +
         '"discount": "<short, e.g. 20% off, Free dessert, 2+1 buffet>", "details": "<one sentence: how to get it, key conditions>", ' +

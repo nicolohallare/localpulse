@@ -1,13 +1,37 @@
 {
+  "regions": [
+    "sin1"
+  ],
   "rewrites": [
-    { "source": "/p/:id", "destination": "/api/share?t=p&id=:id" },
-    { "source": "/v/:id", "destination": "/api/share?t=v&id=:id" },
-    { "source": "/l/:id", "destination": "/api/share?t=l&id=:id" },
-    { "source": "/u/:id", "destination": "/api/share?t=u&id=:id" },
-    { "source": "/c/:id", "destination": "/api/share?t=c&id=:id" }
+    {
+      "source": "/p/:id",
+      "destination": "/api/share?t=p&id=:id"
+    },
+    {
+      "source": "/v/:id",
+      "destination": "/api/share?t=v&id=:id"
+    },
+    {
+      "source": "/l/:id",
+      "destination": "/api/share?t=l&id=:id"
+    },
+    {
+      "source": "/u/:id",
+      "destination": "/api/share?t=u&id=:id"
+    },
+    {
+      "source": "/c/:id",
+      "destination": "/api/share?t=c&id=:id"
+    }
   ],
   "crons": [
-    { "path": "/api/cron/weekly", "schedule": "0 1 * * 1" },
-    { "path": "/api/cron/promos", "schedule": "0 20 * * *" }
+    {
+      "path": "/api/cron/weekly",
+      "schedule": "0 1 * * 1"
+    },
+    {
+      "path": "/api/cron/promos",
+      "schedule": "0 20 * * *"
+    }
   ]
 }
