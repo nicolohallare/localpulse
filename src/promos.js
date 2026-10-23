@@ -71,6 +71,16 @@ export function usePromos() {
 const GENERIC = new Set(['lounge', 'lobby', 'bar', 'grill', 'terrace', 'garden', 'market', 'pool', 'deli', 'buffet', 'steak',
   'steakhouse', 'pizza', 'pizzeria', 'ramen', 'sushi', 'bakery', 'bakeshop', 'tea', 'brew', 'pub', 'cafeteria', 'spectrum', 'vue',
   'cucina', 'trattoria', 'izakaya', 'diner', 'canteen', 'eatery', 'room', 'club', 'hall', 'table', 'feast', 'kusina']);
+const PLACEWORDS = new Set(['branch', 'branches', 'only', 'city', 'hotel', 'road', 'street', 'avenue', 'ave', 'blvd', 'boulevard',
+  'floor', 'level', 'ground', 'tower', 'center', 'centre', 'corner', 'cor', 'metro', 'manila', 'philippines', 'mall', 'the', 'and',
+  'with', 'all', 'sm', 'brgy', 'barangay', 'unit', 'bldg', 'building', 'other', 'outlets', 'outlet', 'restaurant', 'participating']);
+// Words naming where a promo applies, or null when it's for all branches.
+export function branchWords(branches) {
+  const b = String(branches || '').trim();
+  if (!b || /nationwide|all (branches|stores|outlets)|participating|multiple|selected/i.test(b)) return null;
+  const words = norm(b).split(' ').filter((x) => x.length > 2 && !PLACEWORDS.has(x) && !/^\d+$/.test(x));
+  return words.length ? [...new Set(words)] : null;
+}
 const has = (name, x) => name.includes(` ${x} `) || name.includes(` ${x}`);
 
 // Promos for a place: same Google place, or every distinctive word of the promo's restaurant name is in the place's name.
@@ -84,10 +94,10 @@ export function promosFor(place, promos, cards) {
     if (p.google_place_id) return p.google_place_id === place.id;
     const w = (p.match_words && p.match_words.length ? p.match_words : matchWords(p.merchant));
     if (!w.length || !w.every((x) => has(title, x))) return false;
-    if (w.length === 1 && GENERIC.has(w[0])) {
-      const where = matchWords(p.branches || '').filter((x) => !GENERIC.has(x));
-      return where.length > 0 && where.some((x) => has(name, x));
-    }
+    // Promos for named branches (e.g. "SM Megamall") only show at places whose name or address mentions one of them.
+    const where = branchWords(p.branches);
+    if (where) return where.some((x) => has(name, x));
+    if (w.length === 1 && GENERIC.has(w[0])) return false;
     return true;
   });
 }

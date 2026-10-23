@@ -8,6 +8,7 @@ import { SECRET, rpc, bearer, getUser } from '../_server.js';
 // Each promo links back to the bank's page. Safe to call often: a short cooldown stops repeat runs.
 const BANKS = [
   { bank: 'BDO', site: 'bdo.com.ph', q: 'dining promo credit card', re: /^https:\/\/(www\.)?bdo\.com\.ph\/personal\/cards\/credit-and-debit-card-promos\/[^?#]+/ },
+  { bank: 'BDO', site: 'deals.bdo.com.ph', q: 'dining restaurant off', re: /^https:\/\/(www\.)?deals\.bdo\.com\.ph\/[^?#]+/ },
   { bank: 'BPI', site: 'bpi.com.ph', q: 'promo dining restaurant', re: /^https:\/\/(www\.)?bpi\.com\.ph\/personal\/rewards-and-promotions\/promos\/[^?#]+/ },
   { bank: 'Metrobank', site: 'metrobank.com.ph', q: 'promos dining discount', re: /^https:\/\/(www\.)?metrobank\.com\.ph\/promos\/[^?#]+/ },
   { bank: 'Security Bank', site: 'securitybank.com', q: 'credit card promo dining', re: /^https:\/\/(www\.)?securitybank\.com\/[^?#]*promo[^?#]*/i },
