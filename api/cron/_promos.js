@@ -111,7 +111,9 @@ export default async function handler(req, res) {
   if (!SECRET) return send(res, 503, { error: 'LP_SERVER_SECRET not set' });
   const ua = String(req.headers['user-agent'] || '');
   const fromCron = ua.includes('vercel-cron');
-  if (!fromCron) {
+  const hop = Number(req.query.hop || 0);
+  const chained = hop > 0 && req.headers['x-ub-chain'] === SECRET;
+  if (!fromCron && !chained) {
     // Anyone may nudge it, but not more than once every 2 minutes.
     const last = await cacheGet('promos:lastrun');
     if (last && Date.now() - last.t < 120e3) return send(res, 429, { error: 'Ran recently, try again in a couple of minutes' });
@@ -131,5 +133,12 @@ export default async function handler(req, res) {
   results.forEach((r) => { queue.urls[r.url] = { ...queue.urls[r.url], read: Date.now(), promos: r.promos || 0, error: r.error || null }; });
   await cachePut(QUEUE, queue, 60 * 86400);
   const left = Object.values(queue.urls).filter((v) => !v.read || v.read < weekAgo).length;
-  send(res, 200, { discovered, pages: Object.keys(queue.urls).length, read: results, left });
+  // More pages waiting: start the next batch (up to 25 in a row), so a day's run reads everything.
+  if (left > 0 && hop < 25) {
+    const host = String(req.headers['x-forwarded-host'] || req.headers.host || '');
+    if (host) {
+      await fetch(`https://${host}/api/cron/promos?hop=${hop + 1}`, { headers: { 'x-ub-chain': SECRET }, signal: AbortSignal.timeout(2500) }).catch(() => {});
+    }
+  }
+  send(res, 200, { discovered, pages: Object.keys(queue.urls).length, read: results, left, hop });
 }
