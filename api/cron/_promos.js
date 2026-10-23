@@ -44,15 +44,16 @@ async function brave(q) {
   const r = await fetch(`https://api.search.brave.com/res/v1/web/search?${params}`, { headers: { Accept: 'application/json', 'X-Subscription-Token': key }, signal: AbortSignal.timeout(8000) });
   if (!r.ok) throw new Error(`Search ${r.status}`);
   const d = await r.json();
-  return ((d.web && d.web.results) || []).map((x) => x.url);
+  const strip = (t) => String(t || '').replace(/<[^>]+>/g, '').replace(/&#x27;|&#39;/g, "'").replace(/&amp;/g, '&').trim();
+  return ((d.web && d.web.results) || []).map((x) => ({ url: x.url, snippet: `${strip(x.title)}\n${strip(x.description)}\n${(x.extra_snippets || []).map(strip).join('\n')}`.slice(0, 1500) }));
 }
 
 async function discover(queue) {
   const found = { ...(queue.urls || {}) };
   // Two searches per bank (dining + restaurant); pages that already ended are skipped when read.
   await Promise.all(BANKS.flatMap((b) => [`site:${b.site} ${b.q}`, `site:${b.site} restaurant discount promo`].map(async (q) => {
-    const urls = await brave(q).catch(() => []);
-    urls.forEach((u) => { const m = String(u).match(b.re); if (m && !found[m[0]]) found[m[0]] = { bank: b.bank, read: null }; });
+    const hits = await brave(q).catch(() => []);
+    hits.forEach((h) => { const m = String(h.url).match(b.re); if (m && !found[m[0]]) found[m[0]] = { bank: b.bank, read: null, snippet: h.snippet }; });
   })));
   // Keep the queue small: drop pages not seen again within 60 days.
   return { urls: found, discoveredAt: Date.now() };
@@ -73,11 +74,14 @@ function pageText(html) {
     .replace(/[ \t]+/g, ' ').replace(/\n\s*\n+/g, '\n').trim().slice(0, 16000);
 }
 
-async function readPage(url, bank) {
-  const r = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml', 'Accept-Language': 'en-PH,en;q=0.9' }, signal: AbortSignal.timeout(15000) });
-  if (!r.ok) return { url, error: `fetch ${r.status}` };
-  const text = pageText(await r.text());
-  if (text.length < 200) return { url, error: 'empty page' };
+async function readPage(url, bank, snippet) {
+  let text = null;
+  let fromSnippet = false;
+  const r = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml', 'Accept-Language': 'en-PH,en;q=0.9' }, signal: AbortSignal.timeout(12000) }).catch(() => null);
+  if (r && r.ok) text = pageText(await r.text());
+  // Some bank sites block servers; then use the search result's title and description instead.
+  if ((!text || text.length < 200) && snippet && snippet.length > 40) { text = snippet; fromSnippet = true; }
+  if (!text || text.length < 40) return { url, error: r ? `fetch ${r.status}` : 'fetch timeout' };
   const key = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
   const ai = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -87,7 +91,7 @@ async function readPage(url, bank) {
       model: process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001',
       max_tokens: 3000,
       messages: [{ role: 'user', content:
-        `Today is ${today()}. Below is the text of a ${bank} bank promo page (${url}). ` +
+        `Today is ${today()}. Below is ${fromSnippet ? 'a search-result summary of' : 'the text of'} a ${bank} bank promo page (${url}). ` +
         'List ONLY promos at restaurants, cafés, bars, bakeries or food places you can go to (skip hotel rooms, travel, shopping, gadgets, installment plans, and food delivery or ride apps such as Foodpanda, GrabFood or Grab). ' +
         'One entry per restaurant brand. Use only what the page says; do not guess. Skip promos that already ended. Reply with JSON only, no code fences:\n' +
         '{"promos": [{"merchant": "<restaurant name as written>", "branches": "<which branches/locations, or empty if all>", ' +
@@ -108,6 +112,7 @@ async function readPage(url, bank) {
       match_words: matchWords(p.merchant), branches: String(p.branches || '').slice(0, 160) || null,
       discount: String(p.discount || '').trim().slice(0, 80), details: String(p.details || '').slice(0, 400) || null,
       min_spend: Number.isFinite(Number(p.min_spend)) && Number(p.min_spend) > 0 ? Number(p.min_spend) : null, ends_on: ends,
+      ...(fromSnippet ? { details: [String(p.details || '').slice(0, 300), 'See the bank page for the full list and terms.'].filter(Boolean).join(' ') } : {}),
     };
   }).filter((p) => p.merchant && p.discount && (!p.ends_on || p.ends_on >= today()));
   const saved = await rpc('replace_bank_promos', { p_secret: SECRET, p_source_url: url, p_rows: rows });
@@ -148,7 +153,7 @@ export default async function handler(req, res) {
   // Stop waiting after 42 s so the batch always finishes (and starts the next one) inside the 60 s limit.
   const deadline = new Promise((r) => setTimeout(() => r('late'), 42000));
   const results = (await Promise.all(todo.map(([url, v]) => Promise.race([
-    readPage(url, v.bank).catch((e) => ({ url, error: String(e.message || e).slice(0, 80) })),
+    readPage(url, v.bank, v.snippet).catch((e) => ({ url, error: String(e.message || e).slice(0, 80) })),
     deadline.then(() => ({ url, error: 'slow' })),
   ]))));
   results.forEach((r) => { queue.urls[r.url] = { ...queue.urls[r.url], read: Date.now(), promos: r.promos || 0, error: r.error || null }; });
