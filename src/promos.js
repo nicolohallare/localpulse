@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase, ensureUser, currentUser } from './lib';
 import { Icon, Sheet, Spinner, Notice, Empty } from './ui';
+import { compressImage } from './media';
 
 // Credit card dining promos: read from banks' promo pages (daily) and submitted by people (approved by admins).
 // They're matched to restaurants by name, so one promo covers every branch unless it names specific ones.
@@ -108,7 +109,7 @@ export function PromoCard({ p, onOpenName }) {
       )}
       <div className="row-between">
         <span className="tiny muted">{p.cards || `${p.bank} cards`}{p.source === 'community' ? ' · shared by a user' : ''}</span>
-        {p.source_url && <a className="link-out tiny" href={p.source_url} target="_blank" rel="noreferrer">Full terms <Icon name="external" size={12} /></a>}
+        {/^https?:/.test(p.source_url || '') && <a className="link-out tiny" href={p.source_url} target="_blank" rel="noreferrer">Full terms <Icon name="external" size={12} /></a>}
       </div>
     </div>
   );
@@ -196,6 +197,7 @@ export function PromosAdmin() {
   }
   return (
     <div className="stack-12">
+      <ImportPromos onDone={load} />
       {stats && <p className="small muted">{stats.count || 0} live promos · {Object.entries(stats.by).map(([b, n]) => `${b} ${n}`).join(' · ')}</p>}
       {!rows && <Spinner />}
       {rows && rows.length === 0 && <Empty icon="tag" title="No promos waiting">Promos people share show up here for approval.</Empty>}
@@ -239,5 +241,64 @@ export function CardPromosHere({ place }) {
       {editCards && <MyCardsSheet onClose={() => setEditCards(false)} />}
       {submitting && <SubmitPromoSheet place={place} onClose={() => setSubmitting(false)} />}
     </section>
+  );
+}
+
+const toB64 = (blob) => new Promise((resolve, reject) => {
+  const r = new FileReader();
+  r.onload = () => resolve(String(r.result).split(',')[1]);
+  r.onerror = reject;
+  r.readAsDataURL(blob);
+});
+
+// Admin: add promos from a bank page that blocks our reader (e.g. BDO). Paste the page text or attach screenshots.
+function ImportPromos({ onDone }) {
+  const [open, setOpen] = useState(false);
+  const [bank, setBank] = useState('BDO');
+  const [url, setUrl] = useState('');
+  const [text, setText] = useState('');
+  const [shots, setShots] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+  async function go() {
+    setBusy(true); setResult(null);
+    try {
+      const images = [];
+      for (const f of shots.slice(0, 5)) images.push(await toB64(await compressImage(f, 1600, 0.8)));
+      const { data } = await supabase.auth.getSession();
+      const token = data && data.session && data.session.access_token;
+      const r = await fetch('/api/cron/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ bank, url: url.trim(), text, images }),
+      });
+      const d = await r.json().catch(() => ({}));
+      setResult(d);
+      if (d.saved) { setText(''); setShots([]); setUrl(''); loadPromos(true); onDone && onDone(); }
+    } catch (e) {
+      setResult({ error: 'Couldn’t send it. Check your connection.' });
+    }
+    setBusy(false);
+  }
+  if (!open) return <button className="btn btn-primary" onClick={() => setOpen(true)}><Icon name="plus" size={18} /> Add promos from a bank page</button>;
+  return (
+    <div className="card stack-10">
+      <span className="strong">Add promos from a bank page</span>
+      <span className="small muted">For banks that block our reader (like BDO). Open the promo page on your phone or computer, then either select all the text and paste it here, or take screenshots. The AI picks out the restaurant promos and they go live right away.</span>
+      <label className="field"><span className="field-label">Bank</span>
+        <select value={bank} onChange={(e) => setBank(e.target.value)}>{BANKS.map((b) => <option key={b}>{b}</option>)}</select>
+      </label>
+      <label className="field"><span className="field-label">Link to the page (recommended)</span><input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://www.bdo.com.ph/…" inputMode="url" /></label>
+      <label className="field"><span className="field-label">Page text</span><textarea rows={5} value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste the whole page here (select all → copy → paste)" /></label>
+      <label className="field"><span className="field-label">…or screenshots (up to 5)</span>
+        <input type="file" accept="image/*" multiple onChange={(e) => setShots(Array.from(e.target.files || []).slice(0, 5))} />
+      </label>
+      <button className="btn btn-primary" disabled={busy || (!text.trim() && !shots.length)} onClick={go}>{busy ? 'Reading… (up to a minute)' : 'Read and add promos'}</button>
+      {result && result.error && <Notice tone="warn">{result.error}</Notice>}
+      {result && !result.error && (
+        <Notice>{result.saved ? `Added ${result.saved} promo${result.saved === 1 ? '' : 's'}: ${result.promos.slice(0, 8).map((p) => `${p.merchant} (${p.discount})`).join(', ')}${result.promos.length > 8 ? '…' : ''}` : 'No restaurant promos found on that page.'}</Notice>
+      )}
+      <button className="link-btn left" onClick={() => setOpen(false)}>Close</button>
+    </div>
   );
 }

@@ -1,5 +1,5 @@
 import { send } from '../_lib.js';
-import { SECRET, rpc } from '../_server.js';
+import { SECRET, rpc, bearer, getUser } from '../_server.js';
 
 // Bank card dining promos, read from the banks' own promo pages.
 // 1) Once a week: a web search per bank finds promo pages published in the last month.
@@ -79,6 +79,44 @@ function pageText(html) {
     .replace(/[ \t]+/g, ' ').replace(/\n\s*\n+/g, '\n').trim().slice(0, 16000);
 }
 
+// Ask the AI for the restaurant promos in a bank page's text (or screenshots of it).
+async function extractPromos({ bank, url, text, images, fromSnippet }) {
+  const key = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
+  const ai = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+    signal: AbortSignal.timeout(images && images.length ? 50000 : 28000),
+    body: JSON.stringify({
+      model: process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001',
+      max_tokens: 3000,
+      messages: [{ role: 'user', content: [...(images || []).map((b64) => ({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } })), { type: 'text', text:
+        `Today is ${today()}. Below is ${images && images.length ? 'screenshots of' : fromSnippet ? 'a search-result summary of' : 'the text of'} a ${bank} bank promo page${url ? ` (${url})` : ''}. ` +
+        'List ONLY promos at restaurants, cafés, bars, bakeries or food places you can go to (skip hotel rooms, travel, shopping, gadgets, installment plans, and food delivery or ride apps such as Foodpanda, GrabFood or Grab). ' +
+        'One entry per restaurant brand. Use only what the page says; do not guess. Skip promos that already ended. Reply with JSON only, no code fences:\n' +
+        '{"promos": [{"merchant": "<restaurant name as written>", "branches": "<which branches/locations, or empty if all>", ' +
+        '"discount": "<short, e.g. 20% off, Free dessert, 2+1 buffet>", "details": "<one sentence: how to get it, key conditions>", ' +
+        '"min_spend": <number in pesos or null>, "ends_on": "<YYYY-MM-DD or empty>", "cards": "<which cards, e.g. BDO credit cards>"}]}\n\n' +
+        (text ? `PAGE TEXT:\n${text}` : '') }] }],
+    }),
+  });
+  const data = await ai.json();
+  if (!ai.ok) return { error: `ai ${ai.status}` };
+  const out = (data.content && data.content[0] && data.content[0].text) || '';
+  let parsed;
+  try { parsed = JSON.parse(out.slice(out.indexOf('{'), out.lastIndexOf('}') + 1)); } catch (e) { return { error: 'unreadable' }; }
+  const rows = (Array.isArray(parsed.promos) ? parsed.promos : []).slice(0, 80).map((p) => {
+    const ends = /^\d{4}-\d{2}-\d{2}$/.test(String(p.ends_on || '')) ? p.ends_on : '';
+    return {
+      bank, cards: String(p.cards || `${bank} cards`).slice(0, 120), merchant: String(p.merchant || '').trim().slice(0, 120),
+      match_words: matchWords(p.merchant), branches: String(p.branches || '').slice(0, 160) || null,
+      discount: String(p.discount || '').trim().slice(0, 80), details: String(p.details || '').slice(0, 400) || null,
+      min_spend: Number.isFinite(Number(p.min_spend)) && Number(p.min_spend) > 0 ? Number(p.min_spend) : null, ends_on: ends,
+      ...(fromSnippet ? { details: [String(p.details || '').slice(0, 300), 'See the bank page for the full list and terms.'].filter(Boolean).join(' ') } : {}),
+    };
+  });
+  return { rows };
+}
+
 async function readPage(url, bank, snippet) {
   let text = null;
   let fromSnippet = false;
@@ -92,39 +130,9 @@ async function readPage(url, bank, snippet) {
     return { url, error: 'gone', promos: 0 };
   }
   if (!text || text.length < 40) return { url, error: r ? `fetch ${r.status}` : 'fetch timeout' };
-  const key = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
-  const ai = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-    signal: AbortSignal.timeout(28000),
-    body: JSON.stringify({
-      model: process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001',
-      max_tokens: 3000,
-      messages: [{ role: 'user', content:
-        `Today is ${today()}. Below is ${fromSnippet ? 'a search-result summary of' : 'the text of'} a ${bank} bank promo page (${url}). ` +
-        'List ONLY promos at restaurants, cafés, bars, bakeries or food places you can go to (skip hotel rooms, travel, shopping, gadgets, installment plans, and food delivery or ride apps such as Foodpanda, GrabFood or Grab). ' +
-        'One entry per restaurant brand. Use only what the page says; do not guess. Skip promos that already ended. Reply with JSON only, no code fences:\n' +
-        '{"promos": [{"merchant": "<restaurant name as written>", "branches": "<which branches/locations, or empty if all>", ' +
-        '"discount": "<short, e.g. 20% off, Free dessert, 2+1 buffet>", "details": "<one sentence: how to get it, key conditions>", ' +
-        '"min_spend": <number in pesos or null>, "ends_on": "<YYYY-MM-DD or empty>", "cards": "<which cards, e.g. BDO credit cards>"}]}\n\n' +
-        `PAGE TEXT:\n${text}` }],
-    }),
-  });
-  const data = await ai.json();
-  if (!ai.ok) return { url, error: `ai ${ai.status}` };
-  const out = (data.content && data.content[0] && data.content[0].text) || '';
-  let parsed;
-  try { parsed = JSON.parse(out.slice(out.indexOf('{'), out.lastIndexOf('}') + 1)); } catch (e) { return { url, error: 'unreadable' }; }
-  const rows = (Array.isArray(parsed.promos) ? parsed.promos : []).slice(0, 80).map((p) => {
-    const ends = /^\d{4}-\d{2}-\d{2}$/.test(String(p.ends_on || '')) ? p.ends_on : '';
-    return {
-      bank, cards: String(p.cards || `${bank} cards`).slice(0, 120), merchant: String(p.merchant || '').trim().slice(0, 120),
-      match_words: matchWords(p.merchant), branches: String(p.branches || '').slice(0, 160) || null,
-      discount: String(p.discount || '').trim().slice(0, 80), details: String(p.details || '').slice(0, 400) || null,
-      min_spend: Number.isFinite(Number(p.min_spend)) && Number(p.min_spend) > 0 ? Number(p.min_spend) : null, ends_on: ends,
-      ...(fromSnippet ? { details: [String(p.details || '').slice(0, 300), 'See the bank page for the full list and terms.'].filter(Boolean).join(' ') } : {}),
-    };
-  }).filter((p) => p.merchant && p.discount && (!p.ends_on || p.ends_on >= today()) && (!fromSnippet || p.ends_on));
+  const ex = await extractPromos({ bank, url, text, fromSnippet });
+  if (ex.error) return { url, error: ex.error };
+  const rows = ex.rows.filter((p) => p.merchant && p.discount && (!p.ends_on || p.ends_on >= today()) && (!fromSnippet || p.ends_on));
   const saved = await rpc('replace_bank_promos', { p_secret: SECRET, p_source_url: url, p_rows: rows });
   return { url, promos: saved };
 }
@@ -159,7 +167,7 @@ export default async function handler(req, res) {
     await cachePut(QUEUE, queue, 60 * 86400);
   }
   const weekAgo = Date.now() - 10 * 864e5; // re-read each page every 10 days
-  const todo = Object.entries(queue.urls).filter(([, v]) => !v.read || v.read < weekAgo).slice(0, discovered ? 2 : PER_RUN);
+  const todo = Object.entries(queue.urls).filter(([, v]) => !v.manual && (!v.read || v.read < weekAgo)).slice(0, discovered ? 2 : PER_RUN);
   // Stop waiting after 42 s so the batch always finishes (and starts the next one) inside the 60 s limit.
   const deadline = new Promise((r) => setTimeout(() => r('late'), 42000));
   const results = (await Promise.all(todo.map(([url, v]) => Promise.race([
@@ -168,7 +176,7 @@ export default async function handler(req, res) {
   ]))));
   results.forEach((r) => { queue.urls[r.url] = { ...queue.urls[r.url], read: Date.now(), promos: r.promos || 0, error: r.error || null }; });
   await cachePut(QUEUE, queue, 60 * 86400);
-  const left = Object.values(queue.urls).filter((v) => !v.read || v.read < weekAgo).length;
+  const left = Object.values(queue.urls).filter((v) => !v.manual && (!v.read || v.read < weekAgo)).length;
   // More pages waiting: start the next batch (up to 25 in a row), so a day's run reads everything.
   if (left > 0 && hop < 25) {
     const host = String(req.headers['x-forwarded-host'] || req.headers.host || '');
@@ -177,4 +185,36 @@ export default async function handler(req, res) {
     }
   }
   send(res, 200, { discovered, pages: Object.keys(queue.urls).length, read: results, left, hop });
+}
+
+// POST /api/cron/import — an admin pastes a bank promo page's text (or screenshots) from their own browser,
+// for banks whose sites block servers (e.g. BDO). Body: { bank, url?, text?, images?: [base64 jpeg] }.
+export async function importPromos(req, res) {
+  if (req.method !== 'POST') return send(res, 405, { error: 'POST only' });
+  const token = bearer(req);
+  const user = await getUser(token);
+  if (!user) return send(res, 401, { error: 'Sign in as an admin first' });
+  const isAdmin = await rpc('is_admin', {}, token).catch(() => false);
+  if (!isAdmin) return send(res, 403, { error: 'Admins only' });
+  const b = req.body || {};
+  const bank = String(b.bank || '').trim().slice(0, 40);
+  const url = /^https?:\/\//.test(String(b.url || '')) ? String(b.url).trim().slice(0, 500) : '';
+  const text = String(b.text || '').replace(/\s+\n/g, '\n').slice(0, 30000);
+  const images = (Array.isArray(b.images) ? b.images : []).filter((x) => typeof x === 'string' && x.length < 3e6).slice(0, 5);
+  if (bank.length < 2 || (!text.trim() && !images.length)) return send(res, 400, { error: 'Pick the bank and paste the page text or add screenshots' });
+  const ex = await extractPromos({ bank, url, text, images });
+  if (ex.error) return send(res, 200, { error: `Couldn't read it (${ex.error}). Try again or use screenshots.` });
+  const rows = ex.rows.filter((p) => p.merchant && p.discount && (!p.ends_on || p.ends_on >= today()));
+  let n = 0;
+  if (rows.length) {
+    let h = 0; for (const c of text.slice(0, 2000)) h = (h * 31 + c.charCodeAt(0)) | 0;
+    const key = url || `manual:${bank}:${today()}:${Math.abs(h)}`;
+    n = await rpc('replace_bank_promos', { p_secret: SECRET, p_source_url: key, p_rows: rows });
+    if (url) { // the automatic reader leaves this page alone from now on
+      const queue = (await cacheGet(QUEUE)) || { urls: {}, discoveredAt: 0 };
+      queue.urls[url] = { ...(queue.urls[url] || {}), bank, manual: true, read: Date.now(), promos: n };
+      await cachePut(QUEUE, queue, 60 * 86400);
+    }
+  }
+  send(res, 200, { saved: n, promos: rows.map((r) => ({ merchant: r.merchant, discount: r.discount, ends_on: r.ends_on || null })) });
 }
