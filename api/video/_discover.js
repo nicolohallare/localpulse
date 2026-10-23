@@ -64,11 +64,16 @@ async function searchStage(id, key, cc) {
   const words = cjk ? [name.split(/[-–|,(（]/)[0].replace(/\s+/g, '').slice(0, 12)] : keyWords(name);
   if (!words.length || !words[0]) return { urls: [], words: [] };
   const brand = name.split(/[-–|,(]/)[0].trim();
-  const urls = await braveSearch(`site:tiktok.com "${brand}" ${city}`, key, cc);
-  const videoUrls = [...new Set(urls
-    .map((u) => (u.match(/^https:\/\/(?:www\.)?tiktok\.com\/@[^/?#]+\/video\/\d+/) || [])[0])
-    .filter(Boolean))].slice(0, 10);
-  return { urls: videoUrls, words };
+  const plain = cjk ? brand : words.join(' ');
+  // Strict first, then looser: exact name + city, then the name's key words + city, then name + "tiktok".
+  const queries = [...new Set([`site:tiktok.com "${brand}" ${city}`, `site:tiktok.com ${plain} ${city}`, `${brand} ${city} tiktok`])];
+  const found = new Set();
+  for (const q of queries) {
+    const urls = await braveSearch(q.trim(), key, cc);
+    urls.forEach((u) => { const m = u.match(/^https:\/\/(?:www\.)?tiktok\.com\/@[^/?#]+\/video\/\d+/); if (m) found.add(m[0]); });
+    if (found.size >= 3) break;
+  }
+  return { urls: [...found].slice(0, 10), words };
 }
 
 export default async function handler(req, res) {
