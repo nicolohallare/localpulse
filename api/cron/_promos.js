@@ -20,7 +20,7 @@ const BANKS = [
   { bank: 'AUB', site: 'aub.com.ph', q: 'credit card promo dining', re: /^https:\/\/(www\.)?aub\.com\.ph\/[^?#]*promo[^?#]*/i },
 ];
 const QUEUE = 'promos:queue';
-const PER_RUN = 8;
+const PER_RUN = 6;
 const today = () => new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10); // Manila date
 
 const cacheGet = (key) => rpc('cache_get', { p_secret: SECRET, p_key: key }).catch(() => null);
@@ -75,7 +75,7 @@ async function readPage(url, bank) {
   const ai = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-    signal: AbortSignal.timeout(35000),
+    signal: AbortSignal.timeout(28000),
     body: JSON.stringify({
       model: process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001',
       max_tokens: 3000,
@@ -109,6 +109,15 @@ async function readPage(url, bank) {
 
 export default async function handler(req, res) {
   if (!SECRET) return send(res, 503, { error: 'LP_SERVER_SECRET not set' });
+  // ?peek=<bank promo url>: show the text the reader sees on that page (bank pages only).
+  if (req.query.peek) {
+    const url = String(req.query.peek);
+    if (!BANKS.some((b) => b.re.test(url))) return send(res, 400, { error: 'Not a bank promo page' });
+    const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; UbeBananaBot/1.0)', Accept: 'text/html' }, signal: AbortSignal.timeout(10000) }).catch((e) => ({ ok: false, status: String(e.message) }));
+    if (!r.ok) return send(res, 200, { status: r.status });
+    const html = await r.text();
+    return send(res, 200, { status: r.status, htmlLength: html.length, text: pageText(html).slice(0, 2500) });
+  }
   const ua = String(req.headers['user-agent'] || '');
   const fromCron = ua.includes('vercel-cron');
   const hop = Number(req.query.hop || 0);
@@ -129,7 +138,12 @@ export default async function handler(req, res) {
   }
   const weekAgo = Date.now() - 7 * 864e5;
   const todo = Object.entries(queue.urls).filter(([, v]) => !v.read || v.read < weekAgo).slice(0, discovered ? 2 : PER_RUN);
-  const results = await Promise.all(todo.map(([url, v]) => readPage(url, v.bank).catch((e) => ({ url, error: String(e.message || e).slice(0, 80) }))));
+  // Stop waiting after 42 s so the batch always finishes (and starts the next one) inside the 60 s limit.
+  const deadline = new Promise((r) => setTimeout(() => r('late'), 42000));
+  const results = (await Promise.all(todo.map(([url, v]) => Promise.race([
+    readPage(url, v.bank).catch((e) => ({ url, error: String(e.message || e).slice(0, 80) })),
+    deadline.then(() => ({ url, error: 'slow' })),
+  ]))));
   results.forEach((r) => { queue.urls[r.url] = { ...queue.urls[r.url], read: Date.now(), promos: r.promos || 0, error: r.error || null }; });
   await cachePut(QUEUE, queue, 60 * 86400);
   const left = Object.values(queue.urls).filter((v) => !v.read || v.read < weekAgo).length;
