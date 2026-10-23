@@ -40,7 +40,7 @@ export function matchWords(name) {
 async function brave(q) {
   const key = process.env.BRAVE_SEARCH_KEY;
   if (!key) return [];
-  const params = new URLSearchParams({ q, count: '20', country: 'PH', freshness: 'pm' });
+  const params = new URLSearchParams({ q, count: '20', country: 'PH', freshness: 'py' });
   const r = await fetch(`https://api.search.brave.com/res/v1/web/search?${params}`, { headers: { Accept: 'application/json', 'X-Subscription-Token': key }, signal: AbortSignal.timeout(8000) });
   if (!r.ok) throw new Error(`Search ${r.status}`);
   const d = await r.json();
@@ -49,10 +49,11 @@ async function brave(q) {
 
 async function discover(queue) {
   const found = { ...(queue.urls || {}) };
-  await Promise.all(BANKS.map(async (b) => {
-    const urls = await brave(`site:${b.site} ${b.q}`).catch(() => []);
+  // Two searches per bank (dining + restaurant); pages that already ended are skipped when read.
+  await Promise.all(BANKS.flatMap((b) => [`site:${b.site} ${b.q}`, `site:${b.site} restaurant discount promo`].map(async (q) => {
+    const urls = await brave(q).catch(() => []);
     urls.forEach((u) => { const m = String(u).match(b.re); if (m && !found[m[0]]) found[m[0]] = { bank: b.bank, read: null }; });
-  }));
+  })));
   // Keep the queue small: drop pages not seen again within 60 days.
   return { urls: found, discoveredAt: Date.now() };
 }
