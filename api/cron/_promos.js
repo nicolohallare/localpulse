@@ -41,7 +41,7 @@ async function brave(q) {
   const key = process.env.BRAVE_SEARCH_KEY;
   if (!key) return [];
   const params = new URLSearchParams({ q, count: '20', country: 'PH', freshness: 'pm' });
-  const r = await fetch(`https://api.search.brave.com/res/v1/web/search?${params}`, { headers: { Accept: 'application/json', 'X-Subscription-Token': key } });
+  const r = await fetch(`https://api.search.brave.com/res/v1/web/search?${params}`, { headers: { Accept: 'application/json', 'X-Subscription-Token': key }, signal: AbortSignal.timeout(8000) });
   if (!r.ok) throw new Error(`Search ${r.status}`);
   const d = await r.json();
   return ((d.web && d.web.results) || []).map((x) => x.url);
@@ -66,7 +66,7 @@ function pageText(html) {
 }
 
 async function readPage(url, bank) {
-  const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; UbeBananaBot/1.0; +https://localpulse-two.vercel.app)', Accept: 'text/html' } });
+  const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; UbeBananaBot/1.0; +https://localpulse-two.vercel.app)', Accept: 'text/html' }, signal: AbortSignal.timeout(10000) });
   if (!r.ok) return { url, error: `fetch ${r.status}` };
   const text = pageText(await r.text());
   if (text.length < 200) return { url, error: 'empty page' };
@@ -74,9 +74,10 @@ async function readPage(url, bank) {
   const ai = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+    signal: AbortSignal.timeout(35000),
     body: JSON.stringify({
       model: process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001',
-      max_tokens: 4000,
+      max_tokens: 3000,
       messages: [{ role: 'user', content:
         `Today is ${today()}. Below is the text of a ${bank} bank promo page (${url}). ` +
         'List ONLY promos at restaurants, cafés, bars, bakeries or food places (skip hotels rooms, travel, shopping, gadgets, installment plans unless it is a food place). ' +
@@ -121,9 +122,10 @@ export default async function handler(req, res) {
   if (!queue.discoveredAt || Date.now() - queue.discoveredAt > 6 * 864e5 || req.query.discover === '1') {
     queue = await discover(queue);
     discovered = true;
+    await cachePut(QUEUE, queue, 60 * 86400);
   }
   const weekAgo = Date.now() - 7 * 864e5;
-  const todo = Object.entries(queue.urls).filter(([, v]) => !v.read || v.read < weekAgo).slice(0, PER_RUN);
+  const todo = Object.entries(queue.urls).filter(([, v]) => !v.read || v.read < weekAgo).slice(0, discovered ? 2 : PER_RUN);
   const results = await Promise.all(todo.map(([url, v]) => readPage(url, v.bank).catch((e) => ({ url, error: String(e.message || e).slice(0, 80) }))));
   results.forEach((r) => { queue.urls[r.url] = { ...queue.urls[r.url], read: Date.now(), promos: r.promos || 0, error: r.error || null }; });
   await cachePut(QUEUE, queue, 60 * 86400);
