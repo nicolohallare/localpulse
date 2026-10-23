@@ -41,7 +41,12 @@ async function braveSearch(q, key, cc) {
   });
   if (!r.ok) throw new Error(`Brave search failed (${r.status}): ${(await r.text()).slice(0, 150)}`);
   const d = await r.json();
-  return ((d.web && d.web.results) || []).map((x) => x.url);
+  const strip = (t) => String(t || '').replace(/<[^>]+>/g, '').replace(/&#x27;|&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&').trim();
+  return ((d.web && d.web.results) || []).map((x) => ({
+    url: x.url,
+    text: `${strip(x.title)} ${strip(x.description)}`.slice(0, 400),
+    thumb: (x.thumbnail && (x.thumbnail.original || x.thumbnail.src)) || null,
+  }));
 }
 
 async function oembed(url) {
@@ -67,13 +72,17 @@ async function searchStage(id, key, cc) {
   const plain = cjk ? brand : words.join(' ');
   // Strict first, then looser: exact name + city, then the name's key words + city, then name + "tiktok".
   const queries = [...new Set([`site:tiktok.com "${brand}" ${city}`, `site:tiktok.com ${plain} ${city}`, `${brand} ${city} tiktok`])];
-  const found = new Set();
+  const found = new Map(); // url -> { text, thumb } from the search result
   for (const q of queries) {
-    const urls = await braveSearch(q.trim(), key, cc);
-    urls.forEach((u) => { const m = u.match(/^https:\/\/(?:www\.)?tiktok\.com\/@[^/?#]+\/video\/\d+/); if (m) found.add(m[0]); });
+    const results = await braveSearch(q.trim(), key, cc);
+    results.forEach((r) => {
+      const m = String(r.url).match(/^https:\/\/(?:www\.)?tiktok\.com\/@[^/?#]+\/video\/\d+/);
+      if (m && !found.has(m[0])) found.set(m[0], { text: r.text, thumb: r.thumb });
+    });
     if (found.size >= 3) break;
   }
-  return { urls: [...found].slice(0, 10), words };
+  const list = [...found.entries()].slice(0, 10);
+  return { urls: list.map(([u]) => u), info: Object.fromEntries(list), words };
 }
 
 export default async function handler(req, res) {
@@ -94,7 +103,7 @@ export default async function handler(req, res) {
     // Reuse the cached search for this place; fall back to searching here.
     // The paid web search is kept in the database for 14 days per place, so app updates don't repeat it.
     const cc = countryOf(req);
-    const ck = `tiktok:${cc}:${id}`;
+    const ck = `tiktok2:${cc}:${id}`;
     let found = SECRET ? await rpc('cache_get', { p_secret: SECRET, p_key: ck }).catch(() => null) : null;
     if (!found || !Array.isArray(found.urls)) {
       try {
@@ -106,15 +115,17 @@ export default async function handler(req, res) {
         return send(res, 200, { videos: [], error: 'TikTok search unavailable' }, 'public, s-maxage=600');
       }
     }
-    const { urls, words } = found;
+    const { urls, words, info = {} } = found;
     if (!urls.length || !words.length) return send(res, 200, { videos: [] }, HALF_DAY);
 
     const metas = await Promise.all(urls.map(async (url) => ({ url, meta: await oembed(url) })));
     const videos = metas
-      .filter(({ meta }) => meta && meta.videoId)
-      // Keep only videos whose caption (or creator) clearly names this place.
-      .filter(({ meta }) => {
-        const raw = `${meta.title || ''} ${meta.author || ''} ${meta.handle || ''}`;
+      .map(({ url, meta }) => ({ url, meta: { ...(meta || {}), videoId: (meta && meta.videoId) || (url.match(/video\/(\d+)/) || [])[1] } }))
+      .filter(({ meta }) => meta.videoId)
+      // Keep only videos whose caption, search snippet or creator clearly names this place.
+      .filter(({ url, meta }) => {
+        const handle = (url.match(/@([^/]+)/) || [])[1] || '';
+        const raw = `${meta.title || ''} ${meta.author || ''} ${meta.handle || handle} ${(info[url] && info[url].text) || ''}`;
         if (/[^\u0000-\u024f\s\d\p{P}\p{S}]/u.test(words[0] || '')) {
           const a = words[0];
           for (let i = 0; i + 2 <= a.length; i += 1) if (raw.includes(a.slice(i, i + 2))) return true;
@@ -128,10 +139,10 @@ export default async function handler(req, res) {
         url,
         videoId: meta.videoId,
         posted: postedAt(meta.videoId),
-        title: meta.title,
-        author: meta.author,
-        handle: meta.handle,
-        thumb: meta.thumb,
+        title: meta.title || ((info[url] && info[url].text) || '').split(' | ')[0].slice(0, 150) || null,
+        author: meta.author || null,
+        handle: meta.handle || (url.match(/@([^/]+)/) || [])[1] || null,
+        thumb: meta.thumb || (info[url] && info[url].thumb) || null,
       }))
       // Newest first, so recent buzz beats old posts.
       .sort((a, b) => String(b.posted || '').localeCompare(String(a.posted || '')))
