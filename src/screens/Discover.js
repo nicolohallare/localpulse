@@ -407,18 +407,6 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
               </div>
             </section>
           )}
-          {!query && !craving && (
-            <section className="section">
-              <button className="creator-cta" onClick={onAddVideo}>
-                <span className="cta-icon"><Icon name="video" size={22} /></span>
-                <span className="grow">
-                  <span className="strong block">Saw a food TikTok?</span>
-                  <span className="small muted">Pin it to the restaurant — we’ll find the place for you.</span>
-                </span>
-                <Icon name="plus" size={20} />
-              </button>
-            </section>
-          )}
         </>
       )}
 

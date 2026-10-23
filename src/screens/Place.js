@@ -303,10 +303,7 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
               ))}
               {ytVideos.length > 0 && <p className="tiny muted">YouTube search results for this place. Some may mention other places.</p>}
             </div>
-            <button className="dashed-btn" onClick={() => setAddingVideo(true)}>
-              <Icon name="plus" size={18} /> Saw a TikTok or Reel about this place? Add it
-            </button>
-            <button className="link-btn left" onClick={onOpenCreators}>Food creator? Put your videos on Ube Banana →</button>
+            <button className="link-btn left" onClick={() => setAddingVideo(true)}>Made a video about this place? Add yours →</button>
           </div>
         )}
 
