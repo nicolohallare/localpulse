@@ -31,7 +31,51 @@
     },
     {
       "path": "/api/cron/promos",
-      "schedule": "0 20 * * *"
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/promos",
+      "schedule": "14 2 * * *"
+    },
+    {
+      "path": "/api/cron/promos",
+      "schedule": "28 4 * * *"
+    },
+    {
+      "path": "/api/cron/promos",
+      "schedule": "42 6 * * *"
+    },
+    {
+      "path": "/api/cron/promos",
+      "schedule": "56 8 * * *"
+    },
+    {
+      "path": "/api/cron/promos",
+      "schedule": "10 10 * * *"
+    },
+    {
+      "path": "/api/cron/promos",
+      "schedule": "24 12 * * *"
+    },
+    {
+      "path": "/api/cron/promos",
+      "schedule": "38 14 * * *"
+    },
+    {
+      "path": "/api/cron/promos",
+      "schedule": "52 16 * * *"
+    },
+    {
+      "path": "/api/cron/promos",
+      "schedule": "6 18 * * *"
+    },
+    {
+      "path": "/api/cron/promos",
+      "schedule": "20 20 * * *"
+    },
+    {
+      "path": "/api/cron/promos",
+      "schedule": "34 22 * * *"
     }
   ]
 }

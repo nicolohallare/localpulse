@@ -53,7 +53,12 @@ async function discover(queue) {
   // Two searches per bank (dining + restaurant); pages that already ended are skipped when read.
   await Promise.all(BANKS.flatMap((b) => [`site:${b.site} ${b.q}`, `site:${b.site} restaurant discount promo`].map(async (q) => {
     const hits = await brave(q).catch(() => []);
-    hits.forEach((h) => { const m = String(h.url).match(b.re); if (m && !found[m[0]]) found[m[0]] = { bank: b.bank, read: null, snippet: h.snippet }; });
+    hits.forEach((h) => {
+      const m = String(h.url).match(b.re);
+      if (!m) return;
+      if (!found[m[0]]) found[m[0]] = { bank: b.bank, read: null, snippet: h.snippet };
+      else if (!found[m[0]].snippet) found[m[0]] = { ...found[m[0]], snippet: h.snippet, read: found[m[0]].error ? null : found[m[0]].read };
+    });
   })));
   // Keep the queue small: drop pages not seen again within 60 days.
   return { urls: found, discoveredAt: Date.now() };
@@ -148,7 +153,7 @@ export default async function handler(req, res) {
     discovered = true;
     await cachePut(QUEUE, queue, 60 * 86400);
   }
-  const weekAgo = Date.now() - 7 * 864e5;
+  const weekAgo = Date.now() - 10 * 864e5; // re-read each page every 10 days
   const todo = Object.entries(queue.urls).filter(([, v]) => !v.read || v.read < weekAgo).slice(0, discovered ? 2 : PER_RUN);
   // Stop waiting after 42 s so the batch always finishes (and starts the next one) inside the 60 s limit.
   const deadline = new Promise((r) => setTimeout(() => r('late'), 42000));
