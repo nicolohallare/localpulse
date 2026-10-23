@@ -66,15 +66,28 @@ export function usePromos() {
   return promos;
 }
 
+// Words too common to identify a restaurant on their own (e.g. "The Lounge" at a hotel).
+const GENERIC = new Set(['lounge', 'lobby', 'bar', 'grill', 'terrace', 'garden', 'market', 'pool', 'deli', 'buffet', 'steak',
+  'steakhouse', 'pizza', 'pizzeria', 'ramen', 'sushi', 'bakery', 'bakeshop', 'tea', 'brew', 'pub', 'cafeteria', 'spectrum', 'vue',
+  'cucina', 'trattoria', 'izakaya', 'diner', 'canteen', 'eatery', 'room', 'club', 'hall', 'table', 'feast', 'kusina']);
+const has = (name, x) => name.includes(` ${x} `) || name.includes(` ${x}`);
+
 // Promos for a place: same Google place, or every distinctive word of the promo's restaurant name is in the place's name.
+// A one-word generic name (a hotel's "Lounge") also needs a word from its location (e.g. "Fairmont") to match.
 export function promosFor(place, promos, cards) {
   if (!place || !promos) return [];
-  const name = ` ${norm(place.name)} `;
+  const name = ` ${norm(`${place.name} ${place.address || ''}`)} `;
+  const title = ` ${norm(place.name)} `;
   return promos.filter((p) => {
     if (cards && cards.length && !cards.includes(p.bank)) return false;
     if (p.google_place_id) return p.google_place_id === place.id;
     const w = (p.match_words && p.match_words.length ? p.match_words : matchWords(p.merchant));
-    return w.length > 0 && w.every((x) => name.includes(` ${x} `) || name.includes(` ${x}`));
+    if (!w.length || !w.every((x) => has(title, x))) return false;
+    if (w.length === 1 && GENERIC.has(w[0])) {
+      const where = matchWords(p.branches || '').filter((x) => !GENERIC.has(x));
+      return where.length > 0 && where.some((x) => has(name, x));
+    }
+    return true;
   });
 }
 

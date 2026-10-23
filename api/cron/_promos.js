@@ -86,6 +86,11 @@ async function readPage(url, bank, snippet) {
   if (r && r.ok) text = pageText(await r.text());
   // Some bank sites block servers; then use the search result's title and description instead.
   if ((!text || text.length < 200) && snippet && snippet.length > 40) { text = snippet; fromSnippet = true; }
+  if (r && (r.status === 404 || r.status === 410)) {
+    // The bank took the page down: remove its promos.
+    await rpc('replace_bank_promos', { p_secret: SECRET, p_source_url: url, p_rows: [] }).catch(() => {});
+    return { url, error: 'gone', promos: 0 };
+  }
   if (!text || text.length < 40) return { url, error: r ? `fetch ${r.status}` : 'fetch timeout' };
   const key = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
   const ai = await fetch('https://api.anthropic.com/v1/messages', {
@@ -119,7 +124,7 @@ async function readPage(url, bank, snippet) {
       min_spend: Number.isFinite(Number(p.min_spend)) && Number(p.min_spend) > 0 ? Number(p.min_spend) : null, ends_on: ends,
       ...(fromSnippet ? { details: [String(p.details || '').slice(0, 300), 'See the bank page for the full list and terms.'].filter(Boolean).join(' ') } : {}),
     };
-  }).filter((p) => p.merchant && p.discount && (!p.ends_on || p.ends_on >= today()));
+  }).filter((p) => p.merchant && p.discount && (!p.ends_on || p.ends_on >= today()) && (!fromSnippet || p.ends_on));
   const saved = await rpc('replace_bank_promos', { p_secret: SECRET, p_source_url: url, p_rows: rows });
   return { url, promos: saved };
 }
