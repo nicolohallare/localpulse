@@ -142,7 +142,7 @@ export default async function handler(req, res) {
         title: meta.title || ((info[url] && info[url].text) || '').split(' | ')[0].slice(0, 150) || null,
         author: meta.author || null,
         handle: meta.handle || (url.match(/@([^/]+)/) || [])[1] || null,
-        thumb: meta.thumb || (info[url] && info[url].thumb) || null,
+        thumb: meta.thumb || (info[url] && /^https:\/\/(?!(?:www\.)?tiktok\.com\/@)/.test(info[url].thumb || '') ? info[url].thumb : null),
       }))
       // Newest first, so recent buzz beats old posts.
       .sort((a, b) => String(b.posted || '').localeCompare(String(a.posted || '')))
