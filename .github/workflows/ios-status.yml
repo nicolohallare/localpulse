@@ -32,6 +32,8 @@ jobs:
               const builds = await get(`builds?filter[app]=${a.id}&sort=-uploadedDate&limit=5`);
               if (!builds.data.length) note(`  No builds yet for ${a.attributes.bundleId}`);
               for (const b of builds.data) note(`  Build ${b.attributes.version}: ${b.attributes.processingState} · uploaded ${b.attributes.uploadedDate} · expired ${b.attributes.expired} · encryption ${b.attributes.usesNonExemptEncryption}`);
+              const vers = await get(`apps/${a.id}/appStoreVersions?limit=3`).catch(() => ({ data: [] }));
+              for (const v of vers.data) note(`  Version ${v.attributes.versionString}: ${v.attributes.appStoreState || v.attributes.appVersionState}`);
             }
           } catch (e) { console.log(`::error::${e.message}`); process.exit(1); }
           JS
