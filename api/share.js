@@ -171,14 +171,42 @@ const GENERIC = {
   description: 'Verified check-ins, honest scores, and group polls for where to eat in the Philippines.',
 };
 
-function page({ title, description, url, image, appPath }) {
+const PLAY_URL = 'https://play.google.com/store/apps/details?id=com.ubebanana.app';
+const APPLE_ID = '6824764829';
+const APPSTORE_URL = `https://apps.apple.com/ph/app/ube-banana/id${APPLE_ID}`;
+
+// Which stores have the app live right now (checked at most every 6 hours).
+let storesCache = null;
+async function storesLive() {
+  if (storesCache && Date.now() - storesCache.t < 6 * 3600e3) return storesCache;
+  const [play, apple] = await Promise.all([
+    fetch(`${PLAY_URL}&hl=en`, { signal: AbortSignal.timeout(4000) }).then((r) => r.ok).catch(() => false),
+    fetch(`https://itunes.apple.com/lookup?id=${APPLE_ID}&country=ph`, { signal: AbortSignal.timeout(4000) })
+      .then((r) => (r.ok ? r.json() : null)).then((d) => !!(d && d.resultCount > 0)).catch(() => false),
+  ]);
+  storesCache = { play, apple, t: Date.now() };
+  return storesCache;
+}
+
+function platformOf(ua) {
+  if (/android/i.test(ua)) return 'android';
+  if (/iphone|ipad|ipod/i.test(ua)) return 'ios';
+  return 'desktop';
+}
+
+function page({ title, description, url, image, appPath, platform, stores }) {
   const t = escapeHtml(title);
   const d = escapeHtml(description);
   const u = escapeHtml(url);
   const img = escapeHtml(image);
-  const href = escapeHtml(appPath);
-  // JSON.stringify + escaping "<" keeps the path safe inside <script>.
-  const jsPath = JSON.stringify(appPath).replace(/</g, '\\u003c');
+  const web = escapeHtml(appPath);
+  const play = `<a class="btn store" href="${PLAY_URL}">▶ Get it on Google Play</a>`;
+  const apple = `<a class="btn store" href="${APPSTORE_URL}"> Download on the App Store</a>`;
+  const open = (label) => `<a class="btn ${label ? 'alt' : 'store'}" href="${web}">${label || 'Open Ube Banana'}</a>`;
+  let buttons;
+  if (platform === 'android') buttons = stores.play ? play + open('Open in browser instead') : open();
+  else if (platform === 'ios') buttons = (stores.apple ? apple : open() + '<p class="soon">The iPhone app is coming soon to the App Store. Meanwhile, tap Share → Add to Home Screen.</p>') + (stores.apple ? open('Open in browser instead') : '');
+  else buttons = (stores.play ? play : '') + (stores.apple ? apple : '') + open(stores.play || stores.apple ? 'Open on the web' : '');
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -201,28 +229,34 @@ function page({ title, description, url, image, appPath }) {
 <meta name="twitter:title" content="${t}">
 <meta name="twitter:description" content="${d}">
 <meta name="twitter:image" content="${img}">
+<meta name="apple-itunes-app" content="app-id=${APPLE_ID}">
 <style>
-  :root { color-scheme: light dark; }
-  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
-    background: #4B1F7A; color: #fff; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  main { max-width: 480px; padding: 32px 24px; text-align: center; }
-  .brand { font-weight: 700; letter-spacing: .02em; opacity: .9; }
-  .brand::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%;
-    background: #FFD23F; margin-right: 8px; vertical-align: middle; }
-  h1 { font-size: 24px; line-height: 1.25; margin: 16px 0 8px; }
-  p { margin: 0 0 24px; opacity: .85; }
-  a.btn { display: inline-block; background: #FFD23F; color: #24123D; font-weight: 700; text-decoration: none;
-    padding: 12px 22px; border-radius: 999px; }
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #4B1F7A; color: #fff;
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { width: 100%; max-width: 480px; padding: 28px 20px 36px; text-align: center; box-sizing: border-box; }
+  .brand { font-weight: 800; font-size: 20px; letter-spacing: .01em; }
+  .brand span { color: #FFD23F; }
+  .tag { opacity: .8; font-size: 14px; margin: 2px 0 18px; }
+  img.card { width: 100%; border-radius: 18px; border: 3px solid #24123D; box-shadow: 0 5px 0 #24123D; display: block; }
+  h1 { font-size: 20px; line-height: 1.3; margin: 18px 0 6px; }
+  p.d { margin: 0 0 22px; opacity: .85; font-size: 15px; }
+  .btn { display: block; text-decoration: none; font-weight: 800; border-radius: 14px; padding: 15px 18px; margin: 10px 0; }
+  .store { background: #FFD23F; color: #24123D; border: 3px solid #24123D; box-shadow: 0 4px 0 #24123D; font-size: 17px; }
+  .alt { color: #fff; opacity: .85; font-weight: 600; text-decoration: underline; padding: 8px; }
+  .soon { font-size: 13px; opacity: .8; margin: 6px 0 0; }
+  .pitch { margin-top: 26px; font-size: 14px; opacity: .8; }
 </style>
 </head>
 <body>
 <main>
-  <div class="brand">Ube Banana</div>
+  <div class="brand">🍌 Ube <span>Banana</span></div>
+  <div class="tag">Everyone’s a food influencer</div>
+  <img class="card" src="${img}" alt="">
   <h1>${t}</h1>
-  <p>${d}</p>
-  <a class="btn" href="${href}">Open in Ube Banana</a>
+  <p class="d">${d}</p>
+  ${buttons}
+  <p class="pitch">Find what’s good near you, see what food creators are raving about, and check in to tell everyone what to order.</p>
 </main>
-<script>location.replace(${jsPath});</script>
 </body>
 </html>`;
 }
@@ -242,23 +276,29 @@ export default async function handler(req, res) {
     }
   }
 
+  const host = String(req.headers['x-forwarded-host'] || req.headers.host || '');
+  const site = /^[a-z0-9.-]+$/i.test(host) ? `https://${host}` : SITE;
+  const platform = platformOf(String(req.headers['user-agent'] || ''));
+  const stores = await storesLive();
   let html;
   if (meta) {
     const enc = encodeURIComponent(id);
     html = page({
       ...meta,
-      url: `${SITE}/${t}/${enc}`,
-      image: `${SITE}/api/og?t=${t}&id=${enc}`,
+      platform,
+      stores,
+      url: `${site}/${t}/${enc}`,
+      image: `${site}/api/og?t=${t}&id=${enc}&v=2`,
       appPath: `/#/${type.route}/${id}`,
       ...(meta.appPath ? { appPath: meta.appPath } : {}),
     });
   } else {
-    html = page({ ...GENERIC, url: `${SITE}/`, image: `${SITE}/api/og`, appPath: '/' });
+    html = page({ ...GENERIC, platform, stores, url: `${site}/`, image: `${site}/api/og?v=2`, appPath: '/' });
   }
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.setHeader('Cache-Control', meta
-    ? 'public, s-maxage=300, stale-while-revalidate=600'
-    : 'public, s-maxage=60');
+  // The buttons depend on the visitor's phone, so this page isn't shared through the CDN cache.
+  res.setHeader('Cache-Control', 'private, max-age=60');
+  res.setHeader('Vary', 'User-Agent');
   res.status(200).send(html);
 }

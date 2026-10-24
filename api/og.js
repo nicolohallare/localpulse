@@ -128,7 +128,7 @@ function card({ kicker, title, body = [], google = false, maxTitle = 84 }) {
     background: UBE,
     color: WHITE,
     padding: '56px 72px',
-    fontFamily: 'sans-serif',
+    fontFamily: 'Figtree',
     overflow: 'hidden',
   }, [
     // Subtle lighter circles in the background.
@@ -264,53 +264,100 @@ function genericCard() {
   });
 }
 
+
+// A shared check-in. Everything that matters sits in the middle 600px, because Facebook
+// crops link images to a square on phones. The restaurant's photo fills the background.
+const INK = '#24123D';
+const BANANA_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g transform="translate(5 26) scale(0.9)"><path d="M17 31 C 19 74, 72 88, 89 27 C 76 55, 37 63, 25 30 Z" fill="#FFD23F" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/><path d="M27 44 C 38 62, 64 66, 79 46" fill="none" stroke="#F2B705" stroke-width="5" stroke-linecap="round"/><path d="M17 31 L 12 20 L 20 17 L 25 30" fill="#6B4A12" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/><circle cx="89" cy="27" r="4" fill="${INK}"/></g><ellipse cx="35" cy="24" rx="9" ry="11" fill="#fff" stroke="${INK}" stroke-width="3"/><ellipse cx="36.5" cy="26" rx="4.5" ry="6" fill="${INK}"/><circle cx="37.5" cy="23" r="1.6" fill="#fff"/><ellipse cx="65" cy="24" rx="9" ry="11" fill="#fff" stroke="${INK}" stroke-width="3"/><ellipse cx="66.5" cy="26" rx="4.5" ry="6" fill="${INK}"/><circle cx="67.5" cy="23" r="1.6" fill="#fff"/><ellipse cx="25" cy="41" rx="5" ry="3" fill="#D66EBE"/><ellipse cx="75" cy="41" rx="5" ry="3" fill="#D66EBE"/></svg>`;
+const BANANA_URI = `data:image/svg+xml;base64,${btoa(BANANA_SVG)}`;
 const LABEL = ['', 'Skip it', 'Poor', 'Meh', 'Below average', 'Okay', 'Decent', 'Good', 'Great', 'Excellent', 'Unforgettable'];
 
-// A shared check-in: their photo on the left (if any), the score and their take on the right.
+async function placeInfo(id) {
+  const key = process.env.GOOGLE_MAPS_KEY || process.env.REACT_APP_GOOGLE_MAPS_KEY || process.env.GOOGLE_MAPS_BROWSER_KEY;
+  if (!key) return {};
+  try {
+    const r = await fetch(`https://places.googleapis.com/v1/places/${id}`, { headers: { 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': 'displayName,photos' } });
+    if (!r.ok) return {};
+    const d = await r.json();
+    let photo = null;
+    const ph = d.photos && d.photos[0] && d.photos[0].name;
+    if (ph) {
+      const m = await fetch(`https://places.googleapis.com/v1/${ph}/media?maxWidthPx=1200&skipHttpRedirect=true&key=${encodeURIComponent(key)}`).then((x) => (x.ok ? x.json() : null)).catch(() => null);
+      photo = m && m.photoUri;
+    }
+    return { name: (d.displayName && d.displayName.text) || null, photo };
+  } catch (e) {
+    return {};
+  }
+}
+
+function nameSize(t) {
+  const n = t.length;
+  if (n <= 14) return 76;
+  if (n <= 22) return 64;
+  if (n <= 32) return 54;
+  if (n <= 44) return 46;
+  return 40;
+}
+
 async function checkinCard(id) {
   const eid = encodeURIComponent(id);
   const [rows, media] = await Promise.all([
-    rest(`visit_feed?id=eq.${eid}&select=google_place_id,score,review,display_name,dishes_good`),
+    rest(`visit_feed?id=eq.${eid}&select=google_place_id,score,review,display_name`),
     safe(rest(`visit_media?visit_id=eq.${eid}&kind=eq.photo&select=path&order=created_at&limit=1`), []),
   ]);
   const v = rows && rows[0];
   if (!v) throw new Error('Check-in not found');
-  const name = (await placeName(v.google_place_id)) || 'A place worth checking out';
-  const photo = media && media[0] ? `${SUPABASE_URL}/storage/v1/object/public/take-media/${media[0].path}` : null;
-  const w = photo ? 640 : 1056;
-  const good = (v.dishes_good || []).slice(0, 3);
+  const info = await placeInfo(v.google_place_id);
+  const name = clip(info.name || 'a great place to eat', 56);
+  const photo = media && media[0] ? `${SUPABASE_URL}/storage/v1/object/public/take-media/${media[0].path}` : info.photo;
+  const who = clip(v.display_name || 'Someone', 22);
+  const quote = v.review ? clip(v.review, 84) : null;
 
-  const text = div({ flexDirection: 'column', width: w, flexGrow: 1, justifyContent: 'center' }, [
-    div({ fontSize: 26, color: MANGO, letterSpacing: 1, marginBottom: 10 }, `${clip(v.display_name || 'Someone', 26).toUpperCase()} CHECKED IN AT`),
-    div({ fontSize: titleSize(name, photo ? 58 : 76), lineHeight: 1.1, fontWeight: 700, marginBottom: 22 }, clip(name, 60)),
-    div({ alignItems: 'center', marginBottom: 20 }, [
-      div({ background: MANGO, color: UBE_DARK, fontSize: 52, fontWeight: 800, padding: '6px 24px', borderRadius: 20,
-        marginRight: 18, border: `4px solid ${UBE_DARK}` }, `${v.score}/10`),
-      div({ fontSize: 36, fontWeight: 700 }, LABEL[v.score] || ''),
-    ]),
-    v.review ? div({ fontSize: 30, color: SOFT, lineHeight: 1.3, marginBottom: 14 }, `“${clip(v.review, photo ? 90 : 140)}”`) : null,
-    good.length ? div({ fontSize: 26, color: WHITE }, `Order: ${clip(good.join(', '), 60)}`) : null,
-  ].filter(Boolean));
-
-  return div({ width: 1200, height: 630, background: UBE, color: WHITE, fontFamily: 'sans-serif', overflow: 'hidden', position: 'relative' }, [
-    photo ? { type: 'img', props: { src: photo, width: 480, height: 630, style: { width: 480, height: 630, objectFit: 'cover' } } } : null,
-    div({ flexDirection: 'column', flexGrow: 1, padding: '48px 56px' }, [
-      div({ alignItems: 'center', fontSize: 30 }, [
-        div({ width: 18, height: 18, borderRadius: 18, background: MANGO, marginRight: 12 }, []),
-        'Ube Banana',
+  return div({ width: 1200, height: 630, position: 'relative', background: UBE, color: WHITE, fontFamily: 'Figtree', overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }, [
+    photo ? { type: 'img', props: { src: photo, width: 1200, height: 630, style: { position: 'absolute', left: 0, top: 0, width: 1200, height: 630, objectFit: 'cover' } } } : null,
+    // Purple wash so the text always reads; darker in the middle.
+    div({ position: 'absolute', left: 0, top: 0, width: 1200, height: 630,
+      backgroundImage: photo
+        ? 'linear-gradient(90deg, rgba(36,18,61,0.10) 0%, rgba(75,31,122,0.86) 27%, rgba(75,31,122,0.90) 73%, rgba(36,18,61,0.10) 100%)'
+        : 'linear-gradient(135deg, #5E2B96 0%, #4B1F7A 55%, #3D1866 100%)' }, []),
+    div({ flexDirection: 'column', alignItems: 'center', width: 640, textAlign: 'center' }, [
+      div({ alignItems: 'center', marginBottom: 18 }, [
+        { type: 'img', props: { src: BANANA_URI, width: 64, height: 64, style: { marginRight: 12 } } },
+        div({ fontFamily: 'Fraunces', fontSize: 36, color: WHITE }, 'Ube Banana'),
       ]),
-      text,
-      div({ fontSize: 22, color: SOFT }, 'Verified check-in · Everyone’s a food influencer'),
-    ]),
+      div({ fontSize: 24, fontWeight: 800, color: MANGO, letterSpacing: 2, marginBottom: 8 }, `${who.toUpperCase()} CHECKED IN AT`),
+      div({ fontFamily: 'Fraunces', fontSize: nameSize(name), lineHeight: 1.08, color: WHITE, justifyContent: 'center', textAlign: 'center', marginBottom: 22, maxWidth: 640 }, name),
+      div({ alignItems: 'center', marginBottom: quote ? 20 : 8 }, [
+        div({ fontFamily: 'Fraunces', fontSize: 56, color: INK, background: MANGO, padding: '4px 26px', borderRadius: 22, border: `4px solid ${INK}`, boxShadow: `0 6px 0 ${INK}`, marginRight: 16 }, `${v.score}/10`),
+        div({ fontSize: 34, fontWeight: 800, color: WHITE }, LABEL[v.score] || ''),
+      ]),
+      quote ? div({ fontSize: 26, fontWeight: 600, color: 'rgba(255,255,255,0.9)', lineHeight: 1.3, justifyContent: 'center', textAlign: 'center', maxWidth: 600 }, `“${quote}”`) : null,
+      div({ marginTop: 22, fontSize: 21, fontWeight: 800, color: MANGO, letterSpacing: 1 }, 'EVERYONE’S A FOOD INFLUENCER · GET THE APP'),
+    ].filter(Boolean)),
   ].filter(Boolean));
 }
 
 const BUILDERS = { p: placeCard, v: pollCard, l: listCard, u: userCard, c: checkinCard };
 
-function render(element, cache) {
+let FONTS = null;
+async function loadFonts(origin) {
+  if (FONTS) return FONTS;
+  const get = (f) => fetch(`${origin}/og-fonts/${f}`).then((r) => (r.ok ? r.arrayBuffer() : null)).catch(() => null);
+  const [fr, f6, f8] = await Promise.all([get('fraunces-800.woff'), get('figtree-600.woff'), get('figtree-800.woff')]);
+  const list = [];
+  if (fr) list.push({ name: 'Fraunces', data: fr, weight: 800, style: 'normal' });
+  if (f6) list.push({ name: 'Figtree', data: f6, weight: 600, style: 'normal' });
+  if (f8) list.push({ name: 'Figtree', data: f8, weight: 800, style: 'normal' });
+  FONTS = list.length ? list : undefined;
+  return FONTS;
+}
+
+function render(element, cache, fonts) {
   return new ImageResponse(element, {
     width: 1200,
     height: 630,
+    ...(fonts ? { fonts } : {}),
     // Lowercase on purpose: @vercel/og sets its own 'cache-control' and spreads ours over it.
     headers: { 'cache-control': cache },
   });
@@ -318,6 +365,7 @@ function render(element, cache) {
 
 export default async function handler(req) {
   let element = null;
+  const fonts = await loadFonts(new URL(req.url).origin).catch(() => undefined);
   try {
     const url = new URL(req.url);
     const t = url.searchParams.get('t') || '';
@@ -326,5 +374,5 @@ export default async function handler(req) {
   } catch (e) {
     element = null;
   }
-  return element ? render(element, CACHE_OK) : render(genericCard(), CACHE_ERR);
+  return element ? render(element, CACHE_OK, fonts) : render(genericCard(), CACHE_ERR, fonts);
 }
