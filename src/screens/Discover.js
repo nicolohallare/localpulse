@@ -43,6 +43,9 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
   const promos = usePromos();
   const myCards = useMyCards();
   const [michSort, setMichSort] = useState('near');
+  const [michAward, setMichAward] = useState('all');
+  const [michQ, setMichQ] = useState('');
+  const [michMap, setMichMap] = useState(false);
   const [pickSort, setPickSort] = useState('best');
   const [showMap, setShowMap] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -266,7 +269,13 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
   const michNear = michWithKm.filter((l) => l.km != null && l.km <= 6).sort((a, b) => a.km - b.km).slice(0, 6);
   const michYr = michelinYear(michSource, michCountry);
   const michNew = michWithKm.filter((l) => l.is_new && l.year === michYr).sort((a, b) => (a.km ?? 1e9) - (b.km ?? 1e9));
-  const michShown = michSort === 'new' ? michList.filter((l) => l.is_new && l.year === michYr) : michList;
+  const AWARD_OK = { all: () => true, star: (d) => /star/.test(d), bib: (d) => d === 'bib_gourmand', selected: (d) => d === 'selected' };
+  const michQn = michQ.trim().toLowerCase();
+  const michShown = (michSort === 'new' ? michList.filter((l) => l.is_new && l.year === michYr) : michList)
+    .filter((l) => AWARD_OK[michAward](l.distinction || ''))
+    .filter((l) => !michQn || `${l.name} ${l.city || ''} ${l.cuisine || ''}`.toLowerCase().includes(michQn));
+  const michCount = (k) => michSource.filter((l) => AWARD_OK[k](l.distinction || '')).length;
+  const showMichHero = cc === 'PH' && michYr >= 2027 && michNew.length > 0 && mode !== 'michelin' && !query;
   // Top picks: nearby places + trending places, scored on rating, check-ins, buzz, MICHELIN, distance and open-now.
   const trendById = Object.fromEntries(((trending && trending.items) || []).map((it) => [it.place.id, it]));
   const pool = (() => {
@@ -310,6 +319,13 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
           </div>
         </div>
         <h1 className="display">{headline}</h1>
+        {showMichHero && (
+          <button className="mich-hero" onClick={() => { setMichSort('near'); setMode('michelin'); window.scrollTo(0, 0); }}>
+            <span className="mich-hero-kicker">Just announced</span>
+            <span className="mich-hero-title">MICHELIN Guide Philippines {michYr}</span>
+            <span className="mich-hero-sub">{michSource.filter((l) => l.year === michYr).length} restaurants · {michNew.length} new — see which are near you →</span>
+          </button>
+        )}
         <form className="search" onSubmit={runSearch} role="search">
           <Icon name="search" size={20} />
           <label className="sr-only" htmlFor="q">Search places</label>
@@ -462,6 +478,25 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
             <button role="tab" aria-selected={michSort === 'award'} className={michSort === 'award' ? 'seg-on' : ''} onClick={() => setMichSort('award')}>By award</button>
             {michNew.length > 0 && <button role="tab" aria-selected={michSort === 'new'} className={michSort === 'new' ? 'seg-on' : ''} onClick={() => setMichSort('new')}>New · {michNew.length}</button>}
           </div>
+          <div className="chips filter-chips" aria-label="Award">
+            {[['all', 'All'], ['star', '⭐ Stars'], ['bib', 'Bib Gourmand'], ['selected', 'Selected']].filter(([k]) => k === 'all' || michCount(k) > 0).map(([k, label]) => (
+              <button key={k} className={`chip chip-sm ${michAward === k ? 'chip-soft-on' : ''}`} aria-pressed={michAward === k} onClick={() => setMichAward(k)}>{label}{k !== 'all' ? ` · ${michCount(k)}` : ''}</button>
+            ))}
+            <button className={`chip chip-sm ${michMap ? 'chip-soft-on' : ''}`} aria-pressed={michMap} onClick={() => setMichMap(!michMap)}>🗺️ Map</button>
+          </div>
+          <label className="menu-search">
+            <Icon name="search" size={18} />
+            <input value={michQ} onChange={(e) => setMichQ(e.target.value)} placeholder="Search name, city or cuisine" aria-label="Search the MICHELIN list" />
+            {michQ && <button type="button" className="link-btn" onClick={() => setMichQ('')}>Clear</button>}
+          </label>
+          {michMap && (
+            <div className="map-inline">
+              <MapView center={loc} stats={{}} activeId={null}
+                places={michShown.filter((l) => l.lat != null).map((l) => ({ id: l.google_place_id || `m${l.id}`, name: l.name, lat: l.lat, lng: l.lng, _m: l }))}
+                onPick={(p) => openMichelin(p._m)} />
+            </div>
+          )}
+          {michShown.length === 0 && <p className="small muted">No MICHELIN restaurants match that.</p>}
           <div className="place-list">
             {michShown.map((l) => (
               <button key={l.id} className={`mich-row ${l.km != null && l.km <= 5 ? 'mich-near' : ''}`} onClick={() => openMichelin(l)} disabled={opening === l.id}>
@@ -473,6 +508,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
                 <span className="muted small">{opening === l.id ? 'Opening…' : (l.city || 'Metro Manila & environs')}</span>
                 {l.award && <span className="small ink">🏅 {l.award}</span>}
                 <WhyLine w={why[l.google_place_id]} />
+                {l.is_new && l.year === michYr && <span className="tiny mich-first">New this year — be the first to check in and review it</span>}
               </button>
             ))}
           </div>

@@ -308,7 +308,13 @@ async function checkinCard(id) {
   ]);
   const v = rows && rows[0];
   if (!v) throw new Error('Check-in not found');
-  const info = await placeInfo(v.google_place_id);
+  const [info, mrows] = await Promise.all([
+    placeInfo(v.google_place_id),
+    safe(rest(`michelin_listings?google_place_id=eq.${encodeURIComponent(v.google_place_id)}&active=eq.true&select=year,distinction&order=year.desc&limit=1`), []),
+  ]);
+  const m = mrows && mrows[0];
+  const MDIST = { three_star: 'THREE MICHELIN STARS', two_star: 'TWO MICHELIN STARS', one_star: 'ONE MICHELIN STAR', bib_gourmand: 'MICHELIN BIB GOURMAND', selected: 'MICHELIN SELECTED' };
+  const mline = m ? `${MDIST[m.distinction] || 'MICHELIN GUIDE'} ${m.year}` : null;
   const name = clip(info.name || 'a great place to eat', 56);
   const photo = media && media[0] ? `${SUPABASE_URL}/storage/v1/object/public/take-media/${media[0].path}` : info.photo;
   const who = clip(v.display_name || 'Someone', 22);
@@ -327,7 +333,8 @@ async function checkinCard(id) {
         div({ fontFamily: 'Fraunces', fontSize: 36, color: WHITE }, 'Ube Banana'),
       ]),
       div({ fontSize: 24, fontWeight: 800, color: MANGO, letterSpacing: 2, marginBottom: 8 }, `${who.toUpperCase()} CHECKED IN AT`),
-      div({ fontFamily: 'Fraunces', fontSize: nameSize(name), lineHeight: 1.08, color: WHITE, justifyContent: 'center', textAlign: 'center', marginBottom: 22, maxWidth: 640 }, name),
+      div({ fontFamily: 'Fraunces', fontSize: nameSize(name), lineHeight: 1.08, color: WHITE, justifyContent: 'center', textAlign: 'center', marginBottom: mline ? 12 : 22, maxWidth: 640 }, name),
+      mline ? div({ fontSize: 19, fontWeight: 800, color: WHITE, background: '#d0021b', padding: '5px 14px', borderRadius: 10, letterSpacing: 1.5, marginBottom: 18 }, mline) : null,
       div({ alignItems: 'center', marginBottom: quote ? 20 : 8 }, [
         div({ fontFamily: 'Fraunces', fontSize: 56, color: INK, background: MANGO, padding: '4px 26px', borderRadius: 22, border: `4px solid ${INK}`, boxShadow: `0 6px 0 ${INK}`, marginRight: 16 }, `${v.score}/10`),
         div({ fontSize: 34, fontWeight: 800, color: WHITE }, LABEL[v.score] || ''),

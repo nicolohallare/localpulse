@@ -159,6 +159,13 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
             <a href={mich.guide_url} target="_blank" rel="noreferrer" className="link-out">Read on Michelin <Icon name="external" size={14} /></a>
           </div>
         )}
+        {mich && (!stat || videoCount === 0) && (
+          <div className="mich-first-card">
+            <p className="small strong">{mich.is_new ? 'New on the MICHELIN list — ' : ''}{!stat ? 'no one has checked in here yet.' : 'no creator videos yet.'}</p>
+            <p className="tiny muted">{!stat ? 'Eat here? Check in to rate it first and get the credit when people go because of you.' : 'Food creator? Add your TikTok or YouTube review — it plays from your post, so the views stay yours.'}</p>
+            {stat && <button className="link-btn left" onClick={() => setAddingVideo(true)}>Add your video →</button>}
+          </div>
+        )}
 
         <div className="score-grid">
           <div className="score-tile ube-tile">
