@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { api, supabase, distanceM, fmtDistance, fmtCount, timeAgo, tiktokEmbed, matchMichelin, DISTINCTION, DISTINCTION_RANK, currencySymbol, priceLabel, getCountry, COUNTRY_NAME, michelinYear } from '../lib';
-import { logPlay, game } from '../game';
+import { logPlay, game, shareLink } from '../game';
 import { Banana, Icon, PlacePhoto, Spinner, Notice, Empty, ScoreBadge, Sheet, GoButtons } from '../ui';
 import MapView from '../MapView';
 import { usePromos, useMyCards, promosFor } from '../promos';
@@ -38,7 +38,7 @@ const MODES = [
   { k: 'top', label: 'Most checked-in' },
 ];
 
-export default function Discover({ loc, locNote, onRetryLocation, michelin, onOpen, onOpenProfile, onAddVideo, active = true }) {
+export default function Discover({ loc, locNote, onRetryLocation, michelin, onOpen, onOpenProfile, onAddVideo, active = true, focus = null }) {
   const [headline] = useState(() => mealLine());
   const promos = usePromos();
   const myCards = useMyCards();
@@ -49,6 +49,15 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
   const [why, setWhy] = useState({});
   const gotWhy = useCallback((id, w) => setWhy((cur) => (cur[id] === w ? cur : { ...cur, [id]: w })), []);
   const [mode, setMode] = useState('near');
+  // Opened from a shared link like /#/michelin?new=1
+  useEffect(() => {
+    if (!focus) return;
+    if (focus.k === 'michelin' || focus.k === 'michelin-new') {
+      setMode('michelin');
+      setMichSort(focus.k === 'michelin-new' ? 'new' : 'near');
+      window.scrollTo(0, 0);
+    }
+  }, [focus]);
   const [places, setPlaces] = useState([]);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
@@ -439,7 +448,14 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
 
       {mode === 'michelin' && (
         <section className="section">
-          <h2 className="h2">MICHELIN Guide {COUNTRY_NAME[michCountry] || michCountry}</h2>
+          <div className="row-between">
+            <h2 className="h2" style={{ margin: 0 }}>MICHELIN Guide {COUNTRY_NAME[michCountry] || michCountry} {michYr || ''}</h2>
+            <button className="soft-btn" onClick={async () => {
+              const url = `${window.location.origin}/michelin${michCountry === 'TW' ? '-tw' : ''}`;
+              const r = await shareLink({ title: `MICHELIN Guide ${COUNTRY_NAME[michCountry] || ''} ${michYr}`, text: 'See which MICHELIN restaurants are near you on Ube Banana 🍌', url });
+              if (r === 'copied') window.alert('Link copied — paste it anywhere');
+            }}><Icon name="share" size={16} /> Share</button>
+          </div>
           <p className="muted small">{michCountry === 'TW' ? 'Starred restaurants' : 'Restaurants'} recognised in the {michYr || ''} selection{michSort === 'near' ? ', nearest to you first' : michSort === 'new' ? ' — new this year' : ''}. Tap one to see it on Ube Banana.</p>
           <div className="seg" role="tablist" aria-label="Sort">
             <button role="tab" aria-selected={michSort === 'near'} className={michSort === 'near' ? 'seg-on' : ''} onClick={() => setMichSort('near')}>Nearest</button>

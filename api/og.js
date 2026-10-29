@@ -11,7 +11,7 @@ const SUPABASE_KEY = 'sb_publishable_NG52mLt7Zqvb57SyLim0QA_h8Fb5YcL';
 const PLACE_ID_RE = /^[A-Za-z0-9_-]{10,300}$/;
 const SHORT_ID_RE = /^[a-z0-9]{6,12}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const VALID = { p: PLACE_ID_RE, v: SHORT_ID_RE, l: SHORT_ID_RE, u: UUID_RE, c: UUID_RE };
+const VALID = { p: PLACE_ID_RE, v: SHORT_ID_RE, l: SHORT_ID_RE, u: UUID_RE, c: UUID_RE, m: /^(ph|tw)$/ };
 
 const UBE = '#4B1F7A';
 const UBE_DARK = '#24123D';
@@ -338,7 +338,35 @@ async function checkinCard(id) {
   ].filter(Boolean));
 }
 
-const BUILDERS = { p: placeCard, v: pollCard, l: listCard, u: userCard, c: checkinCard };
+async function michelinCard(cc) {
+  const rows = await rest(`michelin_listings?country=eq.${cc.toUpperCase()}&active=eq.true&select=year,is_new,distinction,name`);
+  const year = Math.max(0, ...(rows || []).map((r) => r.year || 0));
+  const cur = (rows || []).filter((r) => r.year === year);
+  const fresh = cur.filter((r) => r.is_new);
+  const bib = cur.filter((r) => r.distinction === 'bib_gourmand').length;
+  const where = cc === 'tw' ? 'Taiwan' : 'Philippines';
+  const pill2 = (t, accent) => div({ fontSize: 28, fontWeight: 800, padding: '10px 24px', borderRadius: 999, marginRight: 12, marginBottom: 12,
+    background: accent ? MANGO : 'rgba(255,255,255,0.14)', color: accent ? INK : WHITE, border: accent ? `3px solid ${INK}` : '2px solid rgba(255,255,255,0.25)' }, t);
+  return div({ width: 1200, height: 630, background: 'linear-gradient(135deg, #5E2B96 0%, #4B1F7A 55%, #3D1866 100%)', color: WHITE, fontFamily: 'Figtree', justifyContent: 'center', alignItems: 'center' }, [
+    div({ flexDirection: 'column', alignItems: 'center', width: 680, textAlign: 'center' }, [
+      div({ alignItems: 'center', marginBottom: 20 }, [
+        { type: 'img', props: { src: BANANA_URI, width: 60, height: 60, style: { marginRight: 12 } } },
+        div({ fontFamily: 'Fraunces', fontSize: 34 }, 'Ube Banana'),
+      ]),
+      div({ fontSize: 26, fontWeight: 800, color: MANGO, letterSpacing: 3, marginBottom: 6 }, 'JUST ANNOUNCED'),
+      div({ fontFamily: 'Fraunces', fontSize: 70, lineHeight: 1.04, marginBottom: 6 }, 'MICHELIN Guide'),
+      div({ fontFamily: 'Fraunces', fontSize: 56, lineHeight: 1.05, color: MANGO, marginBottom: 26 }, `${where} ${year}`),
+      div({ flexWrap: 'wrap', justifyContent: 'center' }, [
+        pill2(`${cur.length} restaurants`, true),
+        fresh.length ? pill2(`${fresh.length} new`) : null,
+        bib ? pill2(`${bib} Bib Gourmand`) : null,
+      ].filter(Boolean)),
+      div({ marginTop: 14, fontSize: 24, fontWeight: 800, color: WHITE }, 'See which are near you →'),
+    ]),
+  ]);
+}
+
+const BUILDERS = { p: placeCard, v: pollCard, l: listCard, u: userCard, c: checkinCard, m: michelinCard };
 
 let FONTS = null;
 async function loadFonts(origin) {

@@ -15,6 +15,7 @@ const TYPES = {
   l: { re: SHORT_ID_RE, route: 'list' },
   u: { re: UUID_RE, route: 'u' },
   c: { re: UUID_RE, route: 'place' },
+  m: { re: /^(ph|tw)$/, route: 'michelin' },
 };
 
 export function escapeHtml(s) {
@@ -164,7 +165,21 @@ async function checkinMeta(id) {
   };
 }
 
-const LOADERS = { p: placeMeta, v: pollMeta, l: listMeta, u: userMeta, c: checkinMeta };
+// The MICHELIN Guide list for a country (shared from the app or by link: /michelin).
+async function michelinMeta(cc) {
+  const rows = await rest(`michelin_listings?country=eq.${cc.toUpperCase()}&active=eq.true&select=year,is_new,distinction`);
+  const year = Math.max(0, ...(rows || []).map((r) => r.year || 0));
+  const cur = (rows || []).filter((r) => r.year === year);
+  const fresh = cur.filter((r) => r.is_new).length;
+  const where = cc === 'tw' ? 'Taiwan' : 'Philippines';
+  return {
+    title: `MICHELIN Guide ${where} ${year}: see which are near you`,
+    description: `${cur.length} restaurants${fresh ? `, ${fresh} new this year` : ''} — with what to order, verified check-ins and directions. On Ube Banana.`,
+    appPath: `/#/michelin${fresh ? '?new=1' : ''}`,
+  };
+}
+
+const LOADERS = { p: placeMeta, v: pollMeta, l: listMeta, u: userMeta, c: checkinMeta, m: michelinMeta };
 
 const GENERIC = {
   title: 'Ube Banana — Everyone’s a food influencer',
@@ -287,7 +302,7 @@ export default async function handler(req, res) {
       ...meta,
       platform,
       stores,
-      url: `${site}/${t}/${enc}`,
+      url: t === 'm' ? `${site}/michelin${id === 'tw' ? '-tw' : ''}` : `${site}/${t}/${enc}`,
       image: `${site}/api/og?t=${t}&id=${enc}&v=2`,
       appPath: `/#/${type.route}/${id}`,
       ...(meta.appPath ? { appPath: meta.appPath } : {}),

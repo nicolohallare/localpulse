@@ -22,6 +22,14 @@
     {
       "source": "/c/:id",
       "destination": "/api/share?t=c&id=:id"
+    },
+    {
+      "source": "/michelin",
+      "destination": "/api/share?t=m&id=ph"
+    },
+    {
+      "source": "/michelin-tw",
+      "destination": "/api/share?t=m&id=tw"
     }
   ],
   "crons": [

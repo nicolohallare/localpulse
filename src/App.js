@@ -40,6 +40,7 @@ function parseHash() {
   if (name === 'place' && id) return { name: 'place', id: decodeURIComponent(id) };
   if (name === 'ranks') return { name, id: ['creators', 'influencers'].includes(id) ? id : 'diners' };
   if (['deals', 'creators', 'you', 'checkin', 'feed', 'lists', 'admin'].includes(name)) return { name };
+  if (name === 'michelin') return { name: 'discover', focus: params.get('new') === '1' ? 'michelin-new' : 'michelin' };
   return { name: 'discover' };
 }
 
@@ -53,6 +54,7 @@ export default function App() {
   const [loc, setLoc] = useState({ ...DEFAULT_LOCATION, label: 'Finding you…' });
   const [locNote, setLocNote] = useState(null);
   const [michelin, setMichelin] = useState([]);
+  const [focus, setFocus] = useState(null); // e.g. a shared link to the MICHELIN list
   const lastTab = useRef('discover');
   const navigatedInApp = useRef(false);
 
@@ -74,6 +76,7 @@ export default function App() {
 
   useEffect(() => {
     if (route.name !== 'place' && route.name !== 'checkin') lastTab.current = route.name;
+    if (route.focus) setFocus({ k: route.focus, n: Date.now() });
   }, [route]);
 
   const [picking, setPicking] = useState(false);
@@ -170,7 +173,7 @@ export default function App() {
   function keptScreen(r, active) {
     switch (r.name) {
       case 'discover': return <Discover loc={loc} locNote={locNote} onRetryLocation={() => setPicking(true)} michelin={michelin}
-        onOpen={openPlace} onOpenProfile={() => go('/you')} onAddVideo={() => go('/add')} active={active} />;
+        onOpen={openPlace} onOpenProfile={() => go('/you')} onAddVideo={() => go('/add')} active={active} focus={focus} />;
       case 'deals': return <Deals onOpen={openPlace} loc={loc} />;
       case 'you': return <You onOpen={openPlace} onOpenCreators={() => go('/creators')} onOpenRanks={() => go('/ranks')}
         onOpenUser={openUser} onOpenLists={() => go('/lists')} onOpenAdmin={() => go('/admin')} />;
