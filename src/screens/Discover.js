@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { api, supabase, distanceM, fmtDistance, fmtCount, timeAgo, tiktokEmbed, matchMichelin, DISTINCTION, DISTINCTION_RANK, currencySymbol, priceLabel, getCountry, COUNTRY_NAME } from '../lib';
+import { api, supabase, distanceM, fmtDistance, fmtCount, timeAgo, tiktokEmbed, matchMichelin, DISTINCTION, DISTINCTION_RANK, currencySymbol, priceLabel, getCountry, COUNTRY_NAME, michelinYear } from '../lib';
 import { logPlay, game } from '../game';
 import { Banana, Icon, PlacePhoto, Spinner, Notice, Empty, ScoreBadge, Sheet, GoButtons } from '../ui';
 import MapView from '../MapView';
@@ -255,6 +255,9 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
     ? (a, b) => (a.km ?? 1e9) - (b.km ?? 1e9) || byAward(a, b)
     : byAward);
   const michNear = michWithKm.filter((l) => l.km != null && l.km <= 6).sort((a, b) => a.km - b.km).slice(0, 6);
+  const michYr = michelinYear(michSource, michCountry);
+  const michNew = michWithKm.filter((l) => l.is_new && l.year === michYr).sort((a, b) => (a.km ?? 1e9) - (b.km ?? 1e9));
+  const michShown = michSort === 'new' ? michList.filter((l) => l.is_new && l.year === michYr) : michList;
   // Top picks: nearby places + trending places, scored on rating, check-ins, buzz, MICHELIN, distance and open-now.
   const trendById = Object.fromEntries(((trending && trending.items) || []).map((it) => [it.place.id, it]));
   const pool = (() => {
@@ -396,14 +399,33 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
             {!loading && places.length > 0 && sorted.length === 0 && <p className="small muted">No places match those filters. Try removing one.</p>}
             {sorted.length > 0 && <p className="attribution">Places, ratings and photos from Google Maps</p>}
           </section>}
+          {!query && !craving && michNew.length > 0 && (
+            <section className="section">
+              <div className="row-between">
+                <h2 className="h2">🆕 New in MICHELIN {michYr}</h2>
+                <button className="link-btn" onClick={() => { setMichSort('new'); setMode('michelin'); }}>See all {michNew.length}</button>
+              </div>
+              <p className="small muted" style={{ marginTop: -6, marginBottom: 10 }}>Just announced — be the first to check in and say if they deserve it.</p>
+              <div className="mich-rail">
+                {michNew.slice(0, 10).map((l) => (
+                  <button key={l.id} className="mich-chip mich-new" onClick={() => openMichelin(l)}>
+                    <span className="row-6"><span className="new-badge">NEW</span><span className="mich-dist">{DISTINCTION[l.distinction]}</span></span>
+                    <span className="strong">{l.name}</span>
+                    <span className="tiny muted">{l.km != null ? `${fmtDistance(l.km * 1000)} away` : (l.city || '')}</span>
+                    {l.award && <span className="tiny ink clamp-2">🏅 {l.award.replace('MICHELIN ', '')}</span>}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
           {!query && !craving && <TrendingRail data={trending} loc={loc} onOpen={onOpen} related={related} onPlay={openClips} />}
           {!query && !craving && michNear.length > 0 && (
             <section className="section">
-              <div className="row-between"><h2 className="h2">MICHELIN near you</h2><button className="link-btn" onClick={() => setMode('michelin')}>See all</button></div>
+              <div className="row-between"><h2 className="h2">MICHELIN {michYr || ''} near you</h2><button className="link-btn" onClick={() => setMode('michelin')}>See all</button></div>
               <div className="mich-rail">
                 {michNear.map((l) => (
                   <button key={l.id} className="mich-chip" onClick={() => openMichelin(l)}>
-                    <span className="mich-dist">{DISTINCTION[l.distinction]}</span>
+                    <span className="row-6">{l.is_new && l.year === michYr && <span className="new-badge">NEW</span>}<span className="mich-dist">{DISTINCTION[l.distinction]}</span></span>
                     <span className="strong">{l.name}</span>
                     <span className="tiny muted">{fmtDistance(l.km * 1000)} away</span>
                     {why[l.google_place_id] && why[l.google_place_id].why && <span className="tiny clamp-2 ink">{why[l.google_place_id].why}</span>}
@@ -418,25 +440,27 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
       {mode === 'michelin' && (
         <section className="section">
           <h2 className="h2">MICHELIN Guide {COUNTRY_NAME[michCountry] || michCountry}</h2>
-          <p className="muted small">{michCountry === 'TW' ? 'Starred restaurants' : 'Restaurants'} recognised in the 2026 selection{michSort === 'near' ? ', nearest to you first' : ''}. Tap one to see it on Ube Banana.</p>
+          <p className="muted small">{michCountry === 'TW' ? 'Starred restaurants' : 'Restaurants'} recognised in the {michYr || ''} selection{michSort === 'near' ? ', nearest to you first' : michSort === 'new' ? ' — new this year' : ''}. Tap one to see it on Ube Banana.</p>
           <div className="seg" role="tablist" aria-label="Sort">
             <button role="tab" aria-selected={michSort === 'near'} className={michSort === 'near' ? 'seg-on' : ''} onClick={() => setMichSort('near')}>Nearest</button>
             <button role="tab" aria-selected={michSort === 'award'} className={michSort === 'award' ? 'seg-on' : ''} onClick={() => setMichSort('award')}>By award</button>
+            {michNew.length > 0 && <button role="tab" aria-selected={michSort === 'new'} className={michSort === 'new' ? 'seg-on' : ''} onClick={() => setMichSort('new')}>New · {michNew.length}</button>}
           </div>
           <div className="place-list">
-            {michList.map((l) => (
+            {michShown.map((l) => (
               <button key={l.id} className={`mich-row ${l.km != null && l.km <= 5 ? 'mich-near' : ''}`} onClick={() => openMichelin(l)} disabled={opening === l.id}>
                 <span className="row-between">
-                  <span className="mich-dist">{DISTINCTION[l.distinction]}</span>
+                  <span className="row-6">{l.is_new && l.year === michYr && <span className="new-badge">NEW</span>}<span className="mich-dist">{DISTINCTION[l.distinction]}</span>{l.year && l.year !== michYr && <span className="tiny muted">{l.year}</span>}</span>
                   {l.km != null && <span className="mich-km">{l.km <= 5 ? 'Near you · ' : ''}{fmtDistance(l.km * 1000)}</span>}
                 </span>
                 <span className="mich-name">{l.name}</span>
                 <span className="muted small">{opening === l.id ? 'Opening…' : (l.city || 'Metro Manila & environs')}</span>
+                {l.award && <span className="small ink">🏅 {l.award}</span>}
                 <WhyLine w={why[l.google_place_id]} />
               </button>
             ))}
           </div>
-          <a className="link-out" href={michCountry === 'TW' ? 'https://guide.michelin.com/tw/en/selection/taiwan/restaurants' : 'https://guide.michelin.com/en/article/michelin-guide-ceremony/philippines-full-selection-2026'} target="_blank" rel="noreferrer">
+          <a className="link-out" href={michCountry === 'TW' ? 'https://guide.michelin.com/tw/en/selection/taiwan/restaurants' : 'https://guide.michelin.com/ph/en/selection/philippines/restaurants'} target="_blank" rel="noreferrer">
             Full selection on guide.michelin.com <Icon name="external" size={14} />
           </a>
         </section>

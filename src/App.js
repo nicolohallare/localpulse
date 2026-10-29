@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import './styles.css';
-import { api, supabase, getLocation, DEFAULT_LOCATION, findVideoUrl, setCountry } from './lib';
+import { api, supabase, getLocation, DEFAULT_LOCATION, findVideoUrl, setCountry, currentMichelin } from './lib';
 import { Sheet, Spinner } from './ui';
 
 import { Icon } from './ui';
@@ -123,8 +123,8 @@ export default function App() {
   useEffect(() => { api.config().then((c) => { setCountry(c.country); setCc(c.country); }).catch(() => {}); }, []);
 
   useEffect(() => {
-    api.michelin().then((rows) => { if (rows.length) setMichelin(rows); else throw new Error('empty'); })
-      .catch(() => supabase.from('michelin_listings').select('*').then(({ data }) => setMichelin(data || [])));
+    api.michelin().then((rows) => { if (rows.length) setMichelin(currentMichelin(rows)); else throw new Error('empty'); })
+      .catch(() => supabase.from('michelin_listings').select('*').then(({ data }) => setMichelin(currentMichelin(data || []))));
   }, []);
 
   const go = useCallback((path) => {

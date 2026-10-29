@@ -673,3 +673,6 @@ html, body { overflow-x: hidden; }
 .promo-bank { align-self: flex-start; padding: 2px 10px; border-radius: 999px; background: #0b4fa3; color: #fff; font-size: 12px; font-weight: 800; }
 .promo-discount { font-family: var(--display); font-weight: 800; font-size: 22px; line-height: 1.15; color: var(--ink); }
 .promo-strip { display: flex; flex-direction: column; gap: 8px; }
+
+.new-badge { display: inline-block; padding: 1px 7px; border-radius: 999px; background: #d0021b; color: #fff; font-size: 10px; font-weight: 900; letter-spacing: .06em; }
+.mich-new { border-color: var(--ube-ink); border-width: 2px; }

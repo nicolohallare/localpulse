@@ -152,8 +152,9 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
         {mich && (
           <div className="mich-card">
             <div>
-              <span className="eyebrow">MICHELIN Guide Philippines {mich.year}</span>
+              <span className="eyebrow">MICHELIN Guide {mich.country === 'TW' ? 'Taiwan' : 'Philippines'} {mich.year}{mich.is_new ? ' · NEW' : ''}</span>
               <span className="mich-card-title">{DISTINCTION[mich.distinction]}</span>
+              {mich.award && <span className="small block">🏅 {mich.award}</span>}
             </div>
             <a href={mich.guide_url} target="_blank" rel="noreferrer" className="link-out">Read on Michelin <Icon name="external" size={14} /></a>
           </div>
