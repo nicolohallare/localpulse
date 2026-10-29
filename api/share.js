@@ -176,6 +176,7 @@ async function michelinMeta(cc) {
     title: `MICHELIN Guide ${where} ${year}: see which are near you`,
     description: `${cur.length} restaurants${fresh ? `, ${fresh} new this year` : ''} — with what to order, verified check-ins and directions. On Ube Banana.`,
     appPath: `/#/michelin${fresh ? '?new=1' : ''}`,
+    seeLabel: `See the ${year} list →`,
   };
 }
 
@@ -209,7 +210,7 @@ function platformOf(ua) {
   return 'desktop';
 }
 
-function page({ title, description, url, image, appPath, platform, stores }) {
+function page({ title, description, url, image, appPath, platform, stores, seeLabel }) {
   const t = escapeHtml(title);
   const d = escapeHtml(description);
   const u = escapeHtml(url);
@@ -219,7 +220,11 @@ function page({ title, description, url, image, appPath, platform, stores }) {
   const apple = `<a class="btn store" href="${APPSTORE_URL}"> Download on the App Store</a>`;
   const open = (label) => `<a class="btn ${label ? 'alt' : 'store'}" href="${web}">${label || 'Open Ube Banana'}</a>`;
   let buttons;
-  if (platform === 'android') buttons = stores.play ? play + open('Open in browser instead') : open();
+  if (seeLabel) {
+    // Lists people want to look at right away: open it first, offer the app second.
+    const get = platform === 'android' ? (stores.play ? play : '') : platform === 'ios' ? (stores.apple ? apple : '') : (stores.play ? play : '') + (stores.apple ? apple : '');
+    buttons = `<a class="btn store" href="${web}">${seeLabel}</a>${get ? `<p class="soon">Get the app to see it with directions and check in:</p>${get.replace(/btn store/g, 'btn store2')}` : ''}`;
+  } else if (platform === 'android') buttons = stores.play ? play + open('Open in browser instead') : open();
   else if (platform === 'ios') buttons = (stores.apple ? apple : open() + '<p class="soon">The iPhone app is coming soon to the App Store. Meanwhile, tap Share → Add to Home Screen.</p>') + (stores.apple ? open('Open in browser instead') : '');
   else buttons = (stores.play ? play : '') + (stores.apple ? apple : '') + open(stores.play || stores.apple ? 'Open on the web' : '');
   return `<!doctype html>
@@ -259,6 +264,7 @@ function page({ title, description, url, image, appPath, platform, stores }) {
   .store { background: #FFD23F; color: #24123D; border: 3px solid #24123D; box-shadow: 0 4px 0 #24123D; font-size: 17px; }
   .alt { color: #fff; opacity: .85; font-weight: 600; text-decoration: underline; padding: 8px; }
   .soon { font-size: 13px; opacity: .8; margin: 6px 0 0; }
+  .store2 { background: transparent; color: #FFD23F; border: 2px solid #FFD23F; font-size: 16px; }
   .pitch { margin-top: 26px; font-size: 14px; opacity: .8; }
 </style>
 </head>

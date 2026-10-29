@@ -361,7 +361,7 @@ async function michelinCard(cc) {
         fresh.length ? pill2(`${fresh.length} new`) : null,
         bib ? pill2(`${bib} Bib Gourmand`) : null,
       ].filter(Boolean)),
-      div({ marginTop: 14, fontSize: 24, fontWeight: 800, color: WHITE }, 'See which are near you →'),
+      div({ marginTop: 14, fontSize: 24, fontWeight: 800, color: WHITE }, 'See which are near you'),
     ]),
   ]);
 }
