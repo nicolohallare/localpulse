@@ -305,20 +305,22 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
     <div className="screen">
       <header className="disc-head">
         <div className="row-between">
-          <button className="pill-btn" onClick={onRetryLocation} aria-label={`Location: ${loc.label}. Tap to change`}>
-            <Icon name="pin" size={18} className="ube" />
+          <div className="brand-line">
+            <Banana size={38} className="brand-banana" />
+            <div>
+              <p className="wordmark">Ube Banana</p>
+              <p className="brand-tag">Everyone’s a food influencer</p>
+            </div>
+          </div>
+          <button className="avatar-btn" onClick={onOpenProfile} aria-label="Your profile"><Icon name="user" size={20} /></button>
+        </div>
+        <div className="head-line">
+          <h1 className="display">{headline}</h1>
+          <button className="pill-btn loc-pill" onClick={onRetryLocation} aria-label={`Location: ${loc.label}. Tap to change`}>
+            <Icon name="pin" size={15} className="ube" />
             <span>{loc.label}</span>
           </button>
-          <button className="avatar-btn" onClick={onOpenProfile} aria-label="Your profile"><Icon name="user" size={22} /></button>
         </div>
-        <div className="brand-line">
-          <Banana size={62} className="brand-banana" />
-          <div>
-            <p className="wordmark">Ube Banana</p>
-            <p className="brand-tag">Everyone’s a food influencer</p>
-          </div>
-        </div>
-        <h1 className="display">{headline}</h1>
         {showMichHero && (
           <button className="mich-hero" onClick={() => { setMichSort('near'); setMode('michelin'); window.scrollTo(0, 0); }}>
             <span className="mich-hero-kicker">Stars just announced</span>
@@ -472,7 +474,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
               if (r === 'copied') window.alert('Link copied — paste it anywhere');
             }}><Icon name="share" size={16} /> Share</button>
           </div>
-          <p className="muted small">{michCountry === 'TW' ? 'Starred restaurants' : 'Restaurants'} recognised in the {michYr || ''} selection{michSort === 'near' ? ', nearest to you first' : michSort === 'new' ? ' — new this year' : ''}. Tap one to see it on Ube Banana.</p>
+          
           <div className="seg" role="tablist" aria-label="Sort">
             <button role="tab" aria-selected={michSort === 'near'} className={michSort === 'near' ? 'seg-on' : ''} onClick={() => setMichSort('near')}>Nearest</button>
             <button role="tab" aria-selected={michSort === 'award'} className={michSort === 'award' ? 'seg-on' : ''} onClick={() => setMichSort('award')}>By award</button>

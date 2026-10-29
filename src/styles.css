@@ -684,3 +684,38 @@ html, body { overflow-x: hidden; }
 .mich-hero-sub { font-size: 13px; opacity: 0.92; }
 .mich-first { color: var(--ube-text); font-weight: 600; margin-top: 2px; }
 .mich-first-card { padding: 12px 14px; border-radius: 14px; border: 1px dashed var(--line-strong); background: var(--tint); display: flex; flex-direction: column; gap: 4px; }
+
+/* Cleaner, denser type (Oct 30): smaller display sizes, tighter header so places show on the first screen */
+.display { font-size: 30px; }
+.display-sm { font-size: 26px; }
+.display-xs { font-size: 22px; }
+.h2 { font-size: 18px; margin-bottom: 10px; }
+.h3 { font-size: 16px; }
+.row-title { font-size: 16px; }
+.mich-name { font-size: 17px; }
+.section { padding-top: 16px; }
+.chips { padding-top: 12px; }
+.chip { min-height: 36px; }
+.crave-chip { min-height: 36px; font-size: 13px; padding: 0 14px; }
+.crave .h3 { margin-bottom: 8px; }
+.sheet-head .h2, .sheet-head h2 { font-size: 19px; margin: 0; }
+
+.disc-head { padding: 12px 20px 18px; gap: 12px; border-radius: 0 0 24px 24px; }
+.disc-head::after { width: 160px; height: 160px; right: -60px; top: -70px; }
+.disc-head .brand-line { margin-top: 0; gap: 8px; }
+.disc-head .wordmark { font-size: 20px; }
+.disc-head .brand-tag { font-size: 11px; margin-top: 1px; }
+.disc-head .avatar-btn { width: 40px; height: 40px; min-height: 40px; }
+.head-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; }
+.disc-head .display { font-size: 28px; line-height: 1.05; }
+.disc-head .loc-pill { min-height: 34px; padding: 0 12px 0 9px; font-size: 13px; gap: 4px; max-width: 60%; }
+.disc-head .loc-pill span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.disc-head .search { height: 46px; }
+.mich-hero { margin: 0; padding: 11px 14px; border-radius: 14px; }
+.mich-hero-kicker { font-size: 10px; }
+.mich-hero-title { font-size: 17px; }
+.mich-hero-sub { font-size: 12px; }
+.section .filter-chips { margin: 0 -20px; padding: 10px 20px 10px; }
+.mich-row { padding: 11px 14px; margin-bottom: 8px; }
+.mich-name { line-height: 1.2; }
+.section > .row-between + .seg { margin-top: 10px; }
