@@ -429,7 +429,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
           {!query && !craving && michNew.length > 0 && (
             <section className="section">
               <div className="row-between">
-                <h2 className="h2">🆕 New in MICHELIN {michYr}</h2>
+                <h2 className="h2">New in MICHELIN {michYr}</h2>
                 <button className="link-btn" onClick={() => { setMichSort('new'); setMode('michelin'); }}>See all {michNew.length}</button>
               </div>
               <p className="small muted" style={{ marginTop: -6, marginBottom: 10 }}>Just announced — be the first to check in and say if they deserve it.</p>
