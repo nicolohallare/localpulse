@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { api, supabase, distanceM, fmtDistance, fmtCount, timeAgo, tiktokEmbed, matchMichelin, DISTINCTION, DISTINCTION_RANK, currencySymbol, priceLabel, getCountry, COUNTRY_NAME, michelinYear } from '../lib';
-import { logPlay, game, shareLink } from '../game';
+import { logPlay, game, shareLink, PUBLIC_SITE } from '../game';
 import { Banana, Icon, PlacePhoto, Spinner, Notice, Empty, ScoreBadge, Sheet, GoButtons } from '../ui';
 import MapView from '../MapView';
 import { usePromos, useMyCards, promosFor } from '../promos';
@@ -469,7 +469,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
           <div className="row-between">
             <h2 className="h2" style={{ margin: 0 }}>MICHELIN Guide {COUNTRY_NAME[michCountry] || michCountry} {michYr || ''}</h2>
             <button className="soft-btn" onClick={async () => {
-              const url = `${window.location.origin}/michelin${michCountry === 'TW' ? '-tw' : ''}`;
+              const url = `${PUBLIC_SITE}/michelin${michCountry === 'TW' ? '-tw' : ''}`;
               const r = await shareLink({ title: `MICHELIN Guide ${COUNTRY_NAME[michCountry] || ''} ${michYr}`, text: 'See which MICHELIN restaurants are near you on Ube Banana 🍌', url });
               if (r === 'copied') window.alert('Link copied — paste it anywhere');
             }}><Icon name="share" size={16} /> Share</button>

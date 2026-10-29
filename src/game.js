@@ -96,7 +96,9 @@ export async function logTouch(placeId, influencerId) {
 }
 
 // Shareable short links with rich previews (see api/share.js).
-export const shareUrl = (kind, id) => `${window.location.origin}/${kind}/${encodeURIComponent(id)}`;
+// Links people share always use the public domain, even from the store apps.
+export const PUBLIC_SITE = 'https://ubebanana.app';
+export const shareUrl = (kind, id) => `${PUBLIC_SITE}/${kind}/${encodeURIComponent(id)}`;
 
 export async function shareLink({ title, text, url }) {
   try {

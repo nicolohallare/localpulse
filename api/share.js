@@ -5,7 +5,7 @@ import { SUPABASE_URL, SUPABASE_KEY, places, PLACE_ID_RE } from './_lib.js';
 // Open Graph tags so Messenger/Viber/Facebook/X show a rich card, then sends humans into the app.
 // Google place names are fetched live for the card and never stored.
 
-const SITE = 'https://localpulse-two.vercel.app';
+const SITE = 'https://ubebanana.app';
 const SHORT_ID_RE = /^[a-z0-9]{6,12}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
