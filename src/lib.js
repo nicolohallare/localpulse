@@ -87,13 +87,13 @@ export const wazeUrl = (p) => (p.lat != null && p.lng != null
 export const photoUrl = (name, w = 800) => `/api/places/photo?${qs({ name, w })}`;
 
 // ── Location ────────────────────────────────────────────────────────────────
-export function getLocation({ timeout = 9000, highAccuracy = false } = {}) {
+export function getLocation({ timeout = 9000, highAccuracy = false, maxAge = 60000 } = {}) {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) return reject(new Error('Location is not supported on this device.'));
     navigator.geolocation.getCurrentPosition(
       (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }),
-      (err) => reject(new Error(err.code === 1 ? 'Location permission was denied.' : 'Could not get your location.')),
-      { timeout, enableHighAccuracy: highAccuracy, maximumAge: 60000 }
+      (err) => reject(Object.assign(new Error(err.code === 1 ? 'Location permission was denied.' : 'Could not get your location.'), { denied: err.code === 1 })),
+      { timeout, enableHighAccuracy: highAccuracy, maximumAge: maxAge }
     );
   });
 }

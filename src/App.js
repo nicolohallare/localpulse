@@ -84,22 +84,31 @@ export default function App() {
   // Use the phone's location. If it's blocked, use the area the person picked before,
   // or ask them where they are (instead of silently assuming one city).
   const locate = useCallback(async () => {
-    try {
-      const here = await getLocation();
-      setLoc({ lat: here.lat, lng: here.lng, label: 'Near you', isDefault: false });
+    const remembered = (key) => { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (x) { return null; } };
+    const applyFix = (here) => {
+      const fix = { lat: here.lat, lng: here.lng, label: 'Near you', isDefault: false };
+      setLoc(fix);
       setLocNote(null);
-    } catch (e) {
-      let saved = null;
-      try { saved = JSON.parse(localStorage.getItem('lp-area') || 'null'); } catch (x) { saved = null; }
-      if (saved && saved.lat != null) {
-        setLoc({ ...saved, isDefault: false, manual: true });
-        setLocNote(null);
-      } else {
-        setLoc({ ...DEFAULT_LOCATION, label: 'Set your area' });
-        setLocNote(`${e.message} Tap “Set your area” to see places near you.`);
-        setPicking(true);
-      }
+      try { localStorage.setItem('lp-last-fix', JSON.stringify({ ...fix, at: Date.now() })); } catch (x) { /* private mode */ }
+    };
+    // A position from the last 10 minutes is fine, and comes back instantly.
+    let err;
+    try { return applyFix(await getLocation({ timeout: 10000, maxAge: 600000 })); } catch (e) { err = e; }
+    // GPS was slow (indoors, at night). Show the last place we knew while we try again, instead of asking.
+    const last = remembered('lp-last-fix');
+    const saved = remembered('lp-area');
+    if (!err.denied) {
+      if (last && last.lat != null) setLoc({ ...last, isDefault: false });
+      else if (saved && saved.lat != null) setLoc({ ...saved, isDefault: false, manual: true });
+      try { return applyFix(await getLocation({ timeout: 25000, maxAge: 3600000 })); } catch (e) { err = e; }
     }
+    if (last && last.lat != null && !err.denied) { setLoc({ ...last, isDefault: false }); setLocNote(null); return; }
+    if (saved && saved.lat != null) { setLoc({ ...saved, isDefault: false, manual: true }); setLocNote(null); return; }
+    if (last && last.lat != null) { setLoc({ ...last, isDefault: false }); setLocNote(null); return; }
+    // We've never known where they are: only now ask.
+    setLoc({ ...DEFAULT_LOCATION, label: 'Set your area' });
+    setLocNote(`${err.message} Tap “Set your area” to see places near you.`);
+    setPicking(true);
   }, []);
 
   const pickArea = useCallback((p) => {
