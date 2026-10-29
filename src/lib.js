@@ -48,7 +48,7 @@ const qs = (o) => new URLSearchParams(Object.entries(o).filter(([, v]) => v !== 
 export const api = {
   nearby: (lat, lng, radius = 1500, amenities) => getJSON(`/api/places/nearby?${qs({ lat: +lat.toFixed(3), lng: +lng.toFixed(3), radius, amenities: amenities ? 1 : null })}`).then((d) => d.places),
   search: (q, lat, lng, amenities) => getJSON(`/api/places/search?${qs({ q, lat: lat == null ? lat : +lat.toFixed(2), lng: lng == null ? lng : +lng.toFixed(2), amenities: amenities ? 1 : null })}`).then((d) => d.places),
-  michelin: () => getJSON('/api/places/michelin?v=3').then((d) => d.listings || []),
+  michelin: () => getJSON('/api/places/michelin?v=4').then((d) => d.listings || []),
   details: (id) => getJSON(`/api/places/details?${qs({ id })}`).then((d) => d.place),
   names: (ids) => (ids.length ? getJSON(`/api/places/names?${qs({ ids: ids.join(',') })}`).then((d) => d.places) : Promise.resolve([])),
   youtube: (q) => getJSON(`/api/youtube?${qs({ q })}`),

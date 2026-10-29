@@ -351,6 +351,7 @@ async function michelinCard(cc) {
   const cur = (rows || []).filter((r) => r.year === year);
   const fresh = cur.filter((r) => r.is_new);
   const bib = cur.filter((r) => r.distinction === 'bib_gourmand').length;
+  const starred = cur.filter((r) => /star/.test(r.distinction || '')).length;
   const where = cc === 'tw' ? 'Taiwan' : 'Philippines';
   const pill2 = (t, accent) => div({ fontSize: 28, fontWeight: 800, padding: '10px 24px', borderRadius: 999, marginRight: 12, marginBottom: 12,
     background: accent ? MANGO : 'rgba(255,255,255,0.14)', color: accent ? INK : WHITE, border: accent ? `3px solid ${INK}` : '2px solid rgba(255,255,255,0.25)' }, t);
@@ -365,6 +366,7 @@ async function michelinCard(cc) {
       div({ fontFamily: 'Fraunces', fontSize: 56, lineHeight: 1.05, color: MANGO, marginBottom: 26 }, `${where} ${year}`),
       div({ flexWrap: 'wrap', justifyContent: 'center' }, [
         pill2(`${cur.length} restaurants`, true),
+        starred ? pill2(`${starred} with stars`) : null,
         fresh.length ? pill2(`${fresh.length} new`) : null,
         bib ? pill2(`${bib} Bib Gourmand`) : null,
       ].filter(Boolean)),

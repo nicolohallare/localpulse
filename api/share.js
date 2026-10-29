@@ -171,10 +171,11 @@ async function michelinMeta(cc) {
   const year = Math.max(0, ...(rows || []).map((r) => r.year || 0));
   const cur = (rows || []).filter((r) => r.year === year);
   const fresh = cur.filter((r) => r.is_new).length;
+  const starred = cur.filter((r) => /star/.test(r.distinction || '')).length;
   const where = cc === 'tw' ? 'Taiwan' : 'Philippines';
   return {
     title: `MICHELIN Guide ${where} ${year}: see which are near you`,
-    description: `${cur.length} restaurants${fresh ? `, ${fresh} new this year` : ''} — with what to order, verified check-ins and directions. On Ube Banana.`,
+    description: `${cur.length} restaurants${starred ? `, ${starred} with stars` : ''}${fresh ? `, ${fresh} new this year` : ''} — with what to order, verified check-ins and directions. On Ube Banana.`,
     appPath: `/#/michelin${fresh ? '?new=1' : ''}`,
     seeLabel: `See the ${year} list →`,
   };
@@ -309,12 +310,12 @@ export default async function handler(req, res) {
       platform,
       stores,
       url: t === 'm' ? `${site}/michelin${id === 'tw' ? '-tw' : ''}` : `${site}/${t}/${enc}`,
-      image: `${site}/api/og?t=${t}&id=${enc}&v=2`,
+      image: `${site}/api/og?t=${t}&id=${enc}&v=3`,
       appPath: `/#/${type.route}/${id}`,
       ...(meta.appPath ? { appPath: meta.appPath } : {}),
     });
   } else {
-    html = page({ ...GENERIC, platform, stores, url: `${site}/`, image: `${site}/api/og?v=2`, appPath: '/' });
+    html = page({ ...GENERIC, platform, stores, url: `${site}/`, image: `${site}/api/og?v=3`, appPath: '/' });
   }
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');

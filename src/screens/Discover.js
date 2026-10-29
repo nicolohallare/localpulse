@@ -321,9 +321,9 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
         <h1 className="display">{headline}</h1>
         {showMichHero && (
           <button className="mich-hero" onClick={() => { setMichSort('near'); setMode('michelin'); window.scrollTo(0, 0); }}>
-            <span className="mich-hero-kicker">Just announced</span>
+            <span className="mich-hero-kicker">Stars just announced</span>
             <span className="mich-hero-title">MICHELIN Guide Philippines {michYr}</span>
-            <span className="mich-hero-sub">{michSource.filter((l) => l.year === michYr).length} restaurants · {michNew.length} new — see which are near you →</span>
+            <span className="mich-hero-sub">{michSource.filter((l) => l.year === michYr).length} restaurants · {michSource.filter((l) => l.year === michYr && /star/.test(l.distinction || '')).length} with stars · {michNew.length} new — see which are near you →</span>
           </button>
         )}
         <form className="search" onSubmit={runSearch} role="search">
