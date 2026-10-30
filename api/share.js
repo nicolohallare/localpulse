@@ -243,6 +243,7 @@ function page({ title, description, url, image, appPath, platform, stores, seeLa
 <meta property="og:description" content="${d}">
 <meta property="og:url" content="${u}">
 <meta property="og:image" content="${img}">
+<meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="${t}">

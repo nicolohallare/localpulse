@@ -345,7 +345,7 @@ async function checkinCard(id) {
   ].filter(Boolean));
 }
 
-async function michelinCard(cc) {
+async function michelinCard(cc, square = false) {
   const rows = await rest(`michelin_listings?country=eq.${cc.toUpperCase()}&active=eq.true&select=year,is_new,distinction,name`);
   const year = Math.max(0, ...(rows || []).map((r) => r.year || 0));
   const cur = (rows || []).filter((r) => r.year === year);
@@ -355,8 +355,8 @@ async function michelinCard(cc) {
   const where = cc === 'tw' ? 'Taiwan' : 'Philippines';
   const pill2 = (t, accent) => div({ fontSize: 28, fontWeight: 800, padding: '10px 24px', borderRadius: 999, marginRight: 12, marginBottom: 12,
     background: accent ? MANGO : 'rgba(255,255,255,0.14)', color: accent ? INK : WHITE, border: accent ? `3px solid ${INK}` : '2px solid rgba(255,255,255,0.25)' }, t);
-  return div({ width: 1200, height: 630, background: 'linear-gradient(135deg, #5E2B96 0%, #4B1F7A 55%, #3D1866 100%)', color: WHITE, fontFamily: 'Figtree', justifyContent: 'center', alignItems: 'center' }, [
-    div({ flexDirection: 'column', alignItems: 'center', width: 680, textAlign: 'center' }, [
+  return div({ width: square ? 1080 : 1200, height: square ? 1080 : 630, flexDirection: 'column', background: 'linear-gradient(135deg, #5E2B96 0%, #4B1F7A 55%, #3D1866 100%)', color: WHITE, fontFamily: 'Figtree', justifyContent: 'center', alignItems: 'center' }, [
+    div({ flexDirection: 'column', alignItems: 'center', width: 680, textAlign: 'center', ...(square ? { transform: 'scale(1.38)' } : {}) }, [
       div({ alignItems: 'center', marginBottom: 20 }, [
         { type: 'img', props: { src: BANANA_URI, width: 60, height: 60, style: { marginRight: 12 } } },
         div({ fontFamily: 'Fraunces', fontSize: 34 }, 'Ube Banana'),
@@ -371,7 +371,8 @@ async function michelinCard(cc) {
         bib ? pill2(`${bib} Bib Gourmand`) : null,
       ].filter(Boolean)),
       div({ marginTop: 14, fontSize: 24, fontWeight: 800, color: WHITE }, 'See which are near you'),
-    ]),
+      square ? div({ marginTop: 70, fontSize: 34, fontWeight: 800, color: INK, background: MANGO, padding: '12px 30px', borderRadius: 18, border: `4px solid ${INK}` }, 'ubebanana.app/michelin') : null,
+    ].filter(Boolean)),
   ]);
 }
 
@@ -390,10 +391,10 @@ async function loadFonts(origin) {
   return FONTS;
 }
 
-function render(element, cache, fonts) {
+function render(element, cache, fonts, square = false) {
   return new ImageResponse(element, {
-    width: 1200,
-    height: 630,
+    width: square ? 1080 : 1200,
+    height: square ? 1080 : 630,
     ...(fonts ? { fonts } : {}),
     // Lowercase on purpose: @vercel/og sets its own 'cache-control' and spreads ours over it.
     headers: { 'cache-control': cache },
@@ -402,14 +403,16 @@ function render(element, cache, fonts) {
 
 export default async function handler(req) {
   let element = null;
+  let sq = false;
   const fonts = await loadFonts(new URL(req.url).origin).catch(() => undefined);
   try {
     const url = new URL(req.url);
     const t = url.searchParams.get('t') || '';
     const id = url.searchParams.get('id') || '';
-    if (BUILDERS[t] && VALID[t].test(id)) element = await BUILDERS[t](id);
+    sq = t === 'm' && url.searchParams.get('sq') === '1';
+    if (BUILDERS[t] && VALID[t].test(id)) element = await BUILDERS[t](id, sq);
   } catch (e) {
     element = null;
   }
-  return element ? render(element, CACHE_OK, fonts) : render(genericCard(), CACHE_ERR, fonts);
+  return element ? render(element, CACHE_OK, fonts, sq) : render(genericCard(), CACHE_ERR, fonts);
 }
