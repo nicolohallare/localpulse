@@ -1,4 +1,4 @@
-import { send } from '../_lib.js';
+import { send, trackUse } from '../_lib.js';
 import { SECRET, rpc, bearer, getUser } from '../_server.js';
 
 // Bank card dining promos, read from the banks' own promo pages.
@@ -42,6 +42,7 @@ async function brave(q) {
   const key = process.env.BRAVE_SEARCH_KEY;
   if (!key) return [];
   const params = new URLSearchParams({ q, count: '20', country: 'PH', freshness: 'py' });
+  trackUse('brave');
   const r = await fetch(`https://api.search.brave.com/res/v1/web/search?${params}`, { headers: { Accept: 'application/json', 'X-Subscription-Token': key }, signal: AbortSignal.timeout(8000) });
   if (!r.ok) throw new Error(`Search ${r.status}`);
   const d = await r.json();
@@ -83,6 +84,7 @@ function pageText(html) {
 // Ask the AI for the restaurant promos in a bank page's text (or screenshots of it).
 async function extractPromos({ bank, url, text, images, fromSnippet }) {
   const key = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
+  trackUse('ai');
   const ai = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },

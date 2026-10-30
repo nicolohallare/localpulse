@@ -1,4 +1,4 @@
-import { send, places, shapePlace, LIST_FIELDS, num } from '../_lib.js';
+import { send, places, shapePlace, LIST_FIELDS, num, trackUse } from '../_lib.js';
 import { shapeOembed } from './_oembed.js';
 
 // GET /api/match-video?url=<tiktok/youtube link>&lat=..&lng=..
@@ -28,6 +28,7 @@ async function oembed(url, platform) {
 async function guessPlaces(caption, author) {
   const key = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
   if (!key || !caption) return [];
+  trackUse('ai');
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },

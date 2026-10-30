@@ -1,4 +1,4 @@
-import { send, SUPABASE_URL } from '../_lib.js';
+import { send, SUPABASE_URL, trackUse } from '../_lib.js';
 import { SECRET, rpc, select } from '../_server.js';
 
 // POST /api/places/menu?id=<menu photo id>
@@ -36,6 +36,7 @@ export default async function handler(req, res) {
     const b64 = Buffer.from(await img.arrayBuffer()).toString('base64');
     const type = (img.headers.get('content-type') || 'image/jpeg').split(';')[0];
 
+    trackUse('ai');
     const ai = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },

@@ -1,4 +1,4 @@
-import { send, SUPABASE_URL, SUPABASE_KEY, PLACE_ID_RE } from './_lib.js';
+import { send, SUPABASE_URL, SUPABASE_KEY, PLACE_ID_RE, trackUse } from './_lib.js';
 
 // GET /api/summary?id=<google place id>
 // "Why go" for a place, written by AI from two sources only:
@@ -36,6 +36,7 @@ export default async function handler(req, res) {
       `${i + 1}. ${v.score}/10; order: ${(v.dishes_good || []).join(', ') || '-'}; skip: ${(v.dishes_bad || []).join(', ') || '-'}; tags: ${(v.tags || []).join(', ') || '-'}; review: ${(v.review || '').replace(/\s+/g, ' ').slice(0, 400) || '-'}`
     ).join('\n');
 
+    trackUse('ai');
     const ai = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },

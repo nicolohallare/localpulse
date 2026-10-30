@@ -1,5 +1,5 @@
 import { SECRET, rpc } from './_server.js';
-import { send, places, shapePlace, LIST_FIELDS, isFoodPlace, decodeEntities, num, SERVER_GOOGLE_KEY, countryOf, countryInfo, SUPABASE_URL, SUPABASE_KEY } from './_lib.js';
+import { send, places, shapePlace, LIST_FIELDS, isFoodPlace, decodeEntities, num, SERVER_GOOGLE_KEY, countryOf, countryInfo, SUPABASE_URL, SUPABASE_KEY, trackUse } from './_lib.js';
 
 // Results we pay Google for are kept in the database, so app updates (which clear Vercel's cache) don't redo them.
 async function cacheGet(key) {
@@ -83,6 +83,7 @@ async function extractPlaces(videos, area, cc) {
   const key = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
   if (!key) return [];
   const list = videos.map((v, i) => `${i}. TITLE: ${v.title} | CHANNEL: ${v.channel} | DESC: ${v.description.replace(/\s+/g, ' ')}`).join('\n');
+  trackUse('ai');
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
@@ -203,6 +204,7 @@ async function candidates(ytKey, area, lat, lng, cc) {
 async function driveMinutes(lat, lng, list) {
   const key = SERVER_GOOGLE_KEY;
   if (!key || !list.length) return null;
+  trackUse('g_routes');
   const r = await fetch('https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix', {
     method: 'POST',
     headers: {

@@ -1,4 +1,5 @@
 import { PromosAdmin } from '../promos';
+import { NumbersAdmin } from '../numbers';
 import React, { useCallback, useEffect, useState } from 'react';
 import { api, supabase, PLATFORM_LABEL, findVideoUrl } from '../lib';
 import { Icon, Spinner, Notice, Empty } from '../ui';
@@ -12,7 +13,7 @@ export default function Admin({ loc, onBack, onOpenPlace }) {
   const [sent, setSent] = useState(false);
   const [err, setErr] = useState(null);
   const [q, setQ] = useState(null);
-  const [tab, setTab] = useState('videos');
+  const [tab, setTab] = useState('numbers');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -93,6 +94,7 @@ export default function Admin({ loc, onBack, onOpenPlace }) {
           </section>
           <section className="section stack-12">
             <div className="seg" role="tablist" aria-label="Admin">
+              <button role="tab" aria-selected={tab === 'numbers'} className={tab === 'numbers' ? 'seg-on' : ''} onClick={() => setTab('numbers')}>Numbers</button>
               <button role="tab" aria-selected={tab === 'reports'} className={tab === 'reports' ? 'seg-on' : ''} onClick={() => setTab('reports')}>Reports</button>
               <button role="tab" aria-selected={tab === 'videos'} className={tab === 'videos' ? 'seg-on' : ''} onClick={() => setTab('videos')}>Videos · {q.videos.length}</button>
               <button role="tab" aria-selected={tab === 'apps'} className={tab === 'apps' ? 'seg-on' : ''} onClick={() => setTab('apps')}>Creators · {q.applications.length}</button>
@@ -128,6 +130,7 @@ export default function Admin({ loc, onBack, onOpenPlace }) {
             {tab === 'deals' && <DealsAdmin q={q} loc={loc} reload={load} />}
             {tab === 'media' && <MediaAdmin onOpenPlace={onOpenPlace} />}
             {tab === 'promos' && <PromosAdmin />}
+            {tab === 'numbers' && <NumbersAdmin />}
             {tab === 'reports' && <ReportsAdmin onOpenPlace={onOpenPlace} />}
             {tab === 'import' && <BulkImport loc={loc} onOpenPlace={onOpenPlace} />}
           </section>

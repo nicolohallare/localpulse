@@ -17,6 +17,7 @@ import Profile from './screens/Profile';
 import Admin from './screens/Admin';
 import { PollNew, PollView } from './screens/Poll';
 import { MyLists, ListView } from './screens/Lists';
+import { pingOpen } from './numbers';
 import { syncMyCards } from './promos';
 
 // Shared from another app (TikTok → Share → Ube Banana): /?url=…&text=…
@@ -120,7 +121,7 @@ export default function App() {
   }, []);
 
   useEffect(() => { locate(); }, [locate]);
-  useEffect(() => { syncMyCards(); }, []);
+  useEffect(() => { syncMyCards(); pingOpen(); }, []);
 
   // Back from the admin sign-in email: /?admin=1#access_token=… → wait for the session, then open admin.
   useEffect(() => {

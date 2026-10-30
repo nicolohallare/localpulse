@@ -30,8 +30,20 @@ function googleKey() {
 }
 
 // Calls Google Places API (New). Place data is fetched live and never stored.
+// Counts paid API calls per day so the admin Numbers page can estimate spend. Never blocks or fails a request.
+export function trackUse(kind, n = 1) {
+  const secret = process.env.LP_SERVER_SECRET;
+  if (!secret) return;
+  fetch(`${SUPABASE_URL}/rest/v1/rpc/track_usage`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_secret: secret, p_kind: kind, p_n: n }),
+  }).catch(() => {});
+}
+
 export async function places(path, { method = 'GET', body, fieldMask }) {
   const key = googleKey();
+  trackUse(path.includes('searchText') ? 'g_text' : path.includes('searchNearby') ? 'g_nearby' : 'g_details');
   const r = await fetch(`https://places.googleapis.com/v1/${path}`, {
     method,
     headers: {
@@ -55,6 +67,7 @@ export async function places(path, { method = 'GET', body, fieldMask }) {
 
 export async function placePhotoUri(name, width) {
   const key = googleKey();
+  trackUse('g_photo');
   const url = `https://places.googleapis.com/v1/${name}/media?maxWidthPx=${width}&skipHttpRedirect=true&key=${encodeURIComponent(key)}`;
   const r = await fetch(url);
   const data = await r.json().catch(() => ({}));

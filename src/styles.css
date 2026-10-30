@@ -721,3 +721,11 @@ html, body { overflow-x: hidden; }
 .section > .row-between + .seg { margin-top: 10px; }
 .section .row-between > .link-btn { white-space: nowrap; flex-shrink: 0; }
 .section .row-between > .h2 { min-width: 0; }
+.num-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.num-tile { display: flex; flex-direction: column; gap: 2px; padding: 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); }
+.num-big { font-family: var(--display); font-weight: 800; font-size: 26px; line-height: 1.1; }
+.num-budget { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: 14px; background: var(--ube-wash); color: var(--ube-text); }
+.num-budget.num-over { background: #fbebeb; color: #9b1c1c; }
+.num-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.num-table th, .num-table td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+.num-table th:not(:first-child), .num-table td:not(:first-child) { text-align: right; }

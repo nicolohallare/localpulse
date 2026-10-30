@@ -1,4 +1,4 @@
-import { send, places, PLACE_ID_RE, countryOf } from '../_lib.js';
+import { send, places, PLACE_ID_RE, countryOf, trackUse } from '../_lib.js';
 import { shapeOembed } from './_oembed.js';
 import { SECRET, rpc } from '../_server.js';
 
@@ -36,6 +36,7 @@ function keyWords(name) {
 
 async function braveSearch(q, key, cc) {
   const params = new URLSearchParams({ q, count: '20', country: cc || 'PH', safesearch: 'moderate' });
+  trackUse('brave');
   const r = await fetch(`https://api.search.brave.com/res/v1/web/search?${params}`, {
     headers: { Accept: 'application/json', 'X-Subscription-Token': key },
   });
