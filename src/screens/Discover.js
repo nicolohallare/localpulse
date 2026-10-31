@@ -10,6 +10,7 @@ const CRAVINGS_BY_COUNTRY = {
   TW: ['Beef noodles', 'Xiao long bao', 'Braised pork rice', 'Hot pot', 'Bubble tea', 'Dumplings', 'Fried chicken', 'Shaved ice', 'Breakfast', 'Ramen', 'Coffee', 'Night market'],
 };
 const DEFAULT_CRAVINGS = ['Noodles', 'Dumplings', 'Ramen', 'Pizza', 'Burger', 'Fried chicken', 'Sushi', 'Coffee', 'Dessert', 'Bubble tea', 'Breakfast', 'Street food'];
+const CRAVE_EMOJI = { Sisig: '🥘', Lechon: '🐷', Ramen: '🍜', Samgyup: '🥓', 'Kare-kare': '🥜', 'Chicken wings': '🍗', Pizza: '🍕', Burger: '🍔', 'Milk tea': '🧋', Coffee: '☕', 'Halo-halo': '🍧', Bulalo: '🍲', 'Beef noodles': '🍜', 'Xiao long bao': '🥟', 'Braised pork rice': '🍚', 'Hot pot': '🍲', 'Bubble tea': '🧋', Dumplings: '🥟', 'Fried chicken': '🍗', 'Shaved ice': '🍧', Breakfast: '🍳', 'Night market': '🏮', Noodles: '🍜', Sushi: '🍣', Dessert: '🍰', 'Street food': '🍢' };
 const cravingsFor = (cc) => CRAVINGS_BY_COUNTRY[cc] || DEFAULT_CRAVINGS;
 const FILTERS = [
   { k: 'open', label: 'Open now', test: (p) => p.openNow === true },
@@ -338,26 +339,24 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
         {locNote && <p className="tiny muted">{locNote}</p>}
       </header>
 
-      <div className="chips" role="tablist" aria-label="Filter">
+      <div className="mode-tabs" role="tablist" aria-label="Show">
         {MODES.map((m) => (
-          <button key={m.k} role="tab" aria-selected={mode === m.k} className={`chip ${mode === m.k ? 'chip-on' : ''}`}
+          <button key={m.k} role="tab" aria-selected={mode === m.k} className={mode === m.k ? 'on' : ''}
             onClick={() => setMode(m.k)}>{m.label}</button>
         ))}
       </div>
 
       {mode === 'near' && (
         <>
-          <div className="chips filter-chips" aria-label="Filters">
-            {FILTERS.map((f) => (
-              <button key={f.k} className={`chip chip-sm ${filters.includes(f.k) ? 'chip-soft-on' : ''}`} aria-pressed={filters.includes(f.k)} onClick={() => toggleFilter(f.k)}>{typeof f.label === 'function' ? f.label() : f.label}</button>
-            ))}
-          </div>
           {!query && (
             <section className="section crave">
-              <h2 className="h3">What are you craving?</h2>
+              <h2 className="h3">Craving something?</h2>
               <div className="crave-rail">
                 {cravingsFor(getCountry()).map((c) => (
-                  <button key={c} className={`crave-chip ${craving === c ? 'crave-on' : ''}`} aria-pressed={craving === c} onClick={() => setCraving(craving === c ? null : c)}>{c}</button>
+                  <button key={c} className={`crave-tile ${craving === c ? 'crave-on' : ''}`} aria-pressed={craving === c} onClick={() => setCraving(craving === c ? null : c)}>
+                    <span className="crave-emoji" aria-hidden="true">{CRAVE_EMOJI[c] || '🍽️'}</span>
+                    <span className="crave-label">{c}</span>
+                  </button>
                 ))}
               </div>
             </section>
@@ -397,13 +396,20 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
               <button className="soft-btn map-toggle" onClick={() => setShowMap((v) => !v)} aria-pressed={showMap}><Icon name="pin" size={16} /> {showMap ? 'Hide map' : 'Map'}</button>
             </div>
             {showMap && <div className="map-inline"><MapView center={loc} places={shownPicks.map((x) => x.p)} stats={stats} onPick={(p) => onOpen(p.id)} /></div>}
-            {!query && (
-              <div className="chips chips-inline" role="tablist" aria-label="Sort picks">
-                {PICK_SORTS.map((o) => (
-                  <button key={o.k} role="tab" aria-selected={pickSort === o.k} className={`chip chip-sm ${pickSort === o.k ? 'chip-on' : ''}`} onClick={() => setPickSort(o.k)}>{o.label}</button>
-                ))}
-              </div>
-            )}
+            <div className="chips chips-inline filter-row" aria-label="Sort and filter">
+              {!query && (
+                <label className={`chip chip-sm sort-chip ${pickSort !== 'best' ? 'chip-soft-on' : ''}`}>
+                  <span>{(PICK_SORTS.find((o) => o.k === pickSort) || PICK_SORTS[0]).label}</span>
+                  <Icon name="chevron-down" size={14} />
+                  <select aria-label="Sort picks" value={pickSort} onChange={(e) => setPickSort(e.target.value)}>
+                    {PICK_SORTS.map((o) => <option key={o.k} value={o.k}>{o.label}</option>)}
+                  </select>
+                </label>
+              )}
+              {FILTERS.map((f) => (
+                <button key={f.k} className={`chip chip-sm ${filters.includes(f.k) ? 'chip-soft-on' : ''}`} aria-pressed={filters.includes(f.k)} onClick={() => toggleFilter(f.k)}>{typeof f.label === 'function' ? f.label() : f.label}</button>
+              ))}
+            </div>
             {(loading || searching) && <Spinner label={searching ? 'Searching…' : 'Finding places near you…'} />}
             {error && !loading && (
               <Notice tone="warn" title="Couldn’t load places" action={<button className="btn btn-quiet" onClick={loadNearby}>Try again</button>}>
@@ -413,10 +419,17 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
             {!loading && !searching && !error && sorted.length === 0 && (
               <Empty title="Nothing found here">Try a different search or area.</Empty>
             )}
+            {!query && shownPicks.length >= 3 && (
+              <div className="pick-rail">
+                {shownPicks.slice(0, 3).map(({ p, m, reasons }, i) => (
+                  <PickCard key={p.id} place={p} michelin={m} reasons={reasons} why={why[p.id]} rank={i + 1} onOpen={() => onOpen(p.id)} />
+                ))}
+              </div>
+            )}
             <div className="place-list">
-              {shownPicks.map(({ p, m, reasons }, i) => (
+              {(!query && shownPicks.length >= 3 ? shownPicks.slice(3) : shownPicks).map(({ p, m, reasons }, i) => (
                 <PlaceRow key={p.id} place={p} stat={stats[p.id]} why={why[p.id]} michelin={m} reasons={reasons}
-                  rank={query ? null : i + 1} onOpen={() => onOpen(p.id)} />
+                  rank={query ? null : i + (shownPicks.length >= 3 ? 4 : 1)} onOpen={() => onOpen(p.id)} />
               ))}
             </div>
             {!query && picks.length > 10 && (
@@ -761,7 +774,48 @@ const PICK_SORTS = [
   { k: 'buzz', label: 'Buzzing' },
 ];
 
+function chipsFor(reasons, p, max = 4) {
+  const order = ['rating', 'ube', 'near', 'mich', 'buzz', 'promo'];
+  return (reasons || []).filter((x) => x.k !== 'open').sort((a, b) => order.indexOf(a.k) - order.indexOf(b.k)).slice(0, max);
+}
+
+function OpenText({ p }) {
+  if (p.openNow === true) return <span className="open-txt">Open now</span>;
+  if (p.openNow === false) return <span className="closed-txt">Closed</span>;
+  return null;
+}
+
+function MetaLine({ p, withDist }) {
+  const bits = [p.type, withDist ? fmtDistance(p.dist) : null, priceLabel(p)].filter(Boolean);
+  return (
+    <span className="muted small clamp-1">{bits.join(' · ')}{p.openNow != null && bits.length ? ' · ' : ''}<OpenText p={p} /></span>
+  );
+}
+
+function PickCard({ place: p, michelin, reasons, why, rank, onOpen }) {
+  const r = (k) => (reasons || []).find((x) => x.k === k);
+  const promo = r('promo');
+  const quick = [p.rating != null ? `★ ${p.rating.toFixed(1)}` : null, r('ube') ? r('ube').t.split(' · ')[0] : null, r('near') ? r('near').t : null].filter(Boolean);
+  return (
+    <button className="pick-card" onClick={onOpen}>
+      <span className="pick-photo">
+        <PlacePhoto photo={p.photos[0]} width={800} className="pick-img" alt="" />
+        <span className="pick-shade" />
+        <span className="pick-rank-lg">{rank}</span>
+        {michelin && <span className="pick-mich">{DISTINCTION[michelin.distinction]}</span>}
+        <span className="pick-name">{p.name}</span>
+      </span>
+      <span className="pick-body">
+        <span className="pick-quick">{quick.map((t) => <span key={t}>{t}</span>)}</span>
+        <MetaLine p={p} />
+        {why && why.why ? <span className="pick-why clamp-2">{why.why}</span> : promo ? <span className="reason reason-promo">{promo.t}</span> : null}
+      </span>
+    </button>
+  );
+}
+
 function PlaceRow({ place: p, stat, michelin, why, onOpen, rank, reasons }) {
+  const chips = reasons ? chipsFor(reasons, p) : null;
   return (
     <button className="place-row" onClick={onOpen}>
       <span className="thumb-wrap">
@@ -769,12 +823,10 @@ function PlaceRow({ place: p, stat, michelin, why, onOpen, rank, reasons }) {
         {rank && <span className="pick-rank">{rank}</span>}
       </span>
       <span className="place-main">
-        <span className="row-title">{p.name}</span>
-        <span className="muted small">{[p.type, fmtDistance(p.dist), priceLabel(p)].filter(Boolean).join(' · ')}</span>
+        <span className="row-title clamp-1">{p.name}</span>
+        <MetaLine p={p} withDist={!reasons} />
+        {chips && <span className="reason-row">{chips.map((x) => <span key={x.k} className={`reason reason-${x.k}`}>{x.t}</span>)}</span>}
         <WhyLine w={why} fallback={p.blurb} />
-        {reasons && reasons.length > 0 && (
-          <span className="reason-row">{reasons.map((x) => <span key={x.k} className={`reason reason-${x.k}`}>{x.t}</span>)}</span>
-        )}
         {!reasons && <span className="score-line">
           {stat ? (
             <><ScoreBadge score={stat.avg_score} /><span className="small strong">Ube Banana</span></>
@@ -784,7 +836,6 @@ function PlaceRow({ place: p, stat, michelin, why, onOpen, rank, reasons }) {
           {p.rating != null && <span className="small muted">★ {p.rating.toFixed(1)} Google</span>}
         </span>}
         {michelin && !reasons && <span className="mich-tag">{DISTINCTION[michelin.distinction]} {michelin.year}</span>}
-        {p.openNow === false && <span className="tiny closed">Closed now</span>}
       </span>
     </button>
   );
