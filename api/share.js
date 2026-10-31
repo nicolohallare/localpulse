@@ -194,7 +194,10 @@ const APPSTORE_URL = `https://apps.apple.com/ph/app/ube-banana/id${APPLE_ID}`;
 
 // Which stores have the app live right now (checked at most every 6 hours).
 let storesCache = null;
+// Both apps are approved and live (Play: Oct 2026, App Store: Nov 1, 2026), so always show both.
 async function storesLive() {
+  return { play: true, apple: true };
+  // eslint-disable-next-line no-unreachable
   if (storesCache && Date.now() - storesCache.t < 6 * 3600e3) return storesCache;
   const [play, apple] = await Promise.all([
     fetch(`${PLAY_URL}&hl=en`, { signal: AbortSignal.timeout(4000) }).then((r) => r.ok).catch(() => false),
@@ -218,7 +221,7 @@ function page({ title, description, url, image, appPath, platform, stores, seeLa
   const img = escapeHtml(image);
   const web = escapeHtml(appPath);
   const play = `<a class="btn store" href="${PLAY_URL}">▶ Get it on Google Play</a>`;
-  const apple = `<a class="btn store" href="${APPSTORE_URL}"> Download on the App Store</a>`;
+  const apple = `<a class="btn store" href="${APPSTORE_URL}">Download on the App Store</a>`;
   const open = (label) => `<a class="btn ${label ? 'alt' : 'store'}" href="${web}">${label || 'Open Ube Banana'}</a>`;
   let buttons;
   if (seeLabel) {
