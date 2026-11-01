@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     const lng = num(req.query.lng, -180, 180, NaN);
     const near = Number.isFinite(lat) && Number.isFinite(lng);
     const amen = req.query.amenities ? 1 : 0;
-    const key = `search:${q.toLowerCase()}:${near ? `${lat.toFixed(2)}:${lng.toFixed(2)}` : 'any'}:${amen}`.slice(0, 300);
+    const key = `search2:${q.toLowerCase()}:${near ? `${lat.toFixed(2)}:${lng.toFixed(2)}` : 'any'}:${amen}`.slice(0, 300);
     const CACHE = 'public, s-maxage=3600, stale-while-revalidate=86400';
 
     if (SECRET) {

@@ -177,7 +177,9 @@ export function isFoodPlace(p) {
   if (prim && NON_FOOD_EXTRA.has(prim)) return false;
   const types = p.types || [];
   if (!prim && types.includes('lodging')) return false;
-  // Malls and hotels sometimes carry a food type; drop them by name unless the name says it's a place to eat.
+  // A restaurant inside a mall ("Texas Roadhouse Estancia Mall") is still a restaurant: trust a food primary type.
+  if (/(restaurant|cafe|coffee|bar|bakery|steak|pizza|food|meal|dessert|ice_cream|tea|diner|bistro|buffet|deli|sandwich|ramen|sushi|barbecue|brunch|breakfast|pub|eatery|grill)/.test(prim)) return true;
+  // Malls and hotels themselves sometimes carry a food type; drop them by name unless the name says it's a place to eat.
   const name = (p.displayName && p.displayName.text) || p.name || '';
   if (/\b(malls?|hotel|resort|residences|condominium)\b/i.test(name)
     && !/(restaurant|resto|caf[eé]|kitchen|bar\b|grill|buffet|dining|bistro|eatery|coffee|bakery)/i.test(name)) return false;
