@@ -5,7 +5,7 @@ import { SECRET, rpc } from '../_server.js';
 // GET /api/places/mall?id=sm-taytay -> that mall and the places to eat inside it
 // Each mall is looked up on Google once, and its restaurants are refreshed weekly (cached in the database).
 export const MALLS = [
-  { id: 'sm-east-ortigas', name: 'SM City East Ortigas', town: 'Pasig', query: 'SM City East Ortigas Ortigas Avenue Extension Pasig', radius: 300, keys: ['sm city east ortigas', 'sm east ortigas', 'east ortigas'] },
+  { id: 'sm-east-ortigas', name: 'SM City East Ortigas', town: 'Pasig', query: 'SM City East Ortigas Ortigas Avenue Extension Pasig', radius: 300, keys: ['sm city east ortigas', 'sm east ortigas', 'east ortigas', 'sm east'] },
   { id: 'sm-masinag', name: 'SM City Masinag', town: 'Antipolo, Rizal', query: 'SM City Masinag Antipolo', radius: 230, keys: ['sm city masinag', 'sm masinag'] },
   { id: 'sm-taytay', name: 'SM City Taytay', town: 'Taytay, Rizal', query: 'SM City Taytay', radius: 260, keys: ['sm city taytay', 'sm taytay'] },
   { id: 'sm-san-mateo', name: 'SM City San Mateo', town: 'San Mateo, Rizal', query: 'SM City San Mateo Rizal', radius: 200, keys: ['sm city san mateo', 'sm san mateo'] },
