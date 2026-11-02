@@ -784,6 +784,9 @@ html, body { overflow-x: hidden; }
 .mall-stats > div { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); }
 .mall-challenge { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 16px; background: var(--banana-cream); color: var(--ink); border: 2px solid var(--ube-ink); }
 .challenge-bar { height: 10px; border-radius: 999px; background: rgba(36,18,61,0.12); overflow: hidden; margin-top: 6px; }
+.wallet-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
+.wallet-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 12px; background: #000; color: #fff; font-weight: 700; font-size: 14px; border: 0; }
+.wallet-btn:disabled { opacity: 0.6; }
 .challenge-bar > span { display: block; height: 100%; background: var(--ube); border-radius: 999px; }
 .mall-list { display: flex; flex-direction: column; padding: 8px 20px; }
 .mall-item { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 16px 40px 16px 0; border: 0; border-bottom: 1px solid var(--line); background: none; text-align: left; }

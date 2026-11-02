@@ -21,6 +21,7 @@ const paths = {
   image: <><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="9" cy="10" r="2" /><path d="M21 17l-5-5-9 8" /></>,
   facebook: <><path d="M15 3h-2.5A3.5 3.5 0 0 0 9 6.5V21" /><path d="M6 10.5h8" /></>,
   share: <><path d="M12 3v13" /><path d="M7 8l5-5 5 5" /><path d="M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5" /></>,
+  wallet: <><rect x="3" y="6" width="18" height="14" rx="3" /><path d="M3 10h18" /><path d="M7 3h10" /><circle cx="16.5" cy="15" r="1.2" /></>,
   phone: <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" />,
   globe: <><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" /></>,
   bookmark: <path d="M6 4h12v17l-6-4-6 4z" />,

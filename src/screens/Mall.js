@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { supabase, getJSON, distanceM, fmtDistance, priceLabel, currentUser } from '../lib';
+import { supabase, getJSON, distanceM, fmtDistance, priceLabel, currentUser, ensureUser, isNativeApp } from '../lib';
 import { Icon, PlacePhoto, Spinner, Notice } from '../ui';
 import { shareLink, PUBLIC_SITE } from '../game';
 import { usePromos, useMyCards, promosFor } from '../promos';
@@ -39,6 +39,45 @@ export function MallList({ onBack, onOpenMall }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// "Add to Apple Wallet / Google Wallet" for the Food Trip card. iPhone sees Apple, Android sees Google, computers see both.
+function WalletButtons({ mallId }) {
+  const [busy, setBusy] = useState(null);
+  const [msg, setMsg] = useState(null);
+  const ua = navigator.userAgent || '';
+  const plat = window.Capacitor && window.Capacitor.getPlatform ? window.Capacitor.getPlatform() : 'web';
+  const ios = plat === 'ios' || /iPhone|iPad|iPod/.test(ua);
+  const android = plat === 'android' || /Android/.test(ua);
+  const kinds = ios ? ['apple'] : android ? ['google'] : ['apple', 'google'];
+  async function add(kind) {
+    setBusy(kind); setMsg(null);
+    try {
+      await ensureUser();
+      const { data } = await supabase.auth.getSession();
+      const token = data && data.session && data.session.access_token;
+      const r = await fetch(`/api/places/wallet?mall=${encodeURIComponent(mallId)}&kind=${kind}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.url) throw new Error(r.status === 503 ? `${kind === 'apple' ? 'Apple' : 'Google'} Wallet card is almost ready. Try again soon.` : d.error || 'Couldn’t make your card.');
+      if (isNativeApp()) {
+        const { Browser } = await import('@capacitor/browser');
+        await Browser.open({ url: d.url });
+      } else window.location.href = d.url;
+    } catch (e) {
+      setMsg(e.message);
+    }
+    setBusy(null);
+  }
+  return (
+    <div className="wallet-row">
+      {kinds.map((k) => (
+        <button key={k} className="wallet-btn" onClick={() => add(k)} disabled={!!busy}>
+          <Icon name="wallet" size={18} /> {busy === k ? 'Making your card…' : `Add to ${k === 'apple' ? 'Apple' : 'Google'} Wallet`}
+        </button>
+      ))}
+      {msg && <span className="tiny">{msg}</span>}
     </div>
   );
 }
@@ -123,6 +162,7 @@ export default function Mall({ id, loc, demo, onBack, onOpen }) {
             <span className="small">Win SM Gift Passes. Every check-in is verified at the restaurant.</span>
             <span className="challenge-bar"><span style={{ width: `${Math.min(100, (mine / 3) * 100)}%` }} /></span>
             <span className="tiny">{Math.min(mine, 3)} of 3 done</span>
+            <WalletButtons mallId={m.id} />
           </div>
         )}
 
