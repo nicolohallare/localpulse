@@ -27,12 +27,12 @@ jobs:
           import { chromium } from 'playwright';
           const SITE = 'https://ubebanana.app';
           const shots = [
-            ['01-taytay-guide', '/#/mall/sm-taytay?demo=1', 0, [14.5717, 121.1336]],
-            ['02-taytay-list', '/#/mall/sm-taytay?demo=1', 900, [14.5717, 121.1336]],
-            ['03-angono-guide', '/#/mall/sm-angono?demo=1', 0, [14.5307, 121.1536]],
-            ['04-east-guide', '/#/mall/sm-east-ortigas?demo=1', 0, [14.5869, 121.1132]],
-            ['05-place', '/#/place/ChIJf4LFawDHlzMRDch-MXl80AI', 0, [14.5717, 121.1336]],
-            ['06-place-more', '/#/place/ChIJf4LFawDHlzMRDch-MXl80AI', 760, [14.5717, 121.1336]],
+            ['01-east-guide', '/#/mall/sm-east-ortigas?demo=1', 0, [14.5878, 121.1052]],
+            ['02-east-list', '/#/mall/sm-east-ortigas?demo=1', 900, [14.5878, 121.1052]],
+            ['03-east-place', '/#/place/ChIJ41DKNADHlzMRZZD0e96Kvis', 0, [14.5878, 121.1052]],
+            ['04-east-place-more', '/#/place/ChIJ41DKNADHlzMRZZD0e96Kvis', 760, [14.5878, 121.1052]],
+            ['05-taytay-guide', '/#/mall/sm-taytay?demo=1', 0, [14.5717, 121.1336]],
+            ['06-angono-guide', '/#/mall/sm-angono?demo=1', 0, [14.5307, 121.1536]],
           ];
           const b = await chromium.launch();
           for (const [name, path, y, [lat, lng]] of shots) {
