@@ -9,8 +9,7 @@ export const MALLS = [
   { id: 'sm-taytay', name: 'SM City Taytay', town: 'Taytay, Rizal', query: 'SM City Taytay', radius: 260, keys: ['sm city taytay', 'sm taytay'] },
   { id: 'sm-san-mateo', name: 'SM City San Mateo', town: 'San Mateo, Rizal', query: 'SM City San Mateo Rizal', radius: 200, keys: ['sm city san mateo', 'sm san mateo'] },
   { id: 'sm-angono', name: 'SM Center Angono', town: 'Angono, Rizal', query: 'SM Center Angono', radius: 160, keys: ['sm center angono', 'sm angono'] },
-  { id: 'sm-antipolo', name: 'SM Center Antipolo Downtown', town: 'Antipolo, Rizal', query: 'SM Center Antipolo Downtown', radius: 160, keys: ['sm center antipolo', 'antipolo downtown'] },
-  { id: 'sm-cherry-antipolo', name: 'SM Cherry Antipolo', town: 'Antipolo, Rizal', query: 'SM Cherry Antipolo Marcos Highway', radius: 160, keys: ['cherry antipolo', 'sm cherry'] },
+  { id: 'sm-antipolo', name: 'SM Center Antipolo Downtown', town: 'Antipolo, Rizal', query: 'SM Center Antipolo Downtown (formerly SM Cherry Antipolo)', radius: 160, keys: ['sm center antipolo', 'antipolo downtown', 'sm cherry', 'cherry antipolo', 'cherry mall', 'sm downtown'] },
 ];
 
 const GROUPS = [
@@ -69,9 +68,11 @@ export default async function handler(req, res) {
     });
 
     // Inside = Google's address names the mall (or the place name does); everything else is "nearby".
-    const inside = (p) => mall.keys.some((k) => `${p.name} ${p.address || ''}`.toLowerCase().includes(k));
+    // Within this small radius, an address that says "SM City" / "SM Center" is this mall.
+    const keys = [...mall.keys, 'sm city', 'sm center'];
+    const inside = (p) => keys.some((k) => `${p.name} ${p.address || ''}`.toLowerCase().includes(k));
     const out = ((list && list.places) || []).map((p) => ({ ...p, inside: inside(p) }));
-    const { keys, query, ...pub } = mall;
+    const { keys: _k, query, ...pub } = mall;
     send(res, 200, { mall: { ...pub, ...where }, places: out }, 'public, s-maxage=3600, stale-while-revalidate=86400');
   } catch (e) {
     fail(res, e);
