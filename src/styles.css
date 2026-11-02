@@ -772,3 +772,21 @@ html, body { overflow-x: hidden; }
 .pick-quick { display: flex; gap: 12px; font-weight: 800; font-size: 14px; color: var(--ink); white-space: nowrap; overflow: hidden; }
 .open-txt { color: var(--green); font-weight: 700; }
 .closed-txt { color: var(--soft); font-weight: 600; }
+
+/* Mall guides */
+.mall-hero .hero-shade { background: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(20,10,35,0.85) 100%); }
+.mall-hero-text { position: absolute; left: 20px; right: 20px; bottom: 18px; display: flex; flex-direction: column; gap: 2px; color: #fff; z-index: 2; }
+.mall-kicker { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mango); }
+.mall-kicker.dark { color: var(--ube-text); }
+.mall-title { font-family: var(--display); font-weight: 800; font-size: 30px; line-height: 1.05; margin: 0; }
+.mall-sub { font-size: 13px; opacity: 0.9; }
+.mall-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.mall-stats > div { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); }
+.mall-challenge { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 16px; background: var(--banana-cream); color: var(--ink); border: 2px solid var(--ube-ink); }
+.challenge-bar { height: 10px; border-radius: 999px; background: rgba(36,18,61,0.12); overflow: hidden; margin-top: 6px; }
+.challenge-bar > span { display: block; height: 100%; background: var(--ube); border-radius: 999px; }
+.mall-list { display: flex; flex-direction: column; padding: 8px 20px; }
+.mall-item { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 16px 40px 16px 0; border: 0; border-bottom: 1px solid var(--line); background: none; text-align: left; }
+.mall-item-name { font-weight: 800; font-size: 17px; }
+.mall-chev { position: absolute; right: 4px; top: 50%; transform: translateY(-50%) rotate(180deg); color: var(--soft); }
+.screen-head { padding: calc(14px + var(--safe-t)) 16px 8px; align-items: center; }

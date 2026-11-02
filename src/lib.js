@@ -32,7 +32,7 @@ export function isNativeApp() {
   return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
 }
 
-async function getJSON(url) {
+export async function getJSON(url) {
   const r = await fetch(url);
   const data = await r.json().catch(() => ({}));
   if (!r.ok) {

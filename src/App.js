@@ -15,6 +15,7 @@ import ShareVideo from './screens/ShareVideo';
 import Feed from './screens/Feed';
 import Profile from './screens/Profile';
 import Admin from './screens/Admin';
+import Mall, { MallList } from './screens/Mall';
 import { PollNew, PollView } from './screens/Poll';
 import { MyLists, ListView } from './screens/Lists';
 import { pingOpen } from './numbers';
@@ -39,6 +40,8 @@ function parseHash() {
   if (name === 'list' && id) return { name: 'list', id };
   if (name === 'u' && id) return { name: 'user', id };
   if (name === 'place' && id) return { name: 'place', id: decodeURIComponent(id) };
+  if (name === 'mall' && id) return { name: 'mall', id: decodeURIComponent(id), demo: params.get('demo') === '1' };
+  if (name === 'malls') return { name: 'malls' };
   if (name === 'ranks') return { name, id: ['creators', 'influencers'].includes(id) ? id : 'diners' };
   if (['deals', 'creators', 'you', 'checkin', 'feed', 'lists', 'admin'].includes(name)) return { name };
   if (name === 'michelin') return { name: 'discover', focus: params.get('new') === '1' ? 'michelin-new' : 'michelin' };
@@ -47,7 +50,7 @@ function parseHash() {
 
 if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
 
-const KEEP = new Set(['discover', 'feed', 'deals', 'you', 'user', 'poll', 'lists', 'list', 'creators', 'ranks']);
+const KEEP = new Set(['discover', 'feed', 'deals', 'you', 'user', 'poll', 'lists', 'list', 'creators', 'ranks', 'mall', 'malls']);
 const routeKey = (r) => `${r.name}:${r.id || ''}`;
 
 export default function App() {
@@ -178,7 +181,7 @@ export default function App() {
   const openUser = (uid) => go(`/u/${uid}`);
   const openList = (lid) => go(`/list/${lid}`);
   const TABS = ['discover', 'feed', 'deals', 'you'];
-  const showTabs = TABS.includes(tab) || tab === 'creators' || tab === 'ranks';
+  const showTabs = TABS.includes(tab) || tab === 'creators' || tab === 'ranks' || tab === 'mall' || tab === 'malls';
 
   function keptScreen(r, active) {
     switch (r.name) {
@@ -194,6 +197,8 @@ export default function App() {
       case 'list': return <ListView id={r.id} loc={loc} onBack={back} onOpenPlace={openPlace} onOpenUser={openUser} />;
       case 'creators': return <Creators onBack={back} onOpenRanks={() => go('/ranks/creators')} onAddVideo={() => go('/add')} />;
       case 'ranks': return <Ranks initial={r.id} onBack={back} onOpenUser={openUser} />;
+      case 'mall': return <Mall id={r.id} demo={r.demo} loc={loc} onBack={back} onOpen={openPlace} />;
+      case 'malls': return <MallList onBack={back} onOpenMall={(m) => go(`/mall/${m}`)} />;
       default: return null;
     }
   }

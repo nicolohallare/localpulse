@@ -85,5 +85,17 @@
       "path": "/api/cron/promos",
       "schedule": "34 22 * * *"
     }
+  ],
+  "redirects": [
+    {
+      "source": "/mall/:id",
+      "destination": "/#/mall/:id",
+      "permanent": false
+    },
+    {
+      "source": "/malls",
+      "destination": "/#/malls",
+      "permanent": false
+    }
   ]
 }

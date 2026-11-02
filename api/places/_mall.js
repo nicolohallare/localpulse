@@ -5,12 +5,12 @@ import { SECRET, rpc } from '../_server.js';
 // GET /api/places/mall?id=sm-taytay -> that mall and the places to eat inside it
 // Each mall is looked up on Google once, and its restaurants are refreshed weekly (cached in the database).
 export const MALLS = [
-  { id: 'sm-masinag', name: 'SM City Masinag', town: 'Antipolo, Rizal', query: 'SM City Masinag Antipolo', radius: 230 },
-  { id: 'sm-taytay', name: 'SM City Taytay', town: 'Taytay, Rizal', query: 'SM City Taytay', radius: 260 },
-  { id: 'sm-san-mateo', name: 'SM City San Mateo', town: 'San Mateo, Rizal', query: 'SM City San Mateo Rizal', radius: 200 },
-  { id: 'sm-angono', name: 'SM Center Angono', town: 'Angono, Rizal', query: 'SM Center Angono', radius: 160 },
-  { id: 'sm-antipolo', name: 'SM Center Antipolo Downtown', town: 'Antipolo, Rizal', query: 'SM Center Antipolo Downtown', radius: 160 },
-  { id: 'sm-cherry-antipolo', name: 'SM Cherry Antipolo', town: 'Antipolo, Rizal', query: 'SM Cherry Antipolo Marcos Highway', radius: 160 },
+  { id: 'sm-masinag', name: 'SM City Masinag', town: 'Antipolo, Rizal', query: 'SM City Masinag Antipolo', radius: 230, keys: ['sm city masinag', 'sm masinag'] },
+  { id: 'sm-taytay', name: 'SM City Taytay', town: 'Taytay, Rizal', query: 'SM City Taytay', radius: 260, keys: ['sm city taytay', 'sm taytay'] },
+  { id: 'sm-san-mateo', name: 'SM City San Mateo', town: 'San Mateo, Rizal', query: 'SM City San Mateo Rizal', radius: 200, keys: ['sm city san mateo', 'sm san mateo'] },
+  { id: 'sm-angono', name: 'SM Center Angono', town: 'Angono, Rizal', query: 'SM Center Angono', radius: 160, keys: ['sm center angono', 'sm angono'] },
+  { id: 'sm-antipolo', name: 'SM Center Antipolo Downtown', town: 'Antipolo, Rizal', query: 'SM Center Antipolo Downtown', radius: 160, keys: ['sm center antipolo', 'antipolo downtown'] },
+  { id: 'sm-cherry-antipolo', name: 'SM Cherry Antipolo', town: 'Antipolo, Rizal', query: 'SM Cherry Antipolo Marcos Highway', radius: 160, keys: ['cherry antipolo', 'sm cherry'] },
 ];
 
 const GROUPS = [
@@ -68,7 +68,11 @@ export default async function handler(req, res) {
       return { places: [...seen.values()] };
     });
 
-    send(res, 200, { mall: { ...mall, ...where }, places: (list && list.places) || [] }, 'public, s-maxage=3600, stale-while-revalidate=86400');
+    // Inside = Google's address names the mall (or the place name does); everything else is "nearby".
+    const inside = (p) => mall.keys.some((k) => `${p.name} ${p.address || ''}`.toLowerCase().includes(k));
+    const out = ((list && list.places) || []).map((p) => ({ ...p, inside: inside(p) }));
+    const { keys, query, ...pub } = mall;
+    send(res, 200, { mall: { ...pub, ...where }, places: out }, 'public, s-maxage=3600, stale-while-revalidate=86400');
   } catch (e) {
     fail(res, e);
   }
