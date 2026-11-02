@@ -6,10 +6,11 @@ import names from './_names.js';
 import photo from './_photo.js';
 import michelin from './_michelin.js';
 import menu from './_menu.js';
+import mall from './_mall.js';
 
 // One function for all place endpoints (keeps the deployment under Vercel's Hobby function limit):
-// /api/places/nearby · /search · /details · /names · /photo · /michelin · /menu
-const ROUTES = { nearby, search, details, names, photo, michelin, menu };
+// /api/places/nearby · /search · /details · /names · /photo · /michelin · /menu · /mall
+const ROUTES = { nearby, search, details, names, photo, michelin, menu, mall };
 
 export default function handler(req, res) {
   const fn = ROUTES[String(req.query.action || '')];
