@@ -1,0 +1,60 @@
+name: App screenshots
+
+# Takes phone-size screenshots of the live app (for pitch decks and store listings) and saves them to the "screens" branch.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  shoot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install browser
+        run: |
+          mkdir shots && cd shots
+          npm init -y >/dev/null
+          npm i playwright@1.49.1 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Take screenshots
+        working-directory: shots
+        run: |
+          cat > s.mjs <<'JS'
+          import { chromium } from 'playwright';
+          const SITE = 'https://ubebanana.app';
+          const shots = [
+            ['01-mall-guide', '/#/mall/sm-masinag?demo=1', 0],
+            ['02-mall-list', '/#/mall/sm-masinag?demo=1', 900],
+            ['03-malls', '/#/malls', 0],
+            ['04-place', '/#/place/ChIJ6zWIt1a4lzMR2f2dD237cBw', 0],
+            ['05-place-more', '/#/place/ChIJ6zWIt1a4lzMR2f2dD237cBw', 760],
+            ['06-home', '/', 0],
+            ['07-home-picks', '/', 760],
+          ];
+          const b = await chromium.launch();
+          for (const [name, path, y] of shots) {
+            const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true,
+              geolocation: { latitude: 14.6254, longitude: 121.1199 }, permissions: ['geolocation'], colorScheme: 'light', locale: 'en-PH' });
+            const pg = await ctx.newPage();
+            await pg.goto(SITE + path, { waitUntil: 'networkidle' }).catch(() => {});
+            await pg.waitForTimeout(6000);
+            if (y) { await pg.evaluate((yy) => window.scrollTo(0, yy), y); await pg.waitForTimeout(2500); }
+            await pg.screenshot({ path: `${name}.png` });
+            console.log('shot', name);
+            await ctx.close();
+          }
+          await b.close();
+          JS
+          node s.mjs
+      - name: Save to the screens branch
+        working-directory: shots
+        run: |
+          mkdir out && mv *.png out/ && cd out
+          git init -q && git checkout -q -b screens
+          git config user.name "screens-bot" && git config user.email "screens-bot@users.noreply.github.com"
+          git add . && git commit -qm "App screenshots $(date -u +%F)"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" screens
