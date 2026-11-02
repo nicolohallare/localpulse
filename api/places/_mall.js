@@ -36,14 +36,18 @@ export default async function handler(req, res) {
     const mall = MALLS.find((m) => m.id === id);
     if (!mall) return send(res, 404, { error: 'Mall not found' });
 
-    const where = await cached(`mall:loc:${id}`, 90 * 86400, async () => {
+    const where = await cached(`mall:loc2:${id}`, 90 * 86400, async () => {
       const d = await places('places:searchText', {
         method: 'POST',
         fieldMask: 'places.id,places.displayName,places.location,places.photos,places.formattedAddress',
-        body: { textQuery: mall.query, pageSize: 1, regionCode: 'PH', languageCode: 'en' },
+        body: { textQuery: mall.query, pageSize: 5, regionCode: 'PH', languageCode: 'en' },
       });
-      const p = d.places && d.places[0];
-      if (!p || !p.location) return null;
+      const list = (d.places || []).filter((x) => x.location);
+      const p = list[0];
+      if (!p) return null;
+      // Some mall listings have no photos; borrow one from another listing of the same mall.
+      const withPhoto = (p.photos && p.photos.length ? p : list.find((x) => x.photos && x.photos.length && /\bsm\b/i.test((x.displayName && x.displayName.text) || '')));
+      if (withPhoto && withPhoto !== p) p.photos = withPhoto.photos;
       return {
         placeId: p.id, lat: p.location.latitude, lng: p.location.longitude, address: p.formattedAddress || null,
         photo: p.photos && p.photos[0] ? { name: p.photos[0].name } : null,
