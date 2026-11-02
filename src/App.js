@@ -19,6 +19,7 @@ import Mall, { MallList } from './screens/Mall';
 import { PollNew, PollView } from './screens/Poll';
 import { MyLists, ListView } from './screens/Lists';
 import { pingOpen } from './numbers';
+import GetAppBar from './getapp';
 import { syncMyCards } from './promos';
 
 // Shared from another app (TikTok → Share → Ube Banana): /?url=…&text=…
@@ -224,6 +225,7 @@ export default function App() {
         <NearbyCheckIn onClose={back} onPick={(id) => { window.location.replace(`#/place/${encodeURIComponent(id)}`); }} />
       )}
 
+      <GetAppBar route={route.name} visible={route.name !== 'place' && showTabs} />
       {route.name !== 'place' && showTabs && (
         <nav className="tabbar" aria-label="Main">
           <TabLink icon="compass" label="Discover" active={tab === 'discover'} onClick={() => go('/')} />
