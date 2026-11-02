@@ -27,18 +27,17 @@ jobs:
           import { chromium } from 'playwright';
           const SITE = 'https://ubebanana.app';
           const shots = [
-            ['01-mall-guide', '/#/mall/sm-masinag?demo=1', 0],
-            ['02-mall-list', '/#/mall/sm-masinag?demo=1', 900],
-            ['03-malls', '/#/malls', 0],
-            ['04-place', '/#/place/ChIJ6zWIt1a4lzMR2f2dD237cBw', 0],
-            ['05-place-more', '/#/place/ChIJ6zWIt1a4lzMR2f2dD237cBw', 760],
-            ['06-home', '/', 0],
-            ['07-home-picks', '/', 760],
+            ['01-taytay-guide', '/#/mall/sm-taytay?demo=1', 0, [14.5717, 121.1336]],
+            ['02-taytay-list', '/#/mall/sm-taytay?demo=1', 900, [14.5717, 121.1336]],
+            ['03-angono-guide', '/#/mall/sm-angono?demo=1', 0, [14.5307, 121.1536]],
+            ['04-east-guide', '/#/mall/sm-east-ortigas?demo=1', 0, [14.5869, 121.1132]],
+            ['05-place', '/#/place/ChIJf4LFawDHlzMRDch-MXl80AI', 0, [14.5717, 121.1336]],
+            ['06-place-more', '/#/place/ChIJf4LFawDHlzMRDch-MXl80AI', 760, [14.5717, 121.1336]],
           ];
           const b = await chromium.launch();
-          for (const [name, path, y] of shots) {
+          for (const [name, path, y, [lat, lng]] of shots) {
             const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true,
-              geolocation: { latitude: 14.6254, longitude: 121.1199 }, permissions: ['geolocation'], colorScheme: 'light', locale: 'en-PH' });
+              geolocation: { latitude: lat, longitude: lng }, permissions: ['geolocation'], colorScheme: 'light', locale: 'en-PH' });
             const pg = await ctx.newPage();
             await pg.goto(SITE + path, { waitUntil: 'networkidle' }).catch(() => {});
             await pg.waitForTimeout(6000);
