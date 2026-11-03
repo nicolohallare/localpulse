@@ -11,7 +11,19 @@ export default async function handler(req, res) {
     const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
     const o = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
     const raw = await o.text();
-    if (req.query.debug) return send(res, 200, { status: o.status, body: raw.slice(0, 600) });
+    if (req.query.debug) {
+      const out = {};
+      const id = (url.match(/video\/(\d+)/) || [])[1];
+      for (const [k, u] of [['page', url], ['player', `https://www.tiktok.com/player/v1/${id}`], ['embed', `https://www.tiktok.com/embed/v2/${id}`]]) {
+        try {
+          const r = await fetch(u, { headers: { 'User-Agent': UA, 'Accept-Language': 'en' } });
+          const h = await r.text();
+          const imgs = [...new Set(h.match(/https:(?:\/|\\u002F)[^"'\s]*?(?:tiktokcdn|ibyteimg|byteimg)[^"'\s]*/g) || [])].slice(0, 4);
+          out[k] = { status: r.status, len: h.length, og: (h.match(/property="og:image" content="([^"]+)"/) || [])[1] || null, imgs, cover: (h.match(/"(?:cover|originCover|dynamicCover|poster)":"([^"]+)"/) || [])[1] || null };
+        } catch (e) { out[k] = String(e); }
+      }
+      return send(res, 200, out);
+    }
     const d = JSON.parse(raw);
     const thumb = shapeOembed(d).thumb;
     if (!thumb || !/^https:\/\/[^/]+\.(tiktokcdn[^/]*|tiktokcdn-us\.com|ibyteimg\.com|byteimg\.com|muscdn\.com)\//i.test(thumb)) throw new Error('no thumb');
