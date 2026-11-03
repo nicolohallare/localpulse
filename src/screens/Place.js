@@ -449,12 +449,16 @@ function SubmittedVideo({ v, placeId, onPlayYouTube, first }) {
     if (v.platform === 'tiktok' || v.platform === 'youtube') api.oembed(v.url).then(setMeta).catch(() => {});
   }, [v.url, v.platform]);
   const ytId = v.platform === 'youtube' ? youtubeId(v.url) : null;
+  const [thumbOk, setThumbOk] = useState(true);
+  // TikTok thumbnails come through our server (their own links expire and often won't load here).
+  const thumbSrc = v.platform === 'tiktok' ? `/api/video/thumb?url=${encodeURIComponent(v.url)}` : meta && meta.thumb;
   const title = v.title || (meta && meta.title) || `${PLATFORM_LABEL[v.platform]} video`;
   const handle = v.creator_handle || (meta && (meta.handle ? `@${meta.handle}` : meta.author)) || '';
   const inner = (
     <>
       <span className={`vtile vtile-${v.platform}`}>
-        {meta && meta.thumb && <img src={meta.thumb} alt="" loading="lazy" />}
+        {thumbSrc && thumbOk && <img src={thumbSrc} alt="" loading="lazy" onError={() => setThumbOk(false)} />}
+        {(!thumbSrc || !thumbOk) && <span className="vtile-fallback">{v.creator_handle || (meta && meta.author) || ''}</span>}
         <span className="play"><Icon name="play" size={18} /></span>
         <span className="badge-plat">{PLATFORM_LABEL[v.platform]}</span>
       </span>
