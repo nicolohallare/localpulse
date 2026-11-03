@@ -8,10 +8,14 @@ export default async function handler(req, res) {
   const url = String(req.query.url || '');
   if (!/^https:\/\/(www\.|vm\.|vt\.)?tiktok\.com\//i.test(url)) return send(res, 400, { error: 'TikTok links only' });
   try {
-    const d = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`).then((r) => r.json());
+    const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
+    const o = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
+    const raw = await o.text();
+    if (req.query.debug) return send(res, 200, { status: o.status, body: raw.slice(0, 600) });
+    const d = JSON.parse(raw);
     const thumb = shapeOembed(d).thumb;
     if (!thumb || !/^https:\/\/[^/]+\.(tiktokcdn[^/]*|tiktokcdn-us\.com|ibyteimg\.com|byteimg\.com|muscdn\.com)\//i.test(thumb)) throw new Error('no thumb');
-    const r = await fetch(thumb, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    const r = await fetch(thumb, { headers: { 'User-Agent': UA, Referer: 'https://www.tiktok.com/' } });
     const type = r.headers.get('content-type') || '';
     if (!r.ok || !type.startsWith('image/')) throw new Error(`thumb ${r.status}`);
     res.setHeader('Content-Type', type);
