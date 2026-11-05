@@ -175,8 +175,8 @@ h1, h2, h3 { margin: 0; }
 .seg button { flex: 1; min-height: 44px; border: 0; border-radius: 10px; background: transparent; color: var(--mid); font-weight: 600; font-size: 14px; }
 .seg .seg-on { background: var(--surface); color: var(--ink); font-weight: 700; box-shadow: 0 1px 3px rgba(23, 19, 31, 0.12); }
 .video-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.vcard { display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: var(--ink); border: 0; background: none; padding: 0; text-align: left; }
-.vtile { position: relative; height: 250px; border-radius: 16px; overflow: hidden; background: #2b2433; display: flex; align-items: center; justify-content: center; }
+.vcard { width: 100%; min-width: 0; display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: var(--ink); border: 0; background: none; padding: 0; text-align: left; }
+.vtile { position: relative; width: 100%; height: 250px; border-radius: 16px; overflow: hidden; background: #2b2433; display: flex; align-items: center; justify-content: center; }
 .vtile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .vtile-tiktok { background: linear-gradient(160deg, #5E2B96 0%, #24123D 100%); }
 .vtile-fallback { position: absolute; left: 12px; right: 12px; bottom: 14px; color: #fff; opacity: 0.75; font-size: 13px; font-weight: 700; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .vtile-instagram { background: #3b2240; } .vtile-facebook { background: #1c2a44; }
