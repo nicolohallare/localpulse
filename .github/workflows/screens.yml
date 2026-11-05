@@ -41,7 +41,7 @@ jobs:
             const pg = await ctx.newPage();
             await pg.goto(SITE + path, { waitUntil: 'networkidle' }).catch(() => {});
             await pg.waitForTimeout(6000);
-            if (y) { await pg.evaluate((yy) => window.scrollTo(0, yy), y); await pg.waitForTimeout(2500); }
+            if (y) { await pg.evaluate((yy) => window.scrollTo(0, yy), y); await pg.waitForTimeout(9000); }
             await pg.screenshot({ path: `${name}.png` });
             console.log('shot', name);
             await ctx.close();
