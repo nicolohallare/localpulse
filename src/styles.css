@@ -245,10 +245,10 @@ h1, h2, h3 { margin: 0; }
 .you-avatar { width: 64px; height: 64px; border-radius: 999px; background: rgba(255, 255, 255, 0.18); border: 2px solid rgba(255, 255, 255, 0.45); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 22px; }
 .link-btn.light { color: #fff; text-decoration: underline; padding: 0; align-self: flex-start; font-size: 13px; }
 .name-input { max-width: 220px; }
-.you-stats { display: flex; gap: 0; border-top: 1px solid rgba(255, 255, 255, 0.25); padding-top: 14px; }
-.you-stats div { flex: 1; display: flex; flex-direction: column; }
+.you-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; border-top: 1px solid rgba(255, 255, 255, 0.25); padding-top: 14px; }
+.you-stats div { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .you-stats strong { font-family: var(--display); font-size: 26px; font-weight: 800; }
-.you-stats span { font-size: 12px; opacity: 0.85; }
+.you-stats span { font-size: 12px; line-height: 1.25; opacity: 0.85; white-space: normal; overflow-wrap: break-word; }
 .log-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border: 0; border-bottom: 1px solid var(--line); background: none; text-align: left; width: 100%; }
 .creator-cta { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 16px; border: 1.5px solid var(--line-strong); background: var(--ube-wash); text-align: left; }
 .cta-icon { width: 44px; height: 44px; border-radius: 12px; background: var(--ube); color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
