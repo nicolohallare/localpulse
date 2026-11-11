@@ -26,13 +26,16 @@ jobs:
           cat > s.mjs <<'JS'
           import { chromium } from 'playwright';
           const SITE = 'https://ubebanana.app';
+          const M = [14.5636, 121.0324];
           const shots = [
-            ['01-east-guide', '/#/mall/sm-east-ortigas?demo=1', 0, [14.5878, 121.1052]],
-            ['02-east-list', '/#/mall/sm-east-ortigas?demo=1', 900, [14.5878, 121.1052]],
-            ['03-east-place', '/#/place/ChIJ41DKNADHlzMRZZD0e96Kvis', 0, [14.5878, 121.1052]],
-            ['04-east-place-more', '/#/place/ChIJ41DKNADHlzMRZZD0e96Kvis', 760, [14.5878, 121.1052]],
-            ['05-taytay-guide', '/#/mall/sm-taytay?demo=1', 0, [14.5717, 121.1336]],
-            ['06-angono-guide', '/#/mall/sm-angono?demo=1', 0, [14.5307, 121.1536]],
+            ['v1-home', '/', 0, M],
+            ['v2-home-more', '/', 650, M],
+            ['v3-place', '/#/place/ChIJreB8JQDJlzMRvEGgJ-bBRR8', 0, M],
+            ['v4-place-videos', '/#/place/ChIJreB8JQDJlzMRvEGgJ-bBRR8', 760, M],
+            ['v5-michelin', '/#/michelin', 0, M],
+            ['v6-michelin-more', '/#/michelin', 500, M],
+            ['v7-deals', '/#/deals', 0, M],
+            ['v8-place-menu', '/#/place/ChIJreB8JQDJlzMRvEGgJ-bBRR8', 380, M],
           ];
           const b = await chromium.launch();
           for (const [name, path, y, [lat, lng]] of shots) {
