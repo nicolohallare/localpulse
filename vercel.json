@@ -4,6 +4,10 @@
   ],
   "rewrites": [
     {
+      "source": "/about",
+      "destination": "/about.html"
+    },
+    {
       "source": "/p/:id",
       "destination": "/api/share?t=p&id=:id"
     },

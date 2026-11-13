@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ube Banana · Where to eat, rated by people who were there</title>
+<meta name="description" content="A free food app from the Philippines. You can only rate a restaurant while you're actually there, so every review is a real visit.">
+<meta property="og:title" content="Ube Banana">
+<meta property="og:description" content="Rate a restaurant only when you're actually there. Free on iPhone and Android.">
+<meta property="og:image" content="https://ubebanana.app/about/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://ubebanana.app/about">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/icons/icon-192.png">
+<style>
+@font-face { font-family: Fraunces; src: url(/og-fonts/fraunces-800.woff) format('woff'); font-weight: 800; }
+@font-face { font-family: Figtree; src: url(/og-fonts/figtree-600.woff) format('woff'); font-weight: 400 600; }
+@font-face { font-family: Figtree; src: url(/og-fonts/figtree-800.woff) format('woff'); font-weight: 800; }
+:root { --ube: #4B1F7A; --deep: #24123D; --mango: #FFD23F; --cream: #FBF6E9; --muted: #5E4F72; --line: #E3D8EF; }
+* { box-sizing: border-box; margin: 0; }
+body { background: var(--cream); color: var(--deep); font-family: Figtree, system-ui, sans-serif; font-size: 18px; line-height: 1.5; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+header { background: var(--deep); color: var(--cream); padding: 56px 0 64px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; margin-bottom: 36px; }
+.brand img { width: 36px; height: 36px; }
+h1 { font-family: Fraunces, Georgia, serif; font-size: clamp(36px, 7vw, 60px); line-height: 1.05; color: var(--mango); max-width: 760px; }
+.lede { margin-top: 18px; font-size: 20px; max-width: 640px; color: #E6D9F5; }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+.btn { display: inline-block; padding: 14px 22px; border-radius: 14px; font-weight: 800; text-decoration: none; }
+.btn-main { background: var(--mango); color: var(--deep); }
+.btn-ghost { border: 2px solid #6B4F8F; color: var(--cream); }
+section { padding: 56px 0 8px; }
+h2 { font-family: Fraunces, Georgia, serif; font-size: clamp(28px, 5vw, 38px); line-height: 1.1; margin-bottom: 14px; }
+p + p { margin-top: 12px; }
+.muted { color: var(--muted); }
+.grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; margin-top: 28px; }
+.shot { display: flex; flex-direction: column; gap: 10px; }
+.shot img { width: 100%; border-radius: 22px; border: 5px solid var(--deep); display: block; }
+.shot b { font-size: 16px; }
+.shot span { font-size: 15px; color: var(--muted); line-height: 1.4; }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 24px; }
+.fact { background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 20px; }
+.fact b { display: block; font-size: 17px; margin-bottom: 4px; }
+.fact span { font-size: 16px; color: var(--muted); }
+footer { padding: 56px 0 64px; }
+.end { background: var(--ube); color: var(--cream); border-radius: 24px; padding: 32px; }
+.end h2 { color: var(--mango); }
+@media (max-width: 760px) {
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .facts { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="brand"><img src="/wallet/logo@3x.png" alt="">Ube Banana</div>
+    <h1>Where to eat, rated only by people who were really there.</h1>
+    <p class="lede">Google reviews can be written by anyone, from anywhere. On Ube Banana you can only rate a restaurant while you’re at the restaurant. The app checks your location first.</p>
+    <div class="cta">
+      <a class="btn btn-main" href="https://ubebanana.app">Open the app</a>
+      <a class="btn btn-ghost" href="https://apps.apple.com/app/id6824764829">iPhone</a>
+      <a class="btn btn-ghost" href="https://play.google.com/store/apps/details?id=com.ubebanana.app">Android</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section>
+    <h2>Why I built it</h2>
+    <p>Every barkada and office has the same daily question: saan tayo kakain? Most of us stopped trusting Google ratings and just ask friends. Ube Banana puts the friends’ answer in one place, and makes sure every rating comes from a real visit.</p>
+    <p class="muted">Made in Manila by Nicolo Hallare. Free for diners and restaurants.</p>
+  </section>
+
+  <section>
+    <h2>What’s in it</h2>
+    <div class="grid">
+      <div class="shot"><img src="/about/place.jpg" alt="Restaurant page with the Ube Banana score and Google rating"><b>Real scores</b><span>A score shows only after 3 verified visits. Google’s rating sits beside it, never mixed in.</span></div>
+      <div class="shot"><img src="/about/videos.jpg" alt="TikTok reviews on a restaurant page"><b>Every TikTok review</b><span>Food creators’ TikTok and YouTube reviews of each place, on one page.</span></div>
+      <div class="shot"><img src="/about/michelin.jpg" alt="MICHELIN Guide Philippines list in the app"><b>The MICHELIN list</b><span>All of MICHELIN Guide Philippines 2027, sorted by what’s near you.</span></div>
+      <div class="shot"><img src="/about/deals.jpg" alt="Card promos in the app"><b>Card promos</b><span>BDO, BPI, Metrobank and other promos that apply where you’re eating.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>How it stays honest</h2>
+    <div class="facts">
+      <div class="fact"><b>Location-checked</b><span>No check-in unless you’re at the restaurant.</span></div>
+      <div class="fact"><b>No paid scores</b><span>Restaurants can’t pay to change a score. Promos are always labelled.</span></div>
+      <div class="fact"><b>Friends first</b><span>See what the people you follow gave a place before anything else.</span></div>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">
+  <div class="end">
+    <h2>Try it on your next meal</h2>
+    <p>Open it, find a place near you, and check in when you get there. It takes a minute.</p>
+    <div class="cta"><a class="btn btn-main" href="https://ubebanana.app">ubebanana.app</a></div>
+  </div>
+</footer>
+</body>
+</html>
