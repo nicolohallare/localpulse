@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   api, supabase, distanceM, fmtDistance, fmtCount, timeAgo, initials, matchMichelin, DISTINCTION,
-  PLATFORM_LABEL, detectPlatform, youtubeId, ensureUser, tiktokEmbed, priceLabel } from '../lib';
+  PLATFORM_LABEL, detectPlatform, youtubeId, ensureUser, tiktokEmbed, priceLabel, currentUser } from '../lib';
 import { game, logPlay, shareUrl, shareLink } from '../game';
 import { SaveSheet } from './Lists';
 import { MediaStrip, AddMediaSheet, loadMedia } from '../media';
@@ -33,6 +33,8 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
   const [media, setMedia] = useState({});
   const [tiktoks, setTiktoks] = useState(null);
   const [addingMedia, setAddingMedia] = useState(null);
+  const [friends, setFriends] = useState(null);
+  const [howScores, setHowScores] = useState(false);
 
   const loadOwn = useCallback(async () => {
     const [s, f, v, d] = await Promise.all([
@@ -50,6 +52,7 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
     game.place(id).then(setPg).catch(() => {});
     game.dishes(id).then(setDishes).catch(() => {});
     api.discoverTiktok(id).then(setTiktoks).catch(() => setTiktoks({ videos: [] }));
+    loadFriends(id).then(setFriends).catch(() => setFriends(null));
   }, [id]);
 
   const play = useCallback((p) => {
@@ -159,6 +162,16 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
             <a href={mich.guide_url} target="_blank" rel="noreferrer" className="link-out">Read on Michelin <Icon name="external" size={14} /></a>
           </div>
         )}
+        {mich && stat && (
+          <div className="mich-verdict">
+            <span className="tiny muted">MICHELIN says <strong className="ink">{DISTINCTION[mich.distinction]}</strong></span>
+            {stat.visit_count >= MIN_VISITS ? (
+              <span className="tiny muted">Ube Banana diners say <strong className="ink">{Number(stat.avg_score).toFixed(1)}/10</strong> from {stat.visit_count} verified visits</span>
+            ) : (
+              <span className="tiny muted">Ube Banana diners: {stat.visit_count} verified visit{stat.visit_count === 1 ? '' : 's'} so far. Their verdict shows at {MIN_VISITS}.</span>
+            )}
+          </div>
+        )}
         {mich && (!stat || videoCount === 0) && (
           <div className="mich-first-card">
             <p className="small strong">{mich.is_new ? 'New on the MICHELIN list — ' : ''}{!stat ? 'no one has checked in here yet.' : 'no creator videos yet.'}</p>
@@ -170,15 +183,15 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
         <div className="score-grid">
           <div className="score-tile ube-tile">
             <span className="tile-label">Ube Banana score</span>
-            {stat ? (
+            {stat && stat.visit_count >= MIN_VISITS ? (
               <>
                 <span className="tile-big">{Number(stat.avg_score).toFixed(1)}<small>/10</small></span>
-                <span className="tile-foot"><Icon name="shield" size={14} /> {stat.visit_count} verified visit{stat.visit_count === 1 ? '' : 's'}</span>
+                <span className="tile-foot"><Icon name="shield" size={14} /> from {stat.visit_count} verified visits</span>
               </>
             ) : (
               <>
                 <span className="tile-big tile-new">New</span>
-                <span className="tile-foot">Be the first to check in</span>
+                <span className="tile-foot">{stat ? `${stat.visit_count} verified visit${stat.visit_count === 1 ? '' : 's'} so far · score shows at ${MIN_VISITS}` : 'Be the first to check in'}</span>
               </>
             )}
           </div>
@@ -194,7 +207,11 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
             )}
           </div>
         </div>
-        <p className="tiny muted">The two scores are kept separate. Ube Banana counts verified visits only.</p>
+        <p className="tiny muted">
+          The two scores are kept separate. Ube Banana counts only visits checked by location at the restaurant.{' '}
+          <button className="link-btn inline" onClick={() => setHowScores(true)}>How scores work</button>
+        </p>
+        {friends && friends.count > 0 && <FriendsHere f={friends} onOpenUser={onOpenUser} />}
 
         {pg && (
           <div className="stack-8">
@@ -408,6 +425,7 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
         <button className="btn btn-primary grow" onClick={() => setCheckingIn(true)}><Icon name="check" size={20} stroke={2.4} /> Check in here</button>
       </div>
 
+      {howScores && <HowScoresSheet onClose={() => setHowScores(false)} />}
       {checkingIn && (
         <CheckIn place={place} onClose={() => setCheckingIn(false)} onDone={() => { loadOwn(); setTab('visits'); }} />
       )}
@@ -542,6 +560,57 @@ function AddVideo({ place, onClose }) {
           <button className="btn btn-primary" disabled={state === 'saving'}>{state === 'saving' ? 'Sending…' : 'Submit video'}</button>
         </form>
       )}
+    </Sheet>
+  );
+}
+
+// A score shows only once a place has this many verified visits; below that it reads "New".
+const MIN_VISITS = 3;
+
+// People the viewer follows who checked in here: how many, their average score, and names.
+async function loadFriends(placeId) {
+  const me = await currentUser();
+  if (!me) return null;
+  const { data: fl } = await supabase.from('follows').select('followee').eq('follower', me.id).limit(1000);
+  const ids = (fl || []).map((r) => r.followee);
+  if (!ids.length) return null;
+  const { data: v } = await supabase.from('visit_feed').select('user_id,display_name,score,created_at')
+    .eq('google_place_id', placeId).in('user_id', ids.slice(0, 300)).order('created_at', { ascending: false }).limit(200);
+  const rows = (v || []).filter((r) => r.score != null);
+  if (!rows.length) return null;
+  const people = [...new Map(rows.map((r) => [r.user_id, { id: r.user_id, name: r.display_name || 'A friend' }])).values()];
+  const avg = rows.reduce((a, r) => a + Number(r.score), 0) / rows.length;
+  return { count: people.length, avg, people };
+}
+
+function FriendsHere({ f, onOpenUser }) {
+  const names = f.people.slice(0, 2).map((p) => p.name.split(' ')[0]);
+  const more = f.count - names.length;
+  return (
+    <div className="friends-here">
+      <div className="friends-faces">
+        {f.people.slice(0, 3).map((p) => (
+          <button key={p.id} className="friend-face" onClick={() => onOpenUser && onOpenUser(p.id)} aria-label={p.name}>{initials(p.name)}</button>
+        ))}
+      </div>
+      <div className="grow">
+        <span className="strong small block">{f.count === 1 ? '1 friend has' : `${f.count} friends have`} been here · they rate it {f.avg.toFixed(1)}</span>
+        <span className="tiny muted">{names.join(', ')}{more > 0 ? ` and ${more} more` : ''}</span>
+      </div>
+    </div>
+  );
+}
+
+function HowScoresSheet({ onClose }) {
+  return (
+    <Sheet title="How scores work" onClose={onClose}>
+      <div className="stack-12 small">
+        <p><strong>Only real visits count.</strong> You can rate a place only while you’re there. The app checks your location against the restaurant’s before it accepts a check-in.</p>
+        <p><strong>A score needs {MIN_VISITS} visits.</strong> Until then the place shows “New”, so one person can’t decide its score.</p>
+        <p><strong>Restaurants can’t pay to change a score.</strong> Promos and featured spots are always labelled, and they never touch the score.</p>
+        <p><strong>Google’s rating stays separate.</strong> We show it next to ours so you can compare, but we never mix the two.</p>
+        <p><strong>Friends first.</strong> When people you follow have been somewhere, you see what they gave it above everything else.</p>
+      </div>
     </Sheet>
   );
 }

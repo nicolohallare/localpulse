@@ -549,7 +549,7 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
                   <span className="muted small">{r.address || ''}</span>
                 </span>
                 <span className="top-score">
-                  <ScoreBadge score={r.avg_score} />
+                  {r.visit_count >= 3 ? <ScoreBadge score={r.avg_score} /> : <span className="small strong">New</span>}
                   <span className="tiny muted">{r.visit_count} visit{r.visit_count === 1 ? '' : 's'}</span>
                 </span>
               </button>
@@ -734,7 +734,7 @@ export function rankPlace(p, { stat, buzz, mich, hour, mine }) {
   if (stat && stat.visit_count) {
     const conf = stat.visit_count / (stat.visit_count + 3);
     score += (Number(stat.avg_score) / 10) * 25 * conf + Math.min(stat.visit_count, 10);
-    reasons.push({ k: 'ube', t: `🍌 ${Number(stat.avg_score).toFixed(1)} · ${stat.visit_count} check-in${stat.visit_count === 1 ? '' : 's'}` });
+    reasons.push({ k: 'ube', t: stat.visit_count >= 3 ? `🍌 ${Number(stat.avg_score).toFixed(1)} · ${stat.visit_count} check-ins` : `🍌 ${stat.visit_count} check-in${stat.visit_count === 1 ? '' : 's'}` });
   }
   // Buzz: different creators talking about it lately.
   if (buzz && buzz.creators) {
@@ -828,8 +828,10 @@ function PlaceRow({ place: p, stat, michelin, why, onOpen, rank, reasons }) {
         {chips && <span className="reason-row">{chips.map((x) => <span key={x.k} className={`reason reason-${x.k}`}>{x.t}</span>)}</span>}
         <WhyLine w={why} fallback={p.blurb} />
         {!reasons && <span className="score-line">
-          {stat ? (
+          {stat && stat.visit_count >= 3 ? (
             <><ScoreBadge score={stat.avg_score} /><span className="small strong">Ube Banana</span></>
+          ) : stat ? (
+            <span className="small muted">{stat.visit_count} check-in{stat.visit_count === 1 ? '' : 's'} · score at 3</span>
           ) : (
             <span className="small muted">No check-ins yet</span>
           )}

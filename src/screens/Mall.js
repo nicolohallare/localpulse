@@ -207,7 +207,7 @@ function MallRow({ p, stat, rank, onOpen }) {
         <span className="row-title clamp-1">{p.name}</span>
         <span className="muted small clamp-1">{[p.type, priceLabel(p)].filter(Boolean).join(' · ')}{p.openNow === true ? <span className="open-txt"> · Open now</span> : p.openNow === false ? <span className="closed-txt"> · Closed</span> : null}</span>
         <span className="reason-row">
-          {stat && stat.visit_count ? <span className="reason reason-ube">🍌 {Number(stat.avg_score).toFixed(1)} · {stat.visit_count} check-in{stat.visit_count === 1 ? '' : 's'}</span> : null}
+          {stat && stat.visit_count ? <span className="reason reason-ube">🍌 {stat.visit_count >= 3 ? `${Number(stat.avg_score).toFixed(1)} · ${stat.visit_count} check-ins` : `${stat.visit_count} check-in${stat.visit_count === 1 ? '' : 's'}`}</span> : null}
           {p.rating != null ? <span className="reason reason-rating">★ {p.rating.toFixed(1)} ({p.ratingCount >= 1000 ? `${(p.ratingCount / 1000).toFixed(1)}k` : p.ratingCount})</span> : <span className="reason">No reviews yet</span>}
           {p.promo && <span className="reason reason-promo">💳 {String(p.promo.discount).slice(0, 20)} · {p.promo.bank}</span>}
         </span>

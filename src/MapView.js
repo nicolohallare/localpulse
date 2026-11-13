@@ -85,7 +85,7 @@ export default function MapView({ center, places, stats, onPick, activeId }) {
         position: { lat: p.lat, lng: p.lng },
         title: p.name,
         zIndex: active ? 100 : 10,
-        label: s ? { text: Number(s.avg_score).toFixed(1), color: '#FFFFFF', fontSize: '11px', fontWeight: '700' } : undefined,
+        label: s && s.visit_count >= 3 ? { text: Number(s.avg_score).toFixed(1), color: '#FFFFFF', fontSize: '11px', fontWeight: '700' } : undefined,
         icon: {
           path: maps.SymbolPath.CIRCLE,
           scale: s ? 14 : 8,
