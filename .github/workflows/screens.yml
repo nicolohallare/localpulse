@@ -28,14 +28,8 @@ jobs:
           const SITE = 'https://ubebanana.app';
           const M = [14.5636, 121.0324];
           const shots = [
-            ['v1-home', '/', 0, M],
-            ['v2-home-more', '/', 650, M],
-            ['v3-place', '/#/place/ChIJreB8JQDJlzMRvEGgJ-bBRR8', 0, M],
-            ['v4-place-videos', '/#/place/ChIJreB8JQDJlzMRvEGgJ-bBRR8', 760, M],
-            ['v5-michelin', '/#/michelin', 0, M],
-            ['v6-michelin-more', '/#/michelin', 500, M],
-            ['v7-deals', '/#/deals', 0, M],
-            ['v8-place-menu', '/#/place/ChIJreB8JQDJlzMRvEGgJ-bBRR8', 380, M],
+            ['t1-place-2visits', '/#/place/ChIJe-scLi3JlzMRLFY4NKbBRz8', 560, M],
+            ['t2-mich-none', '/#/place/ChIJreB8JQDJlzMRvEGgJ-bBRR8', 330, M],
           ];
           const b = await chromium.launch();
           for (const [name, path, y, [lat, lng]] of shots) {
