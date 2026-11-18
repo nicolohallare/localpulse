@@ -47,19 +47,21 @@ async function mallHere(req, res) {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return send(res, 400, { error: 'lat and lng are required' });
   const me = { lat, lng };
   // Which mall is this spot in? Remembered for a month per ~100 m square.
-  const found = await cached(`mallhere:v1:${lat.toFixed(3)}:${lng.toFixed(3)}`, 30 * 86400, async () => {
+  const found = await cached(`mallhere:v2:${lat.toFixed(3)}:${lng.toFixed(3)}`, 30 * 86400, async () => {
     const d = await places('places:searchNearby', {
       method: 'POST',
-      fieldMask: 'places.id,places.displayName,places.location,places.formattedAddress',
+      fieldMask: 'places.id,places.displayName,places.location,places.formattedAddress,places.userRatingCount',
       body: {
-        includedTypes: ['shopping_mall'], maxResultCount: 3, rankPreference: 'DISTANCE',
+        includedTypes: ['shopping_mall'], maxResultCount: 10, rankPreference: 'DISTANCE',
         locationRestriction: { circle: { center: { latitude: lat, longitude: lng }, radius: 400 } },
         languageCode: 'en', regionCode: 'PH',
       },
     });
+    // Shops inside a mall are sometimes tagged as malls too; the real mall is the one with the most reviews.
     const m = (d.places || []).filter((x) => x.location)
-      .map((x) => ({ placeId: x.id, name: (x.displayName && x.displayName.text) || 'This mall', lat: x.location.latitude, lng: x.location.longitude, address: x.formattedAddress || null }))
-      .find((x) => dist(me, x) <= 350);
+      .map((x) => ({ placeId: x.id, name: (x.displayName && x.displayName.text) || 'This mall', lat: x.location.latitude, lng: x.location.longitude, address: x.formattedAddress || null, n: x.userRatingCount || 0 }))
+      .filter((x) => dist(me, x) <= 350)
+      .sort((a, b) => b.n - a.n)[0];
     return m || { none: true };
   });
   if (!found || found.none) return send(res, 200, { mall: null }, 'public, s-maxage=3600');
