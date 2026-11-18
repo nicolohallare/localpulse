@@ -808,3 +808,12 @@ html, body { overflow-x: hidden; }
 .getapp-text strong { font-size: 14px; }
 .getapp-btn { flex-shrink: 0; padding: 8px 16px; border-radius: 999px; background: var(--banana); color: var(--ube-ink); font-weight: 800; text-decoration: none; font-size: 14px; }
 .getapp-x { flex-shrink: 0; width: 28px; height: 28px; border: 0; background: transparent; color: #fff; font-size: 22px; line-height: 1; opacity: 0.8; }
+
+/* "You're at <mall>" switch on Discover */
+.mall-here { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; margin-bottom: 14px; border-radius: 14px; background: var(--ube-soft, #EFE6FA); color: var(--ink, #24123D); }
+.mall-here-txt { font-size: 15px; line-height: 1.3; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 12px; background: rgba(255,255,255,0.7); }
+.seg button { border: 0; background: none; padding: 8px 10px; border-radius: 9px; font-weight: 700; font-size: 14px; color: inherit; }
+.seg button.seg-on { background: var(--ube, #4B1F7A); color: #fff; }
+[data-theme="dark"] .mall-here { background: #2E1A4A; color: #FBF6E9; }
+[data-theme="dark"] .seg { background: rgba(0,0,0,0.25); }

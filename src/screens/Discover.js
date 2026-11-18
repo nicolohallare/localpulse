@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { api, supabase, distanceM, fmtDistance, fmtCount, timeAgo, tiktokEmbed, matchMichelin, DISTINCTION, DISTINCTION_RANK, currencySymbol, priceLabel, getCountry, COUNTRY_NAME, michelinYear } from '../lib';
+import { api, getJSON, supabase, distanceM, fmtDistance, fmtCount, timeAgo, tiktokEmbed, matchMichelin, DISTINCTION, DISTINCTION_RANK, currencySymbol, priceLabel, getCountry, COUNTRY_NAME, michelinYear } from '../lib';
 import { logPlay, game, shareLink, PUBLIC_SITE } from '../game';
 import { Banana, Icon, PlacePhoto, Spinner, Notice, Empty, ScoreBadge, Sheet, GoButtons } from '../ui';
 import MapView from '../MapView';
@@ -81,6 +81,10 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
   const amen = filters.some((k) => FILTERS.find((f) => f.k === k).amen);
   const trendKey = useRef('');
   const nearbyReq = useRef(0);
+  // The mall you're standing in, if any, and whether to show only its restaurants (on by default).
+  const [mallHere, setMallHere] = useState(null);
+  const [inMall, setInMall] = useState(true);
+  const mallKey = useRef('');
 
   const loadStats = useCallback(async (list) => {
     const ids = list.map((p) => p.id);
@@ -102,6 +106,18 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
       if (req !== nearbyReq.current) return; // a newer location answered already
       setPlaces(list);
       loadStats(list);
+      const mk = `${loc.lat.toFixed(3)},${loc.lng.toFixed(3)}`;
+      if (mk !== mallKey.current) {
+        mallKey.current = mk;
+        getJSON(`/api/places/mall?lat=${loc.lat.toFixed(5)}&lng=${loc.lng.toFixed(5)}`)
+          .then((d) => {
+            if (mallKey.current !== mk) return;
+            const ok = d && d.mall && (d.places || []).length > 0;
+            setMallHere(ok ? d : null);
+            if (ok) loadStats(d.places);
+          })
+          .catch(() => setMallHere(null));
+      }
       // Refresh trending whenever you're somewhere new (about 1 km), but not while still finding you.
       const key = `${loc.lat.toFixed(2)},${loc.lng.toFixed(2)}`;
       if (key !== trendKey.current && loc.label !== 'Finding you…') {
@@ -254,7 +270,9 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
   }
 
   const withPromo = (p) => ({ ...p, promo: promosFor(p, promos, myCards.length ? myCards : null)[0] || null });
-  const sorted = applyFilters(places.map((p) => withPromo({ ...p, dist: distanceM(loc, p) })), filters);
+  const mallOn = !query && inMall && mallHere && mallHere.places.length > 0;
+  const basePlaces = mallOn ? mallHere.places : places;
+  const sorted = applyFilters(basePlaces.map((p) => withPromo({ ...p, dist: distanceM(loc, p) })), filters);
   const cc = getCountry();
   const michHere = (michelin || []).filter((l) => (l.country || 'PH') === cc);
   const michSource = michHere.length ? michHere : (michelin || []);
@@ -391,8 +409,17 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
             </section>
           )}
           {!craving && <section className="section">
+            {!query && mallHere && (
+              <div className="mall-here">
+                <span className="mall-here-txt"><span aria-hidden="true">🛍️</span> You’re at <strong>{mallHere.mall.name}</strong></span>
+                <div className="seg" role="group" aria-label="What to show">
+                  <button className={inMall ? 'seg-on' : ''} aria-pressed={inMall} onClick={() => setInMall(true)}>Inside ({mallHere.places.length})</button>
+                  <button className={!inMall ? 'seg-on' : ''} aria-pressed={!inMall} onClick={() => setInMall(false)}>All nearby</button>
+                </div>
+              </div>
+            )}
             <div className="row-between">
-              <h2 className="h2">{query && !searching ? `Results for “${query}”` : 'Top picks near you'}</h2>
+              <h2 className="h2">{query && !searching ? `Results for “${query}”` : mallOn ? `Inside ${mallHere.mall.name}` : 'Top picks near you'}</h2>
               <button className="soft-btn map-toggle" onClick={() => setShowMap((v) => !v)} aria-pressed={showMap}><Icon name="pin" size={16} /> {showMap ? 'Hide map' : 'Map'}</button>
             </div>
             {showMap && <div className="map-inline"><MapView center={loc} places={shownPicks.map((x) => x.p)} stats={stats} onPick={(p) => onOpen(p.id)} /></div>}

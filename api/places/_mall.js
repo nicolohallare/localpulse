@@ -29,8 +29,74 @@ async function cached(key, ttl, make) {
   return v;
 }
 
+// Words in a mall's name that don't identify it ("Estancia Mall" -> "estancia").
+const GENERIC = new Set(['mall', 'the', 'at', 'of', 'and', 'shopping', 'center', 'centre', 'city', 'place', 'square', 'plaza', 'sm', 'ayala', 'malls', 'robinsons', 'megamall', 'commons', 'town', 'west', 'east', 'north', 'south', 'wing']);
+function mallKeys(name) {
+  const n = String(name || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  const words = n.split(' ').filter((w) => w.length > 2 && !GENERIC.has(w));
+  return [n, ...words];
+}
+const dist = (a, b) => {
+  const r = Math.PI / 180, x = (b.lng - a.lng) * r * Math.cos(((a.lat + b.lat) / 2) * r), y = (b.lat - a.lat) * r;
+  return Math.sqrt(x * x + y * y) * 6371000;
+};
+
+// GET /api/places/mall?lat=..&lng=.. -> the mall you're standing in (if any) and the places to eat inside it.
+async function mallHere(req, res) {
+  const lat = Number(req.query.lat), lng = Number(req.query.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return send(res, 400, { error: 'lat and lng are required' });
+  const me = { lat, lng };
+  // Which mall is this spot in? Remembered for a month per ~100 m square.
+  const found = await cached(`mallhere:v1:${lat.toFixed(3)}:${lng.toFixed(3)}`, 30 * 86400, async () => {
+    const d = await places('places:searchNearby', {
+      method: 'POST',
+      fieldMask: 'places.id,places.displayName,places.location,places.formattedAddress',
+      body: {
+        includedTypes: ['shopping_mall'], maxResultCount: 3, rankPreference: 'DISTANCE',
+        locationRestriction: { circle: { center: { latitude: lat, longitude: lng }, radius: 400 } },
+        languageCode: 'en', regionCode: 'PH',
+      },
+    });
+    const m = (d.places || []).filter((x) => x.location)
+      .map((x) => ({ placeId: x.id, name: (x.displayName && x.displayName.text) || 'This mall', lat: x.location.latitude, lng: x.location.longitude, address: x.formattedAddress || null }))
+      .find((x) => dist(me, x) <= 350);
+    return m || { none: true };
+  });
+  if (!found || found.none) return send(res, 200, { mall: null }, 'public, s-maxage=3600');
+
+  const list = await cached(`mall:places:g1:${found.placeId}`, 7 * 86400, async () => {
+    const seen = new Map();
+    const add = (d) => (d.places || []).filter(isFoodPlace).forEach((p) => { if (!seen.has(p.id)) seen.set(p.id, shapePlace(p, 1)); });
+    for (const types of GROUPS) {
+      add(await places('places:searchNearby', {
+        method: 'POST', fieldMask: LIST_FIELDS,
+        body: {
+          includedTypes: types, excludedPrimaryTypes: NON_FOOD_PRIMARY, maxResultCount: 20, rankPreference: 'POPULARITY',
+          locationRestriction: { circle: { center: { latitude: found.lat, longitude: found.lng }, radius: 300 } },
+          languageCode: 'en', regionCode: 'PH',
+        },
+      }).catch(() => ({ places: [] })));
+    }
+    add(await places('places:searchText', {
+      method: 'POST', fieldMask: LIST_FIELDS,
+      body: { textQuery: `restaurants in ${found.name}`, pageSize: 20, languageCode: 'en', regionCode: 'PH',
+        locationBias: { circle: { center: { latitude: found.lat, longitude: found.lng }, radius: 400 } } },
+    }).catch(() => ({ places: [] })));
+    return { places: [...seen.values()] };
+  });
+
+  const keys = mallKeys(found.name);
+  const inside = (p) => keys.some((k) => k && `${p.name} ${p.address || ''}`.toLowerCase().includes(k));
+  const all = ((list && list.places) || []).filter((p) => p.lat == null || dist(found, p) <= 600);
+  const inMall = all.filter(inside);
+  // If Google's addresses don't name the mall, fall back to everything very close to it.
+  const out = inMall.length >= 5 ? inMall : all.filter((p) => p.lat == null || dist(found, p) <= 250);
+  send(res, 200, { mall: { name: found.name, placeId: found.placeId, lat: found.lat, lng: found.lng }, places: out }, 'public, s-maxage=3600, stale-while-revalidate=86400');
+}
+
 export default async function handler(req, res) {
   try {
+    if (req.query.lat != null) return await mallHere(req, res);
     const id = String(req.query.id || '');
     if (!id) return send(res, 200, { malls: MALLS.map(({ id: i, name, town }) => ({ id: i, name, town })) }, 'public, s-maxage=86400');
     const mall = MALLS.find((m) => m.id === id);
