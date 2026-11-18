@@ -130,7 +130,7 @@ async function candidates(ytKey, area, lat, lng, cc) {
   const nameKey = (p) => `${norm(p.place) || p.place}|${norm(p.branch || '')}`;
   const names = new Map();
   picks.forEach((p) => { if (videos[p.i]) { const k = nameKey(p); if (!names.has(k)) names.set(k, p); } });
-  const lookups = await Promise.all([...names.entries()].slice(0, 20).map(async ([k, p]) => {
+  const lookups = await mapLimit([...names.entries()].slice(0, 20), 4, async ([k, p]) => {
     const ck = `tplace:${cc}:${Number(lat).toFixed(1)}:${Number(lng).toFixed(1)}:${k}`.slice(0, 300);
     const cached = await cacheGet(ck);
     if (cached) return [k, cached.none ? null : cached];
@@ -138,7 +138,7 @@ async function candidates(ytKey, area, lat, lng, cc) {
     // Remember the match for a week (a miss for a day) so the same restaurant isn't searched again.
     await cachePut(ck, found[1] || { none: true }, found[1] ? 7 * 86400 : 86400);
     return found;
-  }));
+  });
   async function lookupPlace(k, p) {
     try {
       const data = await places('places:searchText', {
@@ -312,4 +312,14 @@ export default async function handler(req, res) {
   } catch (e) {
     send(res, 200, { items: [], error: 'Trending unavailable right now' }, 'public, s-maxage=600');
   }
+}
+
+// Runs fn over items with at most `limit` running at once, keeping the order.
+async function mapLimit(items, limit, fn) {
+  const out = new Array(items.length);
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) { const i = next++; out[i] = await fn(items[i], i); }
+  }));
+  return out;
 }

@@ -41,7 +41,20 @@ export function trackUse(kind, n = 1) {
   }).catch(() => {});
 }
 
-export async function places(path, { method = 'GET', body, fieldMask }) {
+// Google limits calls per minute. A short burst (several people searching at once) gets a 429;
+// we wait a moment and try again up to twice before giving up.
+export async function places(path, opts) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await placesOnce(path, opts);
+    } catch (e) {
+      if (e.status !== 429 || attempt >= 2) throw e;
+      await new Promise((r) => setTimeout(r, 1200 * (attempt + 1) + Math.random() * 400));
+    }
+  }
+}
+
+async function placesOnce(path, { method = 'GET', body, fieldMask }) {
   const key = googleKey();
   trackUse(path.includes('searchText') ? 'g_text' : path.includes('searchNearby') ? 'g_nearby' : 'g_details');
   const r = await fetch(`https://places.googleapis.com/v1/${path}`, {
@@ -57,6 +70,10 @@ export async function places(path, { method = 'GET', body, fieldMask }) {
   if (!r.ok) {
     const e = new Error((data.error && data.error.message) || `Google Places error (${r.status})`);
     e.status = r.status === 429 ? 429 : 502;
+    if (r.status === 429) {
+      e.message = 'Lots of people are searching right now. Please try again in a minute.';
+      e.hint = null;
+    }
     if (r.status === 403) {
       e.hint = 'Enable "Places API (New)" for this key in Google Cloud Console → APIs & Services → Library.';
     }
