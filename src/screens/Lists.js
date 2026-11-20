@@ -10,6 +10,54 @@ async function myLists() {
   return data || [];
 }
 
+// ── One-tap save: every account has a private "Want to try" list, made the first time it's needed ───
+export const WANT = 'Want to try';
+async function wantList(create) {
+  const u = create ? await ensureUser() : await currentUser();
+  if (!u) return null;
+  const { data } = await supabase.from('lists').select('id').eq('owner', u.id).eq('title', WANT).order('created_at').limit(1);
+  if (data && data[0]) return data[0].id;
+  if (!create) return null;
+  const { data: made } = await supabase.from('lists').insert({ title: WANT, is_public: false }).select('id').single();
+  return made ? made.id : null;
+}
+export async function isWanted(placeId) {
+  const id = await wantList(false);
+  if (!id) return false;
+  const { data } = await supabase.from('list_items').select('list_id').eq('list_id', id).eq('google_place_id', placeId).limit(1);
+  return !!(data && data.length);
+}
+// Returns true if the place is now saved, false if it was removed.
+export async function toggleWanted(placeId) {
+  const id = await wantList(true);
+  if (!id) throw new Error('Could not save. Try again.');
+  if (await isWanted(placeId)) {
+    await supabase.from('list_items').delete().eq('list_id', id).eq('google_place_id', placeId);
+    return false;
+  }
+  const { error } = await supabase.from('list_items').insert({ list_id: id, google_place_id: placeId });
+  if (error) throw new Error('Could not save. Try again.');
+  return true;
+}
+// Saved places with name and location, newest first (for "saved near you" on Discover).
+export async function wantedPlaces() {
+  const id = await wantList(false);
+  if (!id) return [];
+  const { data } = await supabase.from('list_items').select('google_place_id,created_at').eq('list_id', id).order('created_at', { ascending: false }).limit(20);
+  if (!data || !data.length) return [];
+  // Names and locations don't change, so remember them on the phone and only look up new ones.
+  let known = {};
+  try { known = JSON.parse(localStorage.getItem('ub-saved-names') || '{}'); } catch (x) { /* private mode */ }
+  const ids = data.map((x) => x.google_place_id);
+  const missing = ids.filter((i) => !known[i]);
+  if (missing.length) {
+    const got = await api.names(missing).catch(() => []);
+    got.filter((g) => g && g.name).forEach((g) => { known[g.id] = g; });
+    try { localStorage.setItem('ub-saved-names', JSON.stringify(Object.fromEntries(ids.filter((i) => known[i]).map((i) => [i, known[i]])))); } catch (x) { /* private mode */ }
+  }
+  return ids.map((i) => known[i]).filter(Boolean);
+}
+
 // ── Save a place to a list (sheet on the place page) ───────────────────────
 export function SaveSheet({ place, onClose }) {
   const [lists, setLists] = useState(null);

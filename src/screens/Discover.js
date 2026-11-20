@@ -4,6 +4,7 @@ import { logPlay, game, shareLink, PUBLIC_SITE } from '../game';
 import { Banana, Icon, PlacePhoto, Spinner, Notice, Empty, ScoreBadge, Sheet, GoButtons } from '../ui';
 import MapView from '../MapView';
 import { usePromos, useMyCards, promosFor } from '../promos';
+import { wantedPlaces } from './Lists';
 
 const CRAVINGS_BY_COUNTRY = {
   PH: ['Sisig', 'Lechon', 'Ramen', 'Samgyup', 'Kare-kare', 'Chicken wings', 'Pizza', 'Burger', 'Milk tea', 'Coffee', 'Halo-halo', 'Bulalo'],
@@ -85,6 +86,9 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
   const [mallHere, setMallHere] = useState(null);
   const [inMall, setInMall] = useState(true);
   const mallKey = useRef('');
+  // Places you saved ("Want to try"). Reloaded each time you come back to Discover.
+  const [wanted, setWanted] = useState([]);
+  useEffect(() => { if (active) wantedPlaces().then(setWanted).catch(() => {}); }, [active]);
 
   const loadStats = useCallback(async (list) => {
     const ids = list.map((p) => p.id);
@@ -270,6 +274,10 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
   }
 
   const withPromo = (p) => ({ ...p, promo: promosFor(p, promos, myCards.length ? myCards : null)[0] || null });
+  // Saved places, nearest first. Ones within 5 km come first; if none are close, show the latest few anyway.
+  const wantedAll = wanted.map((p) => ({ ...p, dist: p.lat != null && loc.label !== 'Finding you…' ? distanceM(loc, p) : null }));
+  const wantedClose = wantedAll.filter((p) => p.dist != null && p.dist <= 5000).sort((a, b) => a.dist - b.dist);
+  const wantedNear = (wantedClose.length ? wantedClose : wantedAll).slice(0, 8);
   const mallOn = !query && inMall && mallHere && mallHere.places.length > 0;
   const basePlaces = mallOn ? mallHere.places : places;
   const sorted = applyFilters(basePlaces.map((p) => withPromo({ ...p, dist: distanceM(loc, p) })), filters);
@@ -480,6 +488,20 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
                     <span className="strong">{l.name}</span>
                     <span className="tiny muted">{l.km != null ? `${fmtDistance(l.km * 1000)} away` : (l.city || '')}</span>
                     {l.award && <span className="tiny ink clamp-2">🏅 {l.award.replace('MICHELIN ', '')}</span>}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+          {!query && !craving && wantedNear.length > 0 && (
+            <section className="section">
+              <div className="row-between"><h2 className="h2">You wanted to try</h2><button className="link-btn" onClick={() => { window.location.hash = '/lists'; }}>All saved</button></div>
+              <div className="mich-rail">
+                {wantedNear.map((p) => (
+                  <button key={p.id} className="mich-chip" onClick={() => onOpen(p.id)}>
+                    <span className="mich-dist">{p.dist != null ? (p.dist <= 400 ? 'You’re right here' : `${fmtDistance(p.dist)} away`) : 'Saved'}</span>
+                    <span className="strong">{p.name}</span>
+                    <span className="tiny muted clamp-2">{p.address || ''}</span>
                   </button>
                 ))}
               </div>

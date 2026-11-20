@@ -3,7 +3,7 @@ import {
   api, supabase, distanceM, fmtDistance, fmtCount, timeAgo, initials, matchMichelin, DISTINCTION,
   PLATFORM_LABEL, detectPlatform, youtubeId, ensureUser, tiktokEmbed, priceLabel, currentUser } from '../lib';
 import { game, logPlay, shareUrl, shareLink } from '../game';
-import { SaveSheet } from './Lists';
+import { SaveSheet, isWanted, toggleWanted, WANT } from './Lists';
 import { MediaStrip, AddMediaSheet, loadMedia } from '../media';
 import { Icon, PlacePhoto, Spinner, Notice, Empty, Sheet, GoButtons } from '../ui';
 import CheckIn from './CheckIn';
@@ -34,6 +34,22 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
   const [tiktoks, setTiktoks] = useState(null);
   const [addingMedia, setAddingMedia] = useState(null);
   const [friends, setFriends] = useState(null);
+  const [wanted, setWanted] = useState(false);
+  const [saveNote, setSaveNote] = useState(null);
+  useEffect(() => { isWanted(id).then(setWanted).catch(() => {}); }, [id]);
+  async function quickSave() {
+    const was = wanted;
+    setWanted(!was); // show it right away
+    try {
+      const now = await toggleWanted(id);
+      setWanted(now);
+      setSaveNote(now ? 'saved' : 'removed');
+      setTimeout(() => setSaveNote(null), 5000);
+    } catch (e) {
+      setWanted(was);
+      setShared(e.message); setTimeout(() => setShared(null), 2500);
+    }
+  }
   const [howScores, setHowScores] = useState(false);
 
   const loadOwn = useCallback(async () => {
@@ -419,18 +435,27 @@ export default function Place({ id, loc, michelin, onBack, onOpenCreators, onOpe
       </div>
 
       {shared && <div className="toast" role="status">{shared}</div>}
+      {saveNote && (
+        <div className="toast toast-action" role="status">
+          <span>{saveNote === 'saved' ? `Saved to ${WANT}` : `Removed from ${WANT}`}</span>
+          <button onClick={() => { setSaveNote(null); setSaving(true); }}>Other lists</button>
+        </div>
+      )}
       <div className="action-bar">
-        <button className="action-icon" onClick={() => setSaving(true)} aria-label="Save to a list"><Icon name="bookmark" size={20} /><span>Save</span></button>
+        <button className={`action-icon ${wanted ? 'action-on' : ''}`} onClick={quickSave} aria-pressed={wanted} aria-label={wanted ? `Saved to ${WANT}. Tap to remove` : `Save to ${WANT}`}>
+          <Icon name="bookmark" size={20} fill={wanted ? 'currentColor' : 'none'} /><span>{wanted ? 'Saved' : 'Save'}</span>
+        </button>
         <button className="action-icon" onClick={() => onNewPoll(id)} aria-label="Start a group poll"><Icon name="poll" size={20} /><span>Poll</span></button>
         <button className="btn btn-primary grow" onClick={() => setCheckingIn(true)}><Icon name="check" size={20} stroke={2.4} /> Check in here</button>
       </div>
 
       {howScores && <HowScoresSheet onClose={() => setHowScores(false)} />}
       {checkingIn && (
-        <CheckIn place={place} onClose={() => setCheckingIn(false)} onDone={() => { loadOwn(); setTab('visits'); }} />
+        <CheckIn place={place} onClose={() => setCheckingIn(false)} onDone={() => { loadOwn(); setTab('visits'); }}
+          saved={wanted} onSave={async () => { if (!wanted) await quickSave(); }} />
       )}
       {addingVideo && <AddVideo place={place} onClose={() => setAddingVideo(false)} />}
-      {saving && <SaveSheet place={place} onClose={() => setSaving(false)} />}
+      {saving && <SaveSheet place={place} onClose={() => { setSaving(false); isWanted(id).then(setWanted).catch(() => {}); }} />}
       {addingMedia && (
         <AddMediaSheet visitId={addingMedia} existing={(media[addingMedia] || []).length}
           onClose={() => setAddingMedia(null)} onDone={() => loadOwn()} />

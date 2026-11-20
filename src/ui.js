@@ -60,7 +60,7 @@ export function Banana({ size = 40, className, title }) {
   );
 }
 
-export function Icon({ name, size = 22, stroke = 2, style, className }) {
+export function Icon({ name, size = 22, stroke = 2, style, className, fill = 'none' }) {
   if (name === 'play') {
     return (
       <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={style} className={className} fill="currentColor">
@@ -70,7 +70,7 @@ export function Icon({ name, size = 22, stroke = 2, style, className }) {
   }
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={style} className={className}
-      fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round">
+      fill={fill} stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round">
       {paths[name]}
     </svg>
   );

@@ -27,22 +27,37 @@ jobs:
           import { chromium } from 'playwright';
           const SITE = 'https://ubebanana.app';
           const M = [14.5636, 121.0324];
-          const shots = [
-            ['t1-place-2visits', '/#/place/ChIJe-scLi3JlzMRLFY4NKbBRz8', 560, M],
-            ['t2-mich-none', '/#/place/ChIJreB8JQDJlzMRvEGgJ-bBRR8', 330, M],
-          ];
           const b = await chromium.launch();
-          for (const [name, path, y, [lat, lng]] of shots) {
-            const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true,
-              geolocation: { latitude: lat, longitude: lng }, permissions: ['geolocation'], colorScheme: 'light', locale: 'en-PH' });
-            const pg = await ctx.newPage();
-            await pg.goto(SITE + path, { waitUntil: 'networkidle' }).catch(() => {});
-            await pg.waitForTimeout(6000);
-            if (y) { await pg.evaluate((yy) => window.scrollTo(0, yy), y); await pg.waitForTimeout(9000); }
-            await pg.screenshot({ path: `${name}.png` });
-            console.log('shot', name);
-            await ctx.close();
-          }
+          const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
+            geolocation: { latitude: M[0], longitude: M[1] }, permissions: ['geolocation'], colorScheme: 'light', locale: 'en-PH' });
+          const pg = await ctx.newPage();
+          const shot = async (n) => { await pg.screenshot({ path: `${n}.png` }); console.log('shot', n); };
+          // Texas Roadhouse Estancia, viewed from Makati (about 4 km away)
+          await pg.goto(SITE + '/#/place/ChIJe-scLi3JlzMRLFY4NKbBRz8', { waitUntil: 'networkidle' }).catch(() => {});
+          await pg.waitForTimeout(5000);
+          await pg.getByRole('button', { name: /Save to Want to try/ }).click();
+          await pg.waitForTimeout(2500);
+          await shot('s1-saved');
+          await pg.waitForTimeout(4000);
+          await pg.getByRole('button', { name: /Check in here/ }).click();
+          await pg.waitForTimeout(6000);
+          await shot('s2-too-far');
+          await pg.goto(SITE + '/', { waitUntil: 'networkidle' }).catch(() => {});
+          await pg.reload({ waitUntil: 'networkidle' }).catch(() => {});
+          await pg.waitForTimeout(8000);
+          const h = pg.getByRole('heading', { name: 'You wanted to try' });
+          console.log('rail count', await h.count());
+          if (await h.count()) await h.scrollIntoViewIfNeeded();
+          await pg.waitForTimeout(1500);
+          await shot('s3-rail');
+          // tidy up: remove the test save
+          await pg.goto(SITE + '/#/place/ChIJe-scLi3JlzMRLFY4NKbBRz8', { waitUntil: 'networkidle' }).catch(() => {});
+          await pg.waitForTimeout(5000);
+          const on = pg.getByRole('button', { name: /Saved to Want to try/ });
+          console.log('saved state kept', await on.count());
+          if (await on.count()) { await on.click(); await pg.waitForTimeout(2500); }
+          await shot('s4-removed');
+          await ctx.close();
           await b.close();
           JS
           node s.mjs

@@ -817,3 +817,8 @@ html, body { overflow-x: hidden; }
 .seg button.seg-on { background: var(--ube, #4B1F7A); color: #fff; }
 [data-theme="dark"] .mall-here { background: #2E1A4A; color: #FBF6E9; }
 [data-theme="dark"] .seg { background: rgba(0,0,0,0.25); }
+
+/* One-tap save */
+.action-icon.action-on { background: var(--mango, #FFD23F); border-color: var(--mango, #FFD23F); color: #24123D; }
+.toast.toast-action { display: flex; align-items: center; gap: 14px; white-space: nowrap; }
+.toast.toast-action button { border: 0; background: none; color: var(--mango, #FFD23F); font-weight: 800; font-size: 14px; padding: 0; }

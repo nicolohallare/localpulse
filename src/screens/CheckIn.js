@@ -10,7 +10,7 @@ const TAGS = ['Must try', 'Worth the wait', 'Good value', 'Date night', 'Slow se
 const LABEL = ['', 'Skip it', 'Poor', 'Meh', 'Below average', 'Okay', 'Decent', 'Good', 'Great', 'Excellent', 'Unforgettable'];
 
 // Steps: locating → (too-far | name) → rate → saving → done
-export default function CheckIn({ place, onClose, onDone }) {
+export default function CheckIn({ place, onClose, onDone, saved, onSave }) {
   const [step, setStep] = useState('locating');
   const [problem, setProblem] = useState(null);
   const [distance, setDistance] = useState(null);
@@ -135,7 +135,10 @@ export default function CheckIn({ place, onClose, onDone }) {
           <span className="far-icon"><Icon name="pin" size={30} /></span>
           <p className="strong">You’re {fmtDistance(distance)} away</p>
           <p className="small muted">Check-ins only count when you’re at the restaurant, so every Ube Banana take comes from a real visit.</p>
-          <button className="btn btn-primary" onClick={() => start()}>I’m here now — try again</button>
+          {onSave && (saved
+            ? <p className="small strong">Saved. It will show on your home screen when you’re near it.</p>
+            : <button className="btn btn-primary" onClick={onSave}><Icon name="bookmark" size={18} /> Save it for later</button>)}
+          <button className={`btn ${onSave ? 'btn-quiet' : 'btn-primary'}`} onClick={() => start()}>I’m here now, try again</button>
           {isPreviewHost() && <button className="btn btn-quiet" onClick={() => start(true)}>Preview only: skip location check</button>}
         </div>
       )}
