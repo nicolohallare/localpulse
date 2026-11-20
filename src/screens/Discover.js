@@ -416,6 +416,20 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
               )}
             </section>
           )}
+          {!query && !craving && wantedNear.length > 0 && (
+            <section className="section">
+              <div className="row-between"><h2 className="h2">You wanted to try</h2><button className="link-btn" onClick={() => { window.location.hash = '/lists'; }}>All saved</button></div>
+              <div className="mich-rail">
+                {wantedNear.map((p) => (
+                  <button key={p.id} className="mich-chip" onClick={() => onOpen(p.id)}>
+                    <span className="mich-dist">{p.dist != null ? (p.dist <= 400 ? 'You’re right here' : `${fmtDistance(p.dist)} away`) : 'Saved'}</span>
+                    <span className="strong">{p.name}</span>
+                    <span className="tiny muted clamp-2">{p.address || ''}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
           {!craving && <section className="section">
             {!query && mallHere && (
               <div className="mall-here">
@@ -488,20 +502,6 @@ export default function Discover({ loc, locNote, onRetryLocation, michelin, onOp
                     <span className="strong">{l.name}</span>
                     <span className="tiny muted">{l.km != null ? `${fmtDistance(l.km * 1000)} away` : (l.city || '')}</span>
                     {l.award && <span className="tiny ink clamp-2">🏅 {l.award.replace('MICHELIN ', '')}</span>}
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-          {!query && !craving && wantedNear.length > 0 && (
-            <section className="section">
-              <div className="row-between"><h2 className="h2">You wanted to try</h2><button className="link-btn" onClick={() => { window.location.hash = '/lists'; }}>All saved</button></div>
-              <div className="mich-rail">
-                {wantedNear.map((p) => (
-                  <button key={p.id} className="mich-chip" onClick={() => onOpen(p.id)}>
-                    <span className="mich-dist">{p.dist != null ? (p.dist <= 400 ? 'You’re right here' : `${fmtDistance(p.dist)} away`) : 'Saved'}</span>
-                    <span className="strong">{p.name}</span>
-                    <span className="tiny muted clamp-2">{p.address || ''}</span>
                   </button>
                 ))}
               </div>
